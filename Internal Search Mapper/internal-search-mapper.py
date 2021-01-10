@@ -9,22 +9,21 @@ internal searches to.
 
 
 # set the folder paths HERE for your input files!
-ga_path = "C:\path-to-ga-folder"  # enter the path the the folder that contains your GA search terms export
-sf_path = "C:\path-to-sf-crawl"  # enter the path of the folder that contains your Screaming frog internal_html.csv file
-export_path = (
-    "C:\path-to-export-output-csv"  # enter the path to export the output.csv file to
-)
+ga_path = "C:\path-to-folder-with-ga-export"  # enter the path the the folder that contains your GA search terms export
+sf_path = "C:\path-to-folder-with-sf-export"  # enter the path of the folder that contains internal_html.csv file
+export_path = "C:\path-to-export-folder"  # enter the path to export the output.csv file to
 
-from glob import glob  # Used to parse wildcard for csv import
+
+from glob import glob  # Used to parse wildcards for GA export file name as it is unique everytime. No need to rename!
 import pandas as pd
 
 # adds file names to the paths.
 ga_path_file = ga_path + "/Analytics*.xlsx"
 sf_path_file = sf_path + "/internal_html.csv"
-export_path_file = export_path + "output.csv"
+export_path_file = export_path + "/output.csv"
 
 # imports GA data using a wildcard match
-for f in glob(ga_path):
+for f in glob(ga_path_file):
     df_ga = pd.read_excel((f), sheet_name="Dataset1")
 
 df_sf = pd.read_csv(sf_path_file, encoding="utf8")[["H1-1", "Address", "Indexability"]]

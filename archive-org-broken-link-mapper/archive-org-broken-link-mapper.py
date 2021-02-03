@@ -4,6 +4,16 @@ from io import StringIO
 from urllib.parse import urlparse
 from polyfuzz import PolyFuzz
 
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+
+# set requests features
+session = req.Session()
+retry = Retry(connect=3, backoff_factor=1)
+adapter = HTTPAdapter(max_retries=retry)
+session.mount('http://', adapter)
+session.mount('https://', adapter)
+
 ###### start - Set All Variables HERE - start ######
 
 # set the location of the screaming frog crawl file here
@@ -41,7 +51,7 @@ archive_url = "http://web.archive.org/cdx/search/cdx?url=" + domain + "*&output=
 
 # get the response
 print("Downloading URLs from Archive.org ..")
-resp = req.get(archive_url, headers=headers)
+resp = session.get(archive_url, headers=headers)
 
 # make the df and set the column names
 df_archive = pd.read_csv(

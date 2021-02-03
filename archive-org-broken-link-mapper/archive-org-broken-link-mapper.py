@@ -4,11 +4,27 @@ from io import StringIO
 from urllib.parse import urlparse
 from polyfuzz import PolyFuzz
 
+###### start - Set All Variables HERE - start ######
+
+# set the location of the screaming frog crawl file here
+df_sf_path = "/python_scripts/archive-org-broken-link-mapping/internal_html.csv"
+
+# set the location to EXPORT the csv file to
+output_loc = "/python_scripts/archive-org-broken-link-mapping/output.csv"
+
+# set HTTP Header to: Googlebot Desktop
+headers = {'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'}
+
+# set HTTP Header to: Googlebot Smartphone
+#headers = {'User-Agent': 'Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.120 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'}
+
+# set crawl delay  # not used at present
+crawl_delay = 1
+
+###### end - Set Variables - end ######
 
 # read in the crawl file
-df_sf = pd.read_csv(
-    "/python_scripts/archive-org-broken-link-mapping/internal_html.csv"
-)[["Address", "Status Code", "Indexability"]]
+df_sf = pd.read_csv(df_sf_path)[["Address", "Status Code", "Indexability"]]
 
 # extract the domain name from the crawl
 extracted_domain = df_sf["Address"]
@@ -25,7 +41,7 @@ archive_url = "http://web.archive.org/cdx/search/cdx?url=" + domain + "*&output=
 
 # get the response
 print("Downloading URLs from Archive.org ..")
-resp = req.get(archive_url)
+resp = req.get(archive_url, headers=headers)
 
 # make the df and set the column names
 df_archive = pd.read_csv(
@@ -100,7 +116,6 @@ print("Getting Live HTTP Status Codes for", count_row, "URLs Using Requests ..")
 def url_access(x):
     return req.head(x).status_code
 
-
 df_final["Status Code"] = df_final["Address"].apply(url_access)
 
 # drop urls if already redirected
@@ -122,11 +137,9 @@ df_matches = model.get_matches()
 count_row = df_final.shape[0]
 print("Total Opportunity:", count_row, "URLs")
 
-df_stats = pd.merge(
-    df_matches, df_final, left_on="From", right_on="Address", how="inner"
-)
+df_stats = pd.merge(df_matches, df_final, left_on="From", right_on="Address", how="inner")
 
-# Sort on Similarity
+# sort on similarity
 df_stats = df_stats.sort_values(by="Similarity", ascending=False)
 
 df_stats["Status Code"] = df_stats["Status Code"].astype(str)
@@ -147,24 +160,7 @@ df_stats = df_stats.reindex(columns=cols)
 # rename the cols
 df_stats.rename(columns={"From": "Archive URL", "To": "Suggested URL"}, inplace=True)
 
-orphaned = df_stats["Status Code"].str.contains("200 - Orphaned").value_counts()
-
-if True in orphaned:
-    orphaned == orphaned[True]
-    print(orphaned, "Orphaned URLs ..")
-else:
-    print("Zero Orphaned URLs found")
-
-redirected = df_stats["Status Code"].str.contains("404 - Not Redirected").value_counts()
-
-if True in redirected:
-    print(redirected[True], "404 URLs to Redirect")
-else: 
-    print("Zero URLs to Redirect")
-
-print(orphaned, "Orphaned URLs ..")
-print(redirected, "404 URLs to Redirect ..")
-
-df_stats.to_csv("/archive-org-broken-link-mapping/output.csv")
+# output the final csv
+df_stats.to_csv(output_loc, index=False)
 
 print("Finished!")

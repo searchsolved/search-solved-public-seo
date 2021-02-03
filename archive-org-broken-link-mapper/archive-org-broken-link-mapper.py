@@ -3,18 +3,15 @@ import pandas as pd
 from io import StringIO
 from urllib.parse import urlparse
 from polyfuzz import PolyFuzz
+from time import sleep
 
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
-# set requests features
-session = req.Session()
-retry = Retry(connect=3, backoff_factor=1)
-adapter = HTTPAdapter(max_retries=retry)
-session.mount('http://', adapter)
-session.mount('https://', adapter)
-
 ###### start - Set All Variables HERE - start ######
+
+# set crawl delay (in seconds)
+crawl_delay = 0.5
 
 # set the location of the screaming frog crawl file here
 df_sf_path = "/python_scripts/archive-org-broken-link-mapping/internal_html.csv"
@@ -25,11 +22,15 @@ output_loc = "/python_scripts/archive-org-broken-link-mapping/output.csv"
 # set HTTP Header to: Googlebot Desktop
 headers = {'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'}
 
-# set HTTP Header to: Googlebot Smartphone
+# uncomment to set HTTP Header to: Googlebot Smartphone instead
 #headers = {'User-Agent': 'Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.120 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'}
 
-# set crawl delay  # not used at present
-crawl_delay = 1
+# set requests features
+session = req.Session()
+retry = Retry(connect=3, backoff_factor=1)
+adapter = HTTPAdapter(max_retries=retry)
+session.mount('http://', adapter)
+session.mount('https://', adapter)
 
 ###### end - Set Variables - end ######
 
@@ -121,12 +122,19 @@ del df_final["Indexability"]
 count_row = df_final.shape[0]
 
 print("Getting Live HTTP Status Codes for", count_row, "URLs Using Requests ..")
+print("Crawl Delay =", crawl_delay, "second(s)")
+urls = df_final['Address'].to_list()
 
-# get remaining status codes using requests library
-def url_access(x):
-    return req.head(x).status_code
+count = 0
+my_list = []
+for i in urls:
+    url = req.head(i).status_code
+    count = count + 1
+    print("Crawled", count, "of", count_row, "URLs")
+    my_list.append(url)
+    sleep(crawl_delay)
 
-df_final["Status Code"] = df_final["Address"].apply(url_access)
+df_final['Status Code'] = my_list
 
 # drop urls if already redirected
 df_final = df_final[~df_final["Status Code"].isin(["301"])]

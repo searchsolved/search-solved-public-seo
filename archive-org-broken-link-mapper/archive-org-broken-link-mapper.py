@@ -133,9 +133,7 @@ df_stats["Status Code"] = df_stats["Status Code"].astype(str)
 
 # replace status codes with plain English
 df_stats["Status Code"] = df_stats["Status Code"].str.replace("200", "200 - Orphaned")
-df_stats["Status Code"] = df_stats["Status Code"].str.replace(
-    "404", "404 - Not Redirected"
-)
+df_stats["Status Code"] = df_stats["Status Code"].str.replace("404", "404 - Not Redirected")
 
 # delete address column appended from the merge
 del df_stats["Address"]
@@ -149,10 +147,20 @@ df_stats = df_stats.reindex(columns=cols)
 # rename the cols
 df_stats.rename(columns={"From": "Archive URL", "To": "Suggested URL"}, inplace=True)
 
-orphaned = df_stats["Status Code"].str.contains("200 - Orphaned").value_counts()[True]
-redirected = (
-    df_stats["Status Code"].str.contains("404 - Not Redirected").value_counts()[True]
-)
+orphaned = df_stats["Status Code"].str.contains("200 - Orphaned").value_counts()
+
+if True in orphaned:
+    orphaned == orphaned[True]
+    print(orphaned, "Orphaned URLs ..")
+else:
+    print("Zero Orphaned URLs found")
+
+redirected = df_stats["Status Code"].str.contains("404 - Not Redirected").value_counts()
+
+if True in redirected:
+    print(redirected[True], "404 URLs to Redirect")
+else: 
+    print("Zero URLs to Redirect")
 
 print(orphaned, "Orphaned URLs ..")
 print(redirected, "404 URLs to Redirect ..")

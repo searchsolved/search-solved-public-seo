@@ -75,9 +75,6 @@ del df_archive["7"]
 # replace port 80 urls before de-duping
 df_archive["Address"] = df_archive["Address"].str.replace("\:80", "")
 
-# drop all parameter urls (OPTIONAL!)
-df_archive["Address"] = df_archive["Address"].str.replace("\?", "")
-
 # drop duplicate urls
 df_archive.drop_duplicates(subset="Address", inplace=True)
 
@@ -130,7 +127,7 @@ my_list = []
 for i in urls:
     url = req.head(i).status_code
     count = count + 1
-    print("Crawled", count, "of", count_row, "URLs")
+    print("Crawled", count, "of", count_row, "URLs", "Status:", url)
     my_list.append(url)
     sleep(crawl_delay)
 

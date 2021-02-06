@@ -3,6 +3,8 @@ import pandas as pd
 from io import StringIO
 from urllib.parse import urlparse
 from polyfuzz import PolyFuzz
+import time
+startTime = time.time()
 
 ###### start - Set All Variables HERE - start ######
 
@@ -140,6 +142,12 @@ df_stats['HTTP Status'] = "A" + df_stats['HTTP Status']
 # add in the seotools markup
 df_stats['HTTP Status'] = "=HttpStatus(" + df_stats['HTTP Status'] + ")"
 
+del df_stats['Temp_Range']
+
 # output the final csv
 df_stats.to_csv(output_loc, index=False)
 print("Finished!")
+import time
+
+# Your code here !
+print ('The script took {0} seconds!'.format(time.time() - startTime))

@@ -1,0 +1,3 @@
+pip install git+https://github.com/joshcarty/google-searchconsole
+pip install pandas
+pip install polyfuzz

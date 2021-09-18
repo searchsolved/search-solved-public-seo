@@ -98,29 +98,31 @@ df_archive_urls["Original URL"] = df_archive_urls["Original URL"].str.join(",")
 df_archive_urls["Original URL"] = df_archive_urls["Original URL"].str.replace(',', '/')
 df_archive_urls.drop_duplicates(subset=['Recovered Archive URL'], keep="first", inplace=True)  # drop duplicates
 
-# extract h1s from temp df and make into a list
+# # extract h1s from temp df and make into a list
 archive_url_list = df_archive_urls['Recovered Archive URL']
-remaining = len(archive_url_list)
-print("Scraping H1s from Archive.org")
-count = 1
 archive_h1_list = []
-for i in archive_url_list:
-    try:
-        html = urlopen(i)
-        bsh = BeautifulSoup(html.read(), 'html.parser')
-        print(bsh.h1.text.strip(), count, "of", remaining)
-        archive_h1_list.append(bsh.h1.text.strip())
-        count = count + 1
-    except AttributeError:
-        print("Got an HTTP 301 response at crawl time")
-        archive_h1_list.append("Got an HTTP 301 response at crawl time")
-        count = count + 1
-    except Exception:
-        print("Error getting URL")
-        archive_h1_list.append("Error getting URL")
-        count = count + 1
-        pass
+def get_archive_h1(h1_url):
+    html = urlopen(h1_url)
+    bsh = BeautifulSoup(html.read(), 'html.parser')
+    return bsh.h1.text.strip()
 
+def concurrent_calls():
+    with concurrent.futures.ThreadPoolExecutor(max_workers=CONNECTIONS) as executor:
+        f1 = (executor.submit(get_archive_h1, h1_url) for h1_url in archive_url_list)
+        for future in concurrent.futures.as_completed(f1):
+            try:
+                data = future.result()
+            except Exception as e:
+                data = ('error', e)
+            finally:
+                archive_h1_list.append(data)
+                #print(data)
+
+if __name__ == '__main__':
+    concurrent_calls()
+    print(archive_h1_list)
+
+# clean up the dataframe
 df_archive_urls['H1'] = archive_h1_list  # add list to dataframe column
 df_archive_urls = df_archive_urls[~df_archive_urls["H1"].isin(["Got an HTTP 301 response at crawl time"])]  # drop
 df_archive = pd.merge(df_archive, df_archive_urls, left_on="Address", right_on="Original URL", how="inner")
@@ -129,10 +131,9 @@ df_archive = pd.merge(df_archive, df_archive_urls, left_on="Address", right_on="
 df_archive = df_archive[df_archive["H1"].notna()]
 df_sf = df_sf[df_sf["H1-1"].notna()]
 
-# create lists from dfs
+
 df_sf_list = list(df_sf["H1-1"])
 df_archive_list = list(df_archive["H1"])
-print("Bugging here")
 print(df_sf_list)
 print(df_archive_list)
 # instantiate PolyFuzz model, choose TF-IDF as the similarity measure and match the two lists.

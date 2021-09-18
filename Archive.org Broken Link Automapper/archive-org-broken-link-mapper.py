@@ -1,14 +1,20 @@
 from io import StringIO
 from urllib.parse import urlparse
 from urllib.request import urlopen
-
+import time
 import pandas as pd
 import requests as req
 from bs4 import BeautifulSoup
 from polyfuzz import PolyFuzz
+import concurrent.futures
+import waybackpy
+startTime = time.time()
 
 # set the user agent here
 user_agent = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
+
+CONNECTIONS = 4 # increase this number to run more workers at the same time.
+
 
 # import the Screaming Frog crawl File (internal_html.csv)
 df_sf = pd.read_csv('/python_scripts/archive_mapper_v3/internal_html.csv', usecols=["Address", "H1-1"], dtype={'Address': 'str', 'H1-1': 'str'})
@@ -63,18 +69,29 @@ print("Filtered to", remaining_count, "qualifying URLs!")
 url_list = list(df_archive['Address'])  # create list from address column
 
 archive_url_list = []
-counter = 1
-for url in url_list:
-  try:
-      import waybackpy
+
+def get_archive_url(url):
       target_url = waybackpy.Url(url, user_agent)
       newest_archive = target_url.newest()
-      print(url, ">>", newest_archive, counter, "of", remaining_count)
-      archive_url_list.append(newest_archive)
-      counter = counter +1
-  except Exception:
-    counter = counter + 1
-    print("Error Retrieving URL from Archive.org")
+      return newest_archive
+
+def concurrent_calls():
+    with concurrent.futures.ThreadPoolExecutor(max_workers=CONNECTIONS) as executor:
+        f1 = (executor.submit(get_archive_url, url) for url in url_list)
+        for future in concurrent.futures.as_completed(f1):
+            try:
+                data = future.result()
+            except Exception as e:
+                data = ('error', e)
+            finally:
+                archive_url_list.append(data)
+                print(data)
+
+if __name__ == '__main__':
+    concurrent_calls()
+    print(archive_url_list)
+
+print(archive_url_list)
 
 # extract original url from Recovered Archive URL (for de-duping) and clean the data
 print(archive_url_list)
@@ -119,7 +136,9 @@ df_sf = df_sf[df_sf["H1-1"].notna()]
 # create lists from dfs
 df_sf_list = list(df_sf["H1-1"])
 df_archive_list = list(df_archive["H1"])
-
+print("Bugging here")
+print(df_sf_list)
+print(df_archive_list)
 # instantiate PolyFuzz model, choose TF-IDF as the similarity measure and match the two lists.
 model = PolyFuzz("TF-IDF").match(df_archive_list, df_sf_list)
 df_matches = model.get_matches()  # make the polyfuzz dataframe
@@ -158,3 +177,4 @@ final_count = df_archive.shape[0]  # get the final count
 # export final output
 print("Total Valid Opportunity", final_count, "URLS")
 df_archive.to_csv('/python_scripts/urls-to-redirect-archive-org.csv', index=False)
+print("The script took {0} seconds!".format(time.time() - startTime))

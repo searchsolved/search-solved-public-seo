@@ -12,9 +12,7 @@ startTime = time.time()
 
 # set the user agent here
 user_agent = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
-
 CONNECTIONS = 4 # increase this number to run more workers at the same time.
-
 
 # import the Screaming Frog crawl File (internal_html.csv)
 df_sf = pd.read_csv('/python_scripts/archive_mapper_v3/internal_html.csv', usecols=["Address", "H1-1"], dtype={'Address': 'str', 'H1-1': 'str'})
@@ -71,16 +69,16 @@ url_list = list(df_archive['Address'])  # create list from address column
 archive_url_list = []
 
 def get_archive_url(url):
-      target_url = waybackpy.Url(url, user_agent)
-      newest_archive = target_url.newest()
-      return newest_archive
+    target_url = waybackpy.Url(url, user_agent)
+    newest_archive = target_url.newest()
+    return newest_archive
 
 def concurrent_calls():
     with concurrent.futures.ThreadPoolExecutor(max_workers=CONNECTIONS) as executor:
         f1 = (executor.submit(get_archive_url, url) for url in url_list)
         for future in concurrent.futures.as_completed(f1):
             try:
-                data = future.result()
+                data = future.result().archive_url
             except Exception as e:
                 data = ('error', e)
             finally:
@@ -90,8 +88,6 @@ def concurrent_calls():
 if __name__ == '__main__':
     concurrent_calls()
     print(archive_url_list)
-
-print(archive_url_list)
 
 # extract original url from Recovered Archive URL (for de-duping) and clean the data
 print(archive_url_list)

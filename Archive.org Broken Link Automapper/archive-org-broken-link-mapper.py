@@ -1,18 +1,20 @@
+import concurrent.futures
+import time
 from io import StringIO
 from urllib.parse import urlparse
 from urllib.request import urlopen
-import time
+
 import pandas as pd
 import requests as req
+import waybackpy
 from bs4 import BeautifulSoup
 from polyfuzz import PolyFuzz
-import concurrent.futures
-import waybackpy
+
 startTime = time.time()
 
 # set the user agent here
 user_agent = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
-CONNECTIONS = 4 # increase this number to run more workers at the same time.
+CONNECTIONS = 4  # increase this number to run more workers at the same time.
 
 # import the Screaming Frog crawl File (internal_html.csv)
 df_sf = pd.read_csv('/python_scripts/archive_mapper_v3/internal_html.csv', usecols=["Address", "H1-1"], dtype={'Address': 'str', 'H1-1': 'str'})
@@ -36,7 +38,7 @@ session.headers.update({'User-Agent': user_agent})
 print("Downloading URLs from the Wayback Machine .. Please be patient!")
 resp = session.get(archive_url)
 
-# make the df and set the column names
+# make the dataframe and set the column names
 df_archive = pd.read_csv(
     StringIO(resp.text),
     sep=" ",
@@ -50,20 +52,20 @@ print("Downloaded", count_row, "URLs from Archive.org ..")
 df_archive["Address"] = df_archive["Address"].str.replace("\:80", "") # replace port 80 urls before de-duping
 df_archive.drop_duplicates(subset="Address", inplace=True)  # drop duplicate urls
 df_archive = df_archive[df_archive["Content Type"].isin(["text/html"])]  # keep only text/http content
-#df_archive["Address"].str.lower()
-df_archive = df_archive[~df_archive["Address"].str.contains(".css|.js|.jpg|.png|.jpeg|.pdf|.JPG|.PNG|.CSS|.JS|.JPEG|.PDF|.ICO|.GIF|.TXT|.ico|ver=|.gif|.txt|utm|gclid|:80|\?|#|@")]
-df_archive = df_archive[df_archive["Address"].notna()]
+df_archive = df_archive[
+    ~df_archive["Address"].str.contains(
+        ".css|.js|.jpg|.png|.jpeg|.pdf|.JPG|.PNG|.CSS|.JS|.JPEG|.PDF|.ICO|.GIF|.TXT|.ico|ver=|.gif|.txt|utm|gclid|:80|\?|#|@"
+    )
+]
 
-# check if archive URLs are found in the crawl & remove if found
-df_archive["Match"] = df_archive["Address"].str.contains('|'.join(df_sf['Address']), case=False)
+df_archive = df_archive[df_archive["Address"].notna()]  # keep only non NaN
+df_archive["Match"] = df_archive["Address"].str.contains('|'.join(df_sf['Address']), case=False)  # drop url if in crawl
 df_archive = df_archive[~df_archive["Match"].isin([True])]
 df_archive = df_archive.reindex(columns=['Address'])  # reindex the columns
-
-# calculate and print how many rows remain after filtering
-remaining_count = df_archive.shape[0]
+remaining_count = df_archive.shape[0]  # calculate and print how many rows remain after filtering
 print("Filtered to", remaining_count, "qualifying URLs!")
 
-# fetch the latest version of the archive..org url (so the h1's can be extracted with requests)
+# fetch the latest version of the archive.org url (so the h1's can be extracted with requests)
 url_list = list(df_archive['Address'])  # create list from address column
 
 archive_url_list = []
@@ -89,7 +91,7 @@ if __name__ == '__main__':
     concurrent_calls()
     print(archive_url_list)
 
-# extract original url from Recovered Archive URL (for de-duping) and clean the data
+# extract original url from recovered archive URL (for de-duping) and clean the data
 print(archive_url_list)
 df_archive_urls = pd.DataFrame(archive_url_list)
 df_archive_urls["Recovered Archive URL"] = (df_archive_urls[0]).astype(str)
@@ -98,7 +100,7 @@ df_archive_urls["Original URL"] = df_archive_urls["Original URL"].str.join(",")
 df_archive_urls["Original URL"] = df_archive_urls["Original URL"].str.replace(',', '/')
 df_archive_urls.drop_duplicates(subset=['Recovered Archive URL'], keep="first", inplace=True)  # drop duplicates
 
-# # extract h1s from temp df and make into a list
+# # extract h1s from archive url df and make into a list
 archive_url_list = df_archive_urls['Recovered Archive URL']
 archive_h1_list = []
 def get_archive_h1(h1_url):
@@ -132,12 +134,8 @@ df_archive = pd.merge(df_archive, df_archive_urls, left_on="Address", right_on="
 # start polyfuzz to merge in archive.org data with original screaming frog dataframe
 df_archive = df_archive[df_archive["H1"].notna()]
 df_sf = df_sf[df_sf["H1-1"].notna()]
-
 df_sf_list = list(df_sf["H1-1"])
-df_sf_list = [x for x in df_sf_list if x != []]
 df_archive_list = list(df_archive["H1"])
-#print(df_sf_list)
-#print(df_archive_list)
 
 # instantiate PolyFuzz model, choose TF-IDF as the similarity measure and match the two lists.
 model = PolyFuzz("TF-IDF").match(df_archive_list, df_sf_list)
@@ -150,31 +148,9 @@ df_archive = pd.merge(df_archive, df_sf_mini, left_on="To", right_on="H1-1")
 df_archive.drop_duplicates(subset=['Address_x'], keep="first", inplace=True)  # drop duplicate rows
 df_archive = df_archive.reindex(columns=['Address_x', 'Address_y', 'Similarity'])  # reindex the columns
 df_archive.rename(columns={'Address_x': 'Recovered Archive URL', "Address_y": "Live URL"}, inplace=True)  # rename cols
-count_row = df_archive.shape[0]  # count the final dataframe rows
-
-# check http status of recovered archive.org url
-recovered_archive_list = df_archive['Recovered Archive URL']  # make the list
-print("Getting HTTP Status of Source URL..")
-
-count = 0
-recovered_status_list = []
-for url in recovered_archive_list:
-    try:
-        url = session.head(url).status_code
-        count = count + 1
-        print("Crawled", count, "of", count_row, "URLs", "Status:", url)
-        recovered_status_list.append(url)
-    except Exception:
-        print("Exception!")
-        recovered_status_list.append("Exception Error")
-        pass
-
-df_archive['Status Code'] = recovered_status_list
-df_archive['Status Code'] = df_archive['Status Code'].astype(str)  # Change the Datatype for Filtering
-df_archive = df_archive[~df_archive['Status Code'].str.contains("301|302|500|503")] # Filter status codes
-final_count = df_archive.shape[0]  # get the final count
+final_count = df_archive.shape[0]  # count the final dataframe rows
 
 # export final output
-print("Total Valid Opportunity", final_count, "URLS")
+print("Total Opportunity", final_count, "URLs")
 df_archive.to_csv('/python_scripts/urls-to-redirect-archive-org.csv', index=False)
 print("The script took {0} seconds!".format(time.time() - startTime))

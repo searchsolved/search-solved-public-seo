@@ -1,4 +1,5 @@
 import concurrent.futures
+import logging
 import time
 from io import StringIO
 from urllib.parse import urlparse
@@ -9,6 +10,8 @@ import requests as req
 import waybackpy
 from bs4 import BeautifulSoup
 from polyfuzz import PolyFuzz
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 
 startTime = time.time()
 
@@ -118,9 +121,6 @@ def concurrent_calls():
             except Exception:
                 archive_h1_list.append("No Data Received!")
                 pass
-            # finally:
-            #     archive_h1_list.append(data)
-                #print(data)
 
 if __name__ == '__main__':
     concurrent_calls()
@@ -150,7 +150,28 @@ df_archive = df_archive.reindex(columns=['Address_x', 'Address_y', 'Similarity']
 df_archive.rename(columns={'Address_x': 'Recovered Archive URL', "Address_y": "Live URL"}, inplace=True)  # rename cols
 final_count = df_archive.shape[0]  # count the final dataframe rows
 
+headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
+
+logging.basicConfig(level=logging.DEBUG)
+
+s = req.Session()
+retries = Retry(total=5, backoff_factor=16, status_forcelist=[429])
+s.mount('http://', HTTPAdapter(max_retries=retries))
+
+# check http status of recovered archive.org url
+archive_url_list = list(df_archive['Recovered Archive URL']) # make the list
+print("Getting HTTP Status of Source URL..")
+
+count = 0
+status_list = []
+for url in archive_url_list:
+    try:
+        status_list.append(s.get(url, headers=headers))
+    except Exception:
+        status_list.append("Error Getting Status")
+
+df_archive['Status'] = status_list
+
 # export final output
-print("Total Opportunity", final_count, "URLs")
 df_archive.to_csv('/python_scripts/urls-to-redirect-archive-org.csv', index=False)
 print("The script took {0} seconds!".format(time.time() - startTime))

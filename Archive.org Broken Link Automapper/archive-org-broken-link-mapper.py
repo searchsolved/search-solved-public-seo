@@ -50,7 +50,7 @@ print("Downloaded", count_row, "URLs from Archive.org ..")
 df_archive["Address"] = df_archive["Address"].str.replace("\:80", "") # replace port 80 urls before de-duping
 df_archive.drop_duplicates(subset="Address", inplace=True)  # drop duplicate urls
 df_archive = df_archive[df_archive["Content Type"].isin(["text/html"])]  # keep only text/http content
-df_archive["Address"].str.lower()
+#df_archive["Address"].str.lower()
 df_archive = df_archive[~df_archive["Address"].str.contains(".css|.js|.jpg|.png|.jpeg|.pdf|.JPG|.PNG|.CSS|.JS|.JPEG|.PDF|.ICO|.GIF|.TXT|.ico|ver=|.gif|.txt|utm|gclid|:80|\?|#|@")]
 df_archive = df_archive[df_archive["Address"].notna()]
 
@@ -112,10 +112,12 @@ def concurrent_calls():
         for future in concurrent.futures.as_completed(f1):
             try:
                 data = future.result()
-            except Exception as e:
-                data = ('error', e)
-            finally:
                 archive_h1_list.append(data)
+            except Exception:
+                archive_h1_list.append("No Data Received!")
+                pass
+            # finally:
+            #     archive_h1_list.append(data)
                 #print(data)
 
 if __name__ == '__main__':
@@ -131,11 +133,12 @@ df_archive = pd.merge(df_archive, df_archive_urls, left_on="Address", right_on="
 df_archive = df_archive[df_archive["H1"].notna()]
 df_sf = df_sf[df_sf["H1-1"].notna()]
 
-
 df_sf_list = list(df_sf["H1-1"])
+df_sf_list = [x for x in df_sf_list if x != []]
 df_archive_list = list(df_archive["H1"])
-print(df_sf_list)
-print(df_archive_list)
+#print(df_sf_list)
+#print(df_archive_list)
+
 # instantiate PolyFuzz model, choose TF-IDF as the similarity measure and match the two lists.
 model = PolyFuzz("TF-IDF").match(df_archive_list, df_sf_list)
 df_matches = model.get_matches()  # make the polyfuzz dataframe
@@ -157,7 +160,7 @@ count = 0
 recovered_status_list = []
 for url in recovered_archive_list:
     try:
-        url = session.head(i).status_code
+        url = session.head(url).status_code
         count = count + 1
         print("Crawled", count, "of", count_row, "URLs", "Status:", url)
         recovered_status_list.append(url)

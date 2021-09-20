@@ -133,7 +133,7 @@ def concurrent_calls():
             try:
                 data = future.result()
                 archive_h1_list.append(data)
-                og_url_list.append(h1_url)
+
             except Exception:
                 archive_h1_list.append("No Data Received!")
                 pass
@@ -144,7 +144,15 @@ if __name__ == '__main__':
 
 # clean up the dataframe
 
-df_archive_urls['OG URL List'] = og_url_list
+# try:
+#     df_archive_urls['OG URL List'] = og_url_list
+# except ValueError:
+#     print("\nCouldn't fetch H1's from Wayback Machine. Please try again later ..")
+#     sys.exit()
+#     pass
+print("\archive_h1_list")
+print(og_url_list)
+
 df_archive_urls['H1'] = archive_h1_list  # add list to dataframe column
 df_archive.to_csv('/python_scripts/df_archive-130.csv')  # todo remove
 df_archive_urls = df_archive_urls[~df_archive_urls["H1"].isin(["Got an HTTP 301 response at crawl time"])]  # drop

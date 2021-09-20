@@ -17,7 +17,6 @@ from requests.packages.urllib3.util.retry import Retry
 startTime = time.time()
 
 # set the user agent here
-#user_agent = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
 user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36"
 CONNECTIONS = 8  # increase this number to run more workers at the same time.
 

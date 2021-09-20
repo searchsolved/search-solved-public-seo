@@ -1,5 +1,6 @@
 import concurrent.futures
 import logging
+import sys
 import time
 from io import StringIO
 from urllib.parse import urlparse
@@ -50,6 +51,8 @@ df_archive = pd.read_csv(
     dtype=str,
 )
 
+df_archive.to_csv('/python_scripts/53.csv')
+
 # clean the dataframe
 count_row = df_archive.shape[0]
 print("Downloaded", count_row, "URLs from Archive.org ..")
@@ -58,7 +61,7 @@ df_archive.drop_duplicates(subset="Address", inplace=True)  # drop duplicate url
 df_archive = df_archive[df_archive["Content Type"].isin(["text/html"])]  # keep only text/http content
 df_archive = df_archive[
     ~df_archive["Address"].str.contains(
-        ".css|.js|.jpg|.png|.jpeg|.pdf|.JPG|.PNG|.CSS|.JS|.JPEG|.PDF|.ICO|.GIF|.TXT|.ico|ver=|.gif|.txt|utm|gclid|:80|\?|#|@"
+        ".css|.js|.jpg|.png|.jpeg|.pdf|.JPG|.PNG|.CSS|.JS|.JPEG|.PDF|.ICO|.GIF|.TXT|.ico|ver=|.gif|.txt|utm|gclid|:80|\?|#|@|.eot|.svg|.ttf|.woff|.XMLDOM|.XMLHTTP"
     )
 ]
 
@@ -69,11 +72,13 @@ df_archive = df_archive.reindex(columns=['Address'])  # reindex the columns
 remaining_count = df_archive.shape[0]  # calculate and print how many rows remain after filtering
 print("Filtered to", remaining_count, "qualifying URLs!")
 
+if remaining_count == 0:
+    print("No valid URLs to redirect. Check Wayback Machine status or try again!")
+    sys.exit(0)
 # fetch the latest version of the archive.org url (so the h1's can be extracted with requests)
 url_list = list(df_archive['Address'])  # create list from address column
-
+print(url_list)
 df_archive.to_csv('/python_scripts/df_archive-line-75.csv')  # todo remove this
-
 
 archive_url_list = []
 
@@ -86,6 +91,7 @@ def concurrent_calls():
     with concurrent.futures.ThreadPoolExecutor(max_workers=CONNECTIONS) as executor:
         f1 = (executor.submit(get_archive_url, url) for url in url_list)
         for future in concurrent.futures.as_completed(f1):
+
             try:
                 data = future.result().archive_url
             except Exception as e:
@@ -100,8 +106,8 @@ if __name__ == '__main__':
 
 # extract Extracted Archive URL from Extracted Archive URL (for de-duping) and clean the data
 print(archive_url_list)
-df_archive_urls = pd.DataFrame(archive_url_list)
-df_archive_urls["Extracted Archive URL"] = (df_archive_urls[0]).astype(str)
+df_archive_urls = pd.DataFrame(archive_url_list, columns=["Extracted Archive URL"])
+df_archive_urls["Extracted Archive URL"] = (df_archive_urls["Extracted Archive URL"]).astype(str)
 df_archive_urls["Extracted Archive URL"] = (df_archive_urls["Extracted Archive URL"].str.split("/").str[5:])
 df_archive_urls["Extracted Archive URL"] = df_archive_urls["Extracted Archive URL"].str.join(",")
 df_archive_urls["Extracted Archive URL"] = df_archive_urls["Extracted Archive URL"].str.replace(',', '/')
@@ -109,11 +115,12 @@ df_archive_urls.drop_duplicates(subset=['Extracted Archive URL'], keep="first", 
 
 df_archive_urls.to_csv('/python_scripts/df_archive_urls.csv')  # todo delete this
 
-# todo this code needs fixing - threading appends to the list in the order the task completes rather than chronilogically
+# todo this code needs fixing - threading appends to the list in the order the task completes rather than chronologically
 
 # extract h1s from archive url df and make into a list
-archive_url_list = list(df_archive_urls[0])
+archive_url_list = list(df_archive_urls["Extracted Archive URL"])
 archive_h1_list = []
+og_url_list = []
 def get_archive_h1(h1_url):
     html = urlopen(h1_url)
     bsh = BeautifulSoup(html.read(), 'lxml')
@@ -126,6 +133,7 @@ def concurrent_calls():
             try:
                 data = future.result()
                 archive_h1_list.append(data)
+                og_url_list.append(h1_url)
             except Exception:
                 archive_h1_list.append("No Data Received!")
                 pass
@@ -136,6 +144,7 @@ if __name__ == '__main__':
 
 # clean up the dataframe
 
+df_archive_urls['OG URL List'] = og_url_list
 df_archive_urls['H1'] = archive_h1_list  # add list to dataframe column
 df_archive.to_csv('/python_scripts/df_archive-130.csv')  # todo remove
 df_archive_urls = df_archive_urls[~df_archive_urls["H1"].isin(["Got an HTTP 301 response at crawl time"])]  # drop

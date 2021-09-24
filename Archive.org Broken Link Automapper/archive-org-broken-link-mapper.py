@@ -5,6 +5,7 @@ import time
 from io import StringIO
 from urllib.parse import urlparse
 from urllib.request import urlopen
+from urlextract import URLExtract
 
 import pandas as pd
 import requests as req
@@ -16,8 +17,8 @@ from requests.packages.urllib3.util.retry import Retry
 
 # Set Variables
 user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36"  # set the user agent here
-threads = 8  # Number of Simultaneous Threads to Query Archive.org  / 8 - 10 is recommended. 
-check_status = True  # Check the HTTP Status Using Requests
+threads = 10  # Number of Simultaneous Threads to Query Archive.org  / 8 - 10 is recommended.
+check_status = False  # Check the HTTP Status Using Requests
 
 # import the Screaming Frog crawl File (internal_html.csv)
 df_sf = pd.read_csv('/python_scripts/archive_mapper_v3/internal_html.csv', usecols=["Address", "H1-1"], dtype={'Address': 'str', 'H1-1': 'str'})
@@ -96,26 +97,28 @@ def concurrent_calls():
 
 if __name__ == '__main__':
     concurrent_calls()
-    print(archive_url_list)
 
-# extract Extracted Archive URL from Extracted Archive URL (for de-duping) and clean the data
-print(archive_url_list)
-df_archive_urls = pd.DataFrame(archive_url_list, columns=["Extracted Archive URL"])
-df_archive_urls["Extracted Archive URL"] = (df_archive_urls["Extracted Archive URL"]).astype(str)
+# Create New Dataframe and Populate with Archive.org URLs
+df_archive_urls = pd.DataFrame(None)
+df_archive_urls["Archive URL"] = archive_url_list
+df_archive_urls["Archive URL"] = df_archive_urls["Archive URL"].astype(str)
+df_archive_urls = df_archive_urls[df_archive_urls['Archive URL'].str.startswith('http')]  # drop anything that doesn't start with http
+df_archive_urls.drop_duplicates(subset=['Archive URL'], keep="first", inplace=True)  # drop duplicates
+
+# Extract the Real URL from the Archive.org URL
+df_archive_urls["Extracted Archive URL"] = (df_archive_urls["Archive URL"])
 df_archive_urls["Extracted Archive URL"] = (df_archive_urls["Extracted Archive URL"].str.split("/").str[5:])
 df_archive_urls["Extracted Archive URL"] = df_archive_urls["Extracted Archive URL"].str.join(",")
 df_archive_urls["Extracted Archive URL"] = df_archive_urls["Extracted Archive URL"].str.replace(',', '/')
+df_archive_urls["Extracted Archive URL"] = df_archive_urls["Extracted Archive URL"].apply(lambda x: x.replace(':80', ""))
 df_archive_urls.drop_duplicates(subset=['Extracted Archive URL'], keep="first", inplace=True)  # drop duplicates
 
-# extract h1s from archive url df and make into a list
-archive_url_list = list(df_archive_urls["Extracted Archive URL"])
-archive_h1_list = []
-og_url_list = []
+df_archive_urls.to_csv('/python_scripts/df_archive_urls.csv')
 
-def get_archive_h1(h1_url):
-    html = urlopen(h1_url)
-    bsh = BeautifulSoup(html.read(), 'lxml')
-    return bsh.h1.text.strip()
+# extract h1s from archive url df and make into a list
+
+archive_url_list = list(df_archive_urls["Archive URL"])
+archive_h1_list = []
 
 def get_archive_h1(h1_url):
     try:
@@ -123,7 +126,7 @@ def get_archive_h1(h1_url):
         bsh = BeautifulSoup(html.read(), 'lxml')
         return bsh.h1.text.strip()
     except Exception:
-       return "Exception Error!"
+       return "No Data Received!"
 
 def concurrent_calls():
     with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
@@ -134,21 +137,10 @@ def concurrent_calls():
 concurrent_calls()
 print(archive_h1_list)
 
-# clean up the dataframe
-
-# try:
-#     df_archive_urls['OG URL List'] = og_url_list
-# except ValueError:
-#     print("\nCouldn't fetch H1's from Wayback Machine. Please try again later ..")
-#     sys.exit()
-#     pass
-print("\archive_h1_list")
-print(og_url_list)
-
 df_archive_urls['H1'] = archive_h1_list  # add list to dataframe column
+
 df_archive_urls = df_archive_urls[~df_archive_urls["H1"].isin(["Got an HTTP 301 response at crawl time"])]  # drop
 df_archive = pd.merge(df_archive, df_archive_urls, left_on="Address", right_on="Extracted Archive URL", how="inner")
-
 # start polyfuzz to merge in archive.org data with original screaming frog dataframe
 df_archive = df_archive[df_archive["H1"].notna()]
 df_archive = df_archive[~df_archive["H1"].str.contains("No Data Received!", na=False)]
@@ -168,10 +160,12 @@ df_sf_mini = df_sf[["H1-1", "Address"]]
 df_matches = pd.merge(df_matches, df_archive_mini, left_on="From", right_on="H1")
 df_matches = pd.merge(df_matches, df_sf_mini, left_on="To", right_on="H1-1")
 
+
 df_matches.rename(columns={"H1": "Archive H1", "Extracted Archive URL": "Archive URL", "H1-1": "Matched H1", "Address": "Matched URL"}, inplace=True)
 cols = "Archive URL", "Archive H1", "Similarity", "Matched URL", "Matched H1", "Final HTTP Status"
 df_matches = df_matches.reindex(columns=cols)
 
+# todo multithreaded requests
 if check_status:
     # check http status of recovered archive.org url using requests
     headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
@@ -181,7 +175,7 @@ if check_status:
     s.mount('http://', HTTPAdapter(max_retries=retries))
     archive_url_list = list(df_matches['Archive URL']) # make the list
     print("Getting HTTP Status of Source URL..")
-    
+
     count = 0
     status_list = []
     for url in archive_url_list:
@@ -189,9 +183,14 @@ if check_status:
             status_list.append(s.get(url, headers=headers))
         except Exception:
             status_list.append("Error Getting Status")
-    
+
     df_matches['Final HTTP Status'] = status_list
 
+if check_status == False:
+    df_matches['Final HTTP Status'] = "Not Checked"
+
 # export final output
+df_matches = df_matches.sort_values(by="Similarity", ascending=False)
+df_matches.drop_duplicates(subset=['Archive URL'], keep="first", inplace=True)
+
 df_matches.to_csv('/python_scripts/urls-to-redirect-archive-org.csv', index=False)
-print("The script took {0} seconds!".format(time.time() - startTime))

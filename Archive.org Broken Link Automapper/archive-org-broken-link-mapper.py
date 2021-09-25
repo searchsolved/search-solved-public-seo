@@ -1,11 +1,10 @@
 import concurrent.futures
 import logging
 import sys
-import time
 from io import StringIO
 from urllib.parse import urlparse
 from urllib.request import urlopen
-from urlextract import URLExtract
+import threading
 
 import pandas as pd
 import requests as req
@@ -18,7 +17,8 @@ from requests.packages.urllib3.util.retry import Retry
 # Set Variables
 user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36"  # set the user agent here
 threads = 10  # Number of Simultaneous Threads to Query Archive.org  / 8 - 10 is recommended.
-check_status = False  # Check the HTTP Status Using Requests
+url_threads = 5  # Number of simultaneous threads to use to query http status with requests
+check_status = True  # Check the HTTP Status Using Requests
 
 # import the Screaming Frog crawl File (internal_html.csv)
 df_sf = pd.read_csv('/python_scripts/archive_mapper_v3/internal_html.csv', usecols=["Address", "H1-1"], dtype={'Address': 'str', 'H1-1': 'str'})
@@ -113,10 +113,7 @@ df_archive_urls["Extracted Archive URL"] = df_archive_urls["Extracted Archive UR
 df_archive_urls["Extracted Archive URL"] = df_archive_urls["Extracted Archive URL"].apply(lambda x: x.replace(':80', ""))
 df_archive_urls.drop_duplicates(subset=['Extracted Archive URL'], keep="first", inplace=True)  # drop duplicates
 
-df_archive_urls.to_csv('/python_scripts/df_archive_urls.csv')
-
 # extract h1s from archive url df and make into a list
-
 archive_url_list = list(df_archive_urls["Archive URL"])
 archive_h1_list = []
 
@@ -160,31 +157,47 @@ df_sf_mini = df_sf[["H1-1", "Address"]]
 df_matches = pd.merge(df_matches, df_archive_mini, left_on="From", right_on="H1")
 df_matches = pd.merge(df_matches, df_sf_mini, left_on="To", right_on="H1-1")
 
-
 df_matches.rename(columns={"H1": "Archive H1", "Extracted Archive URL": "Archive URL", "H1-1": "Matched H1", "Address": "Matched URL"}, inplace=True)
 cols = "Archive URL", "Archive H1", "Similarity", "Matched URL", "Matched H1", "Final HTTP Status"
 df_matches = df_matches.reindex(columns=cols)
 
-# todo multithreaded requests
+df_matches.to_csv('/python_scripts/safety_backup_pre_status_code_check.csv')
+
+live_url_list = df_matches['Archive URL']
+status_list = []
 if check_status:
-    # check http status of recovered archive.org url using requests
-    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
-    logging.basicConfig(level=logging.DEBUG)
-    s = req.Session()
-    retries = Retry(total=5, backoff_factor=16, status_forcelist=[429])
-    s.mount('http://', HTTPAdapter(max_retries=retries))
-    archive_url_list = list(df_matches['Archive URL']) # make the list
-    print("Getting HTTP Status of Source URL..")
+    lock = threading.Semaphore(url_threads)
+    def parse(url):
+        headers = {'User-Agent': user_agent}
 
-    count = 0
-    status_list = []
-    for url in archive_url_list:
-        try:
-            status_list.append(s.get(url, headers=headers))
-        except Exception:
-            status_list.append("Error Getting Status")
+        logging.basicConfig(level=logging.DEBUG)
+        s = req.Session()
+        retries = Retry(total=5, backoff_factor=16, status_forcelist=[429])
+        s.mount('http://', HTTPAdapter(max_retries=retries))
+        print("Getting HTTP Status of Source URL..")
+        status_list.append(s.get(url, headers=headers))
+        lock.release()
 
-    df_matches['Final HTTP Status'] = status_list
+    def parse_pool():
+        # List of threads objects I so we can handle them later
+        thread_pool = []
+
+        for url in live_url_list:
+            # Create new thread that calls to your function with a url
+            thread = threading.Thread(target=parse, args=(url,))
+            thread_pool.append(thread)
+            thread.start()
+
+            # Add one to our lock, so we will wait if needed.
+            lock.acquire()
+
+        for thread in thread_pool:
+            thread.join()
+
+        df_matches['Final HTTP Status'] = status_list
+        print('done')
+
+parse_pool()
 
 if check_status == False:
     df_matches['Final HTTP Status'] = "Not Checked"
@@ -192,5 +205,5 @@ if check_status == False:
 # export final output
 df_matches = df_matches.sort_values(by="Similarity", ascending=False)
 df_matches.drop_duplicates(subset=['Archive URL'], keep="first", inplace=True)
-
+print(len(live_url_list))
 df_matches.to_csv('/python_scripts/urls-to-redirect-archive-org.csv', index=False)

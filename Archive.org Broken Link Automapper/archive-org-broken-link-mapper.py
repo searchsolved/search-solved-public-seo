@@ -15,7 +15,7 @@ from polyfuzz import PolyFuzz
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
-# Set Variables
+# set variables here
 user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36"  # set the user agent here
 threads = 10  # Number of Simultaneous Threads to Query Archive.org  / 8 - 10 is recommended.
 url_threads = 5  # Number of simultaneous threads to use to query http status with requests
@@ -25,7 +25,8 @@ check_status = True  # Check the HTTP Status Using Requests
 path = os.getcwd()
 df_sf = pd.read_csv(path + '/internal_html.csv', usecols=["Address", "H1-1"], dtype={'Address': 'str', 'H1-1': 'str'})
 print("Crawl File Read Successfully!", df_sf)
-print(path)
+print("Current working directory is", path)
+
 # extract the domain name from the crawl
 extracted_domain = df_sf["Address"]
 extracted_domain = extracted_domain.iloc[0]
@@ -42,7 +43,7 @@ session = req.Session()
 session.headers.update({'User-Agent': user_agent})
 
 # get the response
-print("Downloading URLs from the Wayback Machine .. Please be patient!")
+print("Downloading URLs from the Wayback Machine.. Please be patient!")
 resp = session.get(archive_url)
 
 # make the dataframe and set the column names
@@ -79,7 +80,6 @@ if remaining_count == 0:
 url_list = list(df_archive['Address'])  # create list from address column
 
 archive_url_list = []
-
 
 def get_archive_url(url):
     target_url = waybackpy.Url(url, user_agent)
@@ -171,11 +171,12 @@ df_matches = df_matches.merge(df_sf_mini.drop_duplicates('H1-1'), how='left', le
 
 df_matches.rename(columns={"H1": "Archive H1", "Extracted Archive URL": "Archive URL", "H1-1": "Matched H1",
                            "Address": "Matched URL"}, inplace=True)
+
 cols = "Archive URL", "Archive H1", "Similarity", "Matched URL", "Matched H1", "Final HTTP Status"
 df_matches = df_matches.reindex(columns=cols)
 
 # exports a safety copy in case requests does not work. (Status code can then be retrieved manually if desired)
-df_matches.to_csv('/python_scripts/safety_backup_pre_status_code_check.csv')
+df_matches.to_csv(path, '/safety_backup_pre_status_code_check.csv')
 
 live_url_list = df_matches['Archive URL']
 status_list = []
@@ -222,5 +223,4 @@ if check_status == False:
 # export final output
 df_matches = df_matches.sort_values(by="Similarity", ascending=False)
 df_matches.drop_duplicates(subset=['Archive URL'], keep="first", inplace=True)
-print(len(live_url_list))
-df_matches.to_csv('/python_scripts/urls-to-redirect-archive-org.csv', index=False)
+df_matches.to_csv(path, '/urls-to-redirect-archive-org.csv', index=False)

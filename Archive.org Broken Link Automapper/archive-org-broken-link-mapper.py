@@ -1,10 +1,11 @@
 import concurrent.futures
 import logging
+import os
 import sys
+import threading
 from io import StringIO
 from urllib.parse import urlparse
 from urllib.request import urlopen
-import threading
 
 import pandas as pd
 import requests as req
@@ -21,8 +22,10 @@ url_threads = 5  # Number of simultaneous threads to use to query http status wi
 check_status = True  # Check the HTTP Status Using Requests
 
 # import the Screaming Frog crawl File (internal_html.csv)
-df_sf = pd.read_csv('/python_scripts/archive_mapper_v3/internal_html.csv', usecols=["Address", "H1-1"], dtype={'Address': 'str', 'H1-1': 'str'})
-
+path = os.getcwd()
+df_sf = pd.read_csv(path + '/internal_html.csv', usecols=["Address", "H1-1"], dtype={'Address': 'str', 'H1-1': 'str'})
+print("Crawl File Read Successfully!", df_sf)
+print(path)
 # extract the domain name from the crawl
 extracted_domain = df_sf["Address"]
 extracted_domain = extracted_domain.iloc[0]
@@ -53,7 +56,7 @@ df_archive = pd.read_csv(
 # clean the dataframe
 count_row = df_archive.shape[0]
 print("Downloaded", count_row, "URLs from Archive.org ..")
-df_archive["Address"] = df_archive["Address"].str.replace("\:80", "") # replace port 80 urls before de-duping
+df_archive["Address"] = df_archive["Address"].str.replace("\:80", "")  # replace port 80 urls before de-duping
 df_archive.drop_duplicates(subset="Address", inplace=True)  # drop duplicate urls
 df_archive = df_archive[df_archive["Content Type"].isin(["text/html"])]  # keep only text/http content
 df_archive = df_archive[
@@ -77,10 +80,12 @@ url_list = list(df_archive['Address'])  # create list from address column
 
 archive_url_list = []
 
+
 def get_archive_url(url):
     target_url = waybackpy.Url(url, user_agent)
     newest_archive = target_url.newest()
     return newest_archive
+
 
 def concurrent_calls():
     with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
@@ -95,6 +100,7 @@ def concurrent_calls():
                 archive_url_list.append(data)
                 print(data)
 
+
 if __name__ == '__main__':
     concurrent_calls()
 
@@ -102,7 +108,8 @@ if __name__ == '__main__':
 df_archive_urls = pd.DataFrame(None)
 df_archive_urls["Archive URL"] = archive_url_list
 df_archive_urls["Archive URL"] = df_archive_urls["Archive URL"].astype(str)
-df_archive_urls = df_archive_urls[df_archive_urls['Archive URL'].str.startswith('http')]  # drop anything that doesn't start with http
+df_archive_urls = df_archive_urls[
+    df_archive_urls['Archive URL'].str.startswith('http')]  # drop anything that doesn't start with http
 df_archive_urls.drop_duplicates(subset=['Archive URL'], keep="first", inplace=True)  # drop duplicates
 
 # Extract the Real URL from the Archive.org URL
@@ -110,12 +117,14 @@ df_archive_urls["Extracted Archive URL"] = (df_archive_urls["Archive URL"])
 df_archive_urls["Extracted Archive URL"] = (df_archive_urls["Extracted Archive URL"].str.split("/").str[5:])
 df_archive_urls["Extracted Archive URL"] = df_archive_urls["Extracted Archive URL"].str.join(",")
 df_archive_urls["Extracted Archive URL"] = df_archive_urls["Extracted Archive URL"].str.replace(',', '/')
-df_archive_urls["Extracted Archive URL"] = df_archive_urls["Extracted Archive URL"].apply(lambda x: x.replace(':80', ""))
+df_archive_urls["Extracted Archive URL"] = df_archive_urls["Extracted Archive URL"].apply(
+    lambda x: x.replace(':80', ""))
 df_archive_urls.drop_duplicates(subset=['Extracted Archive URL'], keep="first", inplace=True)  # drop duplicates
 
 # extract h1s from archive url df and make into a list
 archive_url_list = list(df_archive_urls["Archive URL"])
 archive_h1_list = []
+
 
 def get_archive_h1(h1_url):
     try:
@@ -123,7 +132,8 @@ def get_archive_h1(h1_url):
         bsh = BeautifulSoup(html.read(), 'lxml')
         return bsh.h1.text.strip()
     except Exception:
-       return "No Data Received!"
+        return "No Data Received!"
+
 
 def concurrent_calls():
     with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
@@ -135,9 +145,9 @@ concurrent_calls()
 print(archive_h1_list)
 
 df_archive_urls['H1'] = archive_h1_list  # add list to dataframe column
-
 df_archive_urls = df_archive_urls[~df_archive_urls["H1"].isin(["Got an HTTP 301 response at crawl time"])]  # drop
 df_archive = pd.merge(df_archive, df_archive_urls, left_on="Address", right_on="Extracted Archive URL", how="inner")
+
 # start polyfuzz to merge in archive.org data with original screaming frog dataframe
 df_archive = df_archive[df_archive["H1"].notna()]
 df_archive = df_archive[~df_archive["H1"].str.contains("No Data Received!", na=False)]
@@ -149,24 +159,30 @@ df_archive_list = list(df_archive["H1"])
 # instantiate PolyFuzz model, choose TF-IDF as the similarity measure and match the two lists.
 model = PolyFuzz("TF-IDF").match(df_archive_list, df_sf_list)
 df_matches = model.get_matches()  # make the polyfuzz dataframe
+df_matches = df_matches.sort_values(by="Similarity", ascending=False)
 
 # make mini dfs for easier matching
 df_archive_mini = df_archive[["H1", "Extracted Archive URL"]]
 df_sf_mini = df_sf[["H1-1", "Address"]]
 
-df_matches = pd.merge(df_matches, df_archive_mini, left_on="From", right_on="H1")
-df_matches = pd.merge(df_matches, df_sf_mini, left_on="To", right_on="H1-1")
+# merge the data back in to the polyfuzz dataframe - use the first match to merge
+df_matches = df_matches.merge(df_archive_mini.drop_duplicates('H1'), how='left', left_on='From', right_on="H1")
+df_matches = df_matches.merge(df_sf_mini.drop_duplicates('H1-1'), how='left', left_on='To', right_on="H1-1")
 
-df_matches.rename(columns={"H1": "Archive H1", "Extracted Archive URL": "Archive URL", "H1-1": "Matched H1", "Address": "Matched URL"}, inplace=True)
+df_matches.rename(columns={"H1": "Archive H1", "Extracted Archive URL": "Archive URL", "H1-1": "Matched H1",
+                           "Address": "Matched URL"}, inplace=True)
 cols = "Archive URL", "Archive H1", "Similarity", "Matched URL", "Matched H1", "Final HTTP Status"
 df_matches = df_matches.reindex(columns=cols)
 
+# exports a safety copy in case requests does not work. (Status code can then be retrieved manually if desired)
 df_matches.to_csv('/python_scripts/safety_backup_pre_status_code_check.csv')
 
 live_url_list = df_matches['Archive URL']
 status_list = []
 if check_status:
     lock = threading.Semaphore(url_threads)
+
+
     def parse(url):
         headers = {'User-Agent': user_agent}
 
@@ -177,6 +193,7 @@ if check_status:
         print("Getting HTTP Status of Source URL..")
         status_list.append(s.get(url, headers=headers))
         lock.release()
+
 
     def parse_pool():
         # List of threads objects I so we can handle them later

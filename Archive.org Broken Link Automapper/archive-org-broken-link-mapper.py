@@ -176,7 +176,7 @@ cols = "Archive URL", "Archive H1", "Similarity", "Matched URL", "Matched H1", "
 df_matches = df_matches.reindex(columns=cols)
 
 # exports a safety copy in case requests does not work. (Status code can then be retrieved manually if desired)
-df_matches.to_csv(path, '/safety_backup_pre_status_code_check.csv')
+df_matches.to_csv(path + 'safety_backup_pre_status_code_check.csv')
 
 live_url_list = df_matches['Archive URL']
 status_list = []
@@ -223,4 +223,4 @@ if check_status == False:
 # export final output
 df_matches = df_matches.sort_values(by="Similarity", ascending=False)
 df_matches.drop_duplicates(subset=['Archive URL'], keep="first", inplace=True)
-df_matches.to_csv(path, '/urls-to-redirect-archive-org.csv', index=False)
+df_matches.to_csv(path + 'urls-to-redirect-archive-org.csv', index=False)

@@ -2,7 +2,7 @@ import concurrent.futures
 import logging
 import os
 import sys
-import threading
+import time
 from io import StringIO
 from urllib.parse import urlparse
 from urllib.request import urlopen
@@ -14,18 +14,18 @@ from bs4 import BeautifulSoup
 from polyfuzz import PolyFuzz
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
+startTime = time.time()
 
 # set variables here
 user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36"  # set the user agent here
-threads = 15  # Number of Simultaneous Threads to Query Archive.org  / 8 - 10 is recommended.
-url_threads = 10  # Number of simultaneous threads to use to query http status with requests
+threads = 10  # Number of Simultaneous Threads to Query Archive.org  / 8 - 10 is recommended.
 check_status = True  # Check the HTTP Status Using Requests
 
 # import the Screaming Frog crawl File (internal_html.csv)
 path = os.getcwd()
 df_sf = pd.read_csv(path + '/internal_html.csv', usecols=["Address", "H1-1"], dtype={'Address': 'str', 'H1-1': 'str'})
-print("Crawl File Read Successfully!", df_sf)
-print("Current working directory is", path)
+print("Crawl File Read Successfully!", df_sf.head(10))
+print("\nCurrent working directory is", path)
 
 # extract the domain name from the crawl
 extracted_domain = df_sf["Address"]
@@ -60,11 +60,9 @@ print("Downloaded", count_row, "URLs from Archive.org ..")
 df_archive["Address"] = df_archive["Address"].str.replace("\:80", "")  # replace port 80 urls before de-duping
 df_archive.drop_duplicates(subset="Address", inplace=True)  # drop duplicate urls
 df_archive = df_archive[df_archive["Content Type"].isin(["text/html"])]  # keep only text/http content
-df_archive = df_archive[
-    ~df_archive["Address"].str.contains(
-        ".css|.js|.jpg|.png|.jpeg|.pdf|.JPG|.PNG|.CSS|.JS|.JPEG|.PDF|.ICO|.GIF|.TXT|.ico|ver=|.gif|.txt|utm|gclid|:80|\?|#|@|.eot|.svg|.ttf|.woff|.XMLDOM|.XMLHTTP"
-    )
-]
+df_archive = df_archive[~df_archive["Address"].str.contains(
+    ".css|.js|.jpg|.png|.jpeg|.pdf|.JPG|.PNG|.CSS|.JS|.JPEG|.PDF|.ICO|.GIF|.TXT|.ico|ver=|.gif|.txt|utm|gclid|:80\
+    |\?|#|@|.eot|.svg|.ttf|.woff|.XMLDOM|.XMLHTTP")]
 
 df_archive = df_archive[df_archive["Address"].notna()]  # keep only non NaN
 df_archive["Match"] = df_archive["Address"].str.contains('|'.join(df_sf['Address']), case=False)  # drop url if in crawl
@@ -72,7 +70,7 @@ df_archive = df_archive[~df_archive["Match"].isin([True])]
 df_archive = df_archive.reindex(columns=['Address'])  # reindex the columns
 remaining_count = df_archive.shape[0]  # calculate and print how many rows remain after filtering
 print("Filtered to", remaining_count, "qualifying URLs!")
-
+print("Threads:", threads)
 if remaining_count == 0:
     print("No valid URLs to redirect. Check Wayback Machine status or try again!")
     sys.exit(0)
@@ -80,6 +78,7 @@ if remaining_count == 0:
 url_list = list(df_archive['Address'])  # create list from address column
 
 archive_url_list = []
+
 
 def get_archive_url(url):
     target_url = waybackpy.Url(url, user_agent)
@@ -94,7 +93,7 @@ def concurrent_calls():
         for future in concurrent.futures.as_completed(f1):
 
             try:
-                count +=1
+                count += 1
                 print("Fetching H1s from Wayback Machine", count, "of", remaining_count)
                 data = future.result().archive_url
             except Exception as e:
@@ -127,6 +126,7 @@ df_wayb_urls.drop_duplicates(subset=['Extracted URL'], keep="first", inplace=Tru
 archive_url_list = list(df_wayb_urls["Archive URL"])
 archive_h1_list = []
 
+
 def get_archive_h1(h1_url):
     try:
         html = urlopen(h1_url)
@@ -141,6 +141,7 @@ def concurrent_calls():
         f1 = executor.map(get_archive_h1, archive_url_list)
         for future in f1:
             archive_h1_list.append(future)
+
 
 concurrent_calls()
 print(archive_h1_list)
@@ -171,7 +172,7 @@ df_pf_matched = df_pf_matched.merge(df_archive_mini.drop_duplicates('H1'), how='
 df_pf_matched = df_pf_matched.merge(df_sf_mini.drop_duplicates('H1-1'), how='left', left_on='To', right_on="H1-1")
 
 df_pf_matched.rename(columns={"H1": "Archive H1", "Extracted URL": "Archive URL", "H1-1": "Matched H1",
-                           "Address": "Matched URL"}, inplace=True)
+                              "Address": "Matched URL"}, inplace=True)
 
 cols = "Archive URL", "Archive H1", "Similarity", "Matched URL", "Matched H1", "Final HTTP Status"
 df_pf_matched = df_pf_matched.reindex(columns=cols)
@@ -188,7 +189,7 @@ if check_status:
     s = req.Session()
     retries = Retry(total=5, backoff_factor=16, status_forcelist=[429])
     s.mount('http://', HTTPAdapter(max_retries=retries))
-    archive_url_list = list(df_pf_matched['Archive URL']) # make the list
+    archive_url_list = list(df_pf_matched['Archive URL'])  # make the list
     print("Getting HTTP Status of Source URL..")
 
 count = 0
@@ -211,3 +212,5 @@ if check_status == False:
 df_pf_matched = df_pf_matched.sort_values(by="Similarity", ascending=False)
 df_pf_matched.drop_duplicates(subset=['Archive URL'], keep="first", inplace=True)
 df_pf_matched.to_csv(path + 'urls-to-redirect-archive-org.csv', index=False)
+print("\nFile saved to", path + 'urls-to-redirect-archive-org.csv')
+print(f'Completed in {time.time() - startTime:.2f} Seconds')

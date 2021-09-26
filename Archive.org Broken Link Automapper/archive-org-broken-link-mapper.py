@@ -26,6 +26,7 @@ path = os.getcwd()
 df_sf = pd.read_csv(path + '/internal_html.csv', usecols=["Address", "H1-1"], dtype={'Address': 'str', 'H1-1': 'str'})
 print("Crawl File Read Successfully!", df_sf.head(10))
 print("\nCurrent working directory is", path)
+print("Checking HTTP Status:", check_status, "- Warning Slow!")
 
 # extract the domain name from the crawl
 extracted_domain = df_sf["Address"]

@@ -195,18 +195,18 @@ if check_status:
     archive_url_list = list(df_pf_matched['Archive URL'])  # make the list
     print("Getting HTTP Status of Source URL..")
 
-count = 0
-status_list = []
-for url in archive_url_list:
-    try:
-        count += 1
-        print("Checking HTTP Status:", count, "of", http_remaining)
-        status_list.append(s.get(url, headers=headers))
-    except Exception:
-        status_list.append("Error Getting Status")
-        print("Checking HTTP Status:", count, "of", http_remaining)
-        pass
-df_pf_matched['Final HTTP Status'] = status_list
+    count = 0
+    status_list = []
+    for url in archive_url_list:
+        try:
+            count += 1
+            print("Checking HTTP Status:", count, "of", http_remaining)
+            status_list.append(s.get(url, headers=headers))
+        except Exception:
+            status_list.append("Error Getting Status")
+            print("Checking HTTP Status:", count, "of", http_remaining)
+            pass
+    df_pf_matched['Final HTTP Status'] = status_list
 
 if check_status == False:
     df_pf_matched['Final HTTP Status'] = "Not Checked"

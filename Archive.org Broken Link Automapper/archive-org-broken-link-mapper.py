@@ -18,12 +18,15 @@ startTime = time.time()
 
 # set variables here
 user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36"  # set the user agent here
-threads = 10  # Number of Simultaneous Threads to Query Archive.org  / 8 - 10 is recommended.
-check_status = True  # Check the HTTP Status Using Requests
+threads = 15  # Number of Simultaneous Threads to Query Archive.org  / 8 - 10 is recommended.
+check_status = False  # Check the HTTP Status Using Requests
 
 # import the Screaming Frog crawl File (internal_html.csv)
 path = os.getcwd()
 df_sf = pd.read_csv(path + '/internal_html.csv', usecols=["Address", "H1-1"], dtype={'Address': 'str', 'H1-1': 'str'})
+df_sf = df_sf[df_sf["H1-1"].notna()]  # keep only non NaN
+#df_sf['H1-1'] = df_sf['H1-1'].str.lower()
+
 print("Crawl File Read Successfully!", df_sf.head(10))
 print("\nCurrent working directory is", path)
 print("Checking HTTP Status:", check_status, "- Warning Slow!")
@@ -142,7 +145,6 @@ def concurrent_calls():
         f1 = executor.map(get_archive_h1, archive_url_list)
         for future in f1:
             archive_h1_list.append(future)
-
 
 concurrent_calls()
 print(archive_h1_list)

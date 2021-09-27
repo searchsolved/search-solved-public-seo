@@ -153,7 +153,9 @@ df_wayb_urls['H1'] = archive_h1_list  # add list to dataframe column
 df_wayb_urls = df_wayb_urls[~df_wayb_urls["H1"].isin(["Got an HTTP 301 response at crawl time"])]  # drop
 df_archive = pd.merge(df_archive, df_wayb_urls, left_on="Address", right_on="Extracted URL", how="inner")
 
+
 # start polyfuzz to merge in archive.org data with original screaming frog dataframe
+print("Starting Polyfuzz...")
 df_archive = df_archive[df_archive["H1"].notna()]
 df_archive = df_archive[~df_archive["H1"].str.contains("No Data Received!", na=False)]
 
@@ -215,6 +217,6 @@ if check_status == False:
 # export final output
 df_pf_matched = df_pf_matched.sort_values(by="Similarity", ascending=False)
 df_pf_matched.drop_duplicates(subset=['Archive URL'], keep="first", inplace=True)
-df_pf_matched.to_csv(path + 'urls-to-redirect-archive-org.csv', index=False)
+df_pf_matched.to_csv(path + '/urls-to-redirect-archive-org.csv', index=False)
 print("\nFile saved to", path + 'urls-to-redirect-archive-org.csv')
 print(f'Completed in {time.time() - startTime:.2f} Seconds')

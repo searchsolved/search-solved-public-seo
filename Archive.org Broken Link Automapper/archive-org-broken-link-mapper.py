@@ -179,6 +179,7 @@ df_pf_matched.rename(columns={"H1": "Archive H1", "Extracted URL": "Archive URL"
 
 cols = "Archive URL", "Archive H1", "Similarity", "Matched URL", "Matched H1", "Final HTTP Status"
 df_pf_matched = df_pf_matched.reindex(columns=cols)
+df_pf_matched.drop_duplicates(subset=['Archive URL'], keep="first", inplace=True)
 http_remaining = len(df_pf_matched['Archive URL'])
 
 # exports a safety copy in case requests does not work. (Status code can then be retrieved manually if desired)

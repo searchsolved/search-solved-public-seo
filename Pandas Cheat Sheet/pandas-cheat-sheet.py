@@ -4,6 +4,17 @@
 startTime = time.time()
 # Your code here !
 print ('The script took {0} seconds!'.format(time.time() - startTime))
+print(f'Completed in {time.time() - startTime:.2f} Seconds')  # rounded to 2 decimal places
+
+#get three words before a string by checking one column with another column
+s=df['keyword']
+df=df.assign(WordsBefore=df['description'].str.extract("(^\D+(?=f'{s}'))"),
+WordsAfter=df['description'].str.extract("((?<=f'{s}')\D+)"))
+print(df)
+
+# check all rows for a specifci string and get the count (used to check how many products ar out of stock in a category)
+df['count'] = (df[:].values=='Out of stock').sum(axis=1)
+
 
 # Shift left on empty cells
 v = df.values
@@ -12,10 +23,10 @@ b = pd.isnull(v).argsort(axis=1, kind="mergesort")
 new_array = v[a, b]
 
 # count folder depth
-df_gsc_data["Depth"] = (df_gsc_data["URL"].str.count("\/") - 3) 
+df_gsc_data["Depth"] = (df_gsc_data["URL"].str.count("\/") - 3)
 
 # sorting data by a multiple columns
-df_gsc_data.sort_values(["Depth", "URL"], ascending=[True, True], inplace=True)  
+df_gsc_data.sort_values(["Depth", "URL"], ascending=[True, True], inplace=True)
 df_gsc_data.drop_duplicates(subset=['Keyword'], keep="first", inplace=True)
 
 # this groups and keeps only the top 5 unique values
@@ -24,6 +35,12 @@ df_gsc_data = df_gsc_data.groupby(['URL']).head(5)
 # import using GA data using a wildcard match
 for f in glob("/python_scripts/Analytics*.xlsx"):
     df_ga = pd.read_excel((f), sheet_name="Dataset1")
+
+# limit max words in a column max_kw_length = 3 etc
+df["col_name"] = df["col_name"].apply(lambda x: ' '.join(x.split(maxsplit=max_kw_length)[:max_kw_length]))
+
+# split on nth occurance of a special character
+str = ".".join(str.split("/")[:3])
 
 #                           ==Retrieving Series/DataFrame Information: Basic Information==
 count_row = df.shape[0]  # gives number of rows count
@@ -69,17 +86,50 @@ df["Col_Name"] = df["Col_Name"].str.replace(r"\r\n.*", "")  # remove whitespace 
 
 df["col"] = df["col"].apply(lambda x: x.replace("chars_to_replace", "new_chars"))  # this works if all other replace methods do not
 
+# keep the longest substring in a list
+list1 = ["indoor outdoor", "indoor outdoor beanbag", "indoor outdoor beanbag lounger", "hello", "hello is it me"]
+substrings = {w1 for w1 in list1 for w2 in list1 if w1 in w2 and w1 != w2}
+longest_word = set(list1) - substrings
+
+
+
 # start strip out all special characters from a column
 spec_chars = ["!",'"',"#","%","&","'","(",")",
               "*","+",",","-",".","/",":",";","<",
               "=",">","?","@","[","\\","]","^","_",
               "`","{","|","}","~","–"]
 for char in spec_chars:
-    df_sf['Title 1'] = df_sf['Title 1'].str.replace(char, ' ')
+    df['Title 1'] = df['Title 1'].str.replace(char, ' ')
+
+# remove non-ascii characters from a df column. (Good for cleaning up website data)
+df['col_name'] = df['col_name'].str.encode('ascii', 'ignore').str.decode('ascii')
+
+
+#count the number of words (strings) in a cell
+df['new_column'] = df['count_column'].str.count(' ') + 1
+
+# find keywords from one column in another in any order and count the frequency
+def ismatch(s):
+    A = set(s["Keyword"].split())
+    B = set(s['Title'].split())
+    return A.intersection(B) == A
+df['New Column'] = df.apply(ismatch, axis=1)
+
+# remove all double and triple whitespace etc directly from a pandas dataframe
+df['H1-1'] = (df['H1-1'].str.split()).str.join(' ')
+
+# set words using | to drop from a data frame
+drop_words = "wickes|screwfix| uk|price|toolstation|b&q|size|mm |accessories|for sale|mm$|supplies|superstore \
+                |megastore|bandq|amazon|ebay|wicks|best| for | or |offers|how|can|where|why|does|cheap|buy|homebase \
+                 nearme|near me|facro|argos"
+
+# drop any matching word above
+df = df[~df['column'].str.contains(drop_words)]
 
 #                           ==Merging Data==
 df = pd.merge(df,df2[['Key_Col','Target_Col']],on='Key_Column', how='left')  # merge only certain columns vlookup style
 df_new = pd.merge(df_1, df_2, on="col_name", how="left")  # merging dataframes when column names are the same
+df_final = df_final.merge(df_pf_h1_merge.drop_duplicates('H1-1'),how='left',left_on='H1-1', right_on="From (H1)")  # merge on first instance only - think different urls with the same title.
 
 #                           ==Converting Data==
 df = pd.Dataframe(mylist)  # Make dataframe from a list
@@ -109,6 +159,7 @@ df["New_Col"] = df["Col_to_Lookup"].str.contains('|'.join(df_2['Col_to_Check']),
 df["New_Col"] = df.apply(lambda row: row["Col_to_Lookup"] in row["Col_to_Check"], axis=1)  # check whether a column value is found in another column in the same dataframe
 df = df.reindex(columns=cols)  # re-indexes columns in a new order. new columns can also be inserted
 
+
 #                           ==Row Manipulation==
 df = df[~df["col"].isin(["string"])]  # drop rows on exact match [used to drop non-indexable from a csv crawl file]
 df = df[~df["col"].str.contains("string", na=False)]  # drop rows on partial string match [used to drop pagination etc]
@@ -124,11 +175,10 @@ df.sort_values(["Page", "H1"], ascending=[True, False], inplace=True,)  # sortin
 
 #                           ==Grouping Data==
 df = (df.groupby("query").agg({"clicks": "sum", "impressions": "mean", "ctr": "mean",}).reset_index())
-df = (df.groupby("query").agg({"clicks": "sum", "impressions": "mean", "ctr": "mean",}).reset_index())
 df['new_col'] = df['col_to_count_ifs_on'].map(df.groupby('col_to_count_ifs_on')['col_to_count_ifs_on'].count())  # countifs
 
-# make new dtaframes based on str.contains
-df_new = df_sf[df_sf['Address'].str.contains("/product/")].copy()
+# make new dataframe based on str.contains
+df_new = df[df['Address'].str.contains("/product/")].copy()
 
 #                           ==Splitting / Joining Data==
 df["New_Col"] = (df["URL_Col_to_Split"].str.split("/").str[-1])  # extract the last folder from a URL

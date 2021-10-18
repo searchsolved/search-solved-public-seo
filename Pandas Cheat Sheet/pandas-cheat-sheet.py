@@ -6,15 +6,18 @@ startTime = time.time()
 print ('The script took {0} seconds!'.format(time.time() - startTime))
 print(f'Completed in {time.time() - startTime:.2f} Seconds')  # rounded to 2 decimal places
 
-#get three words before a string by checking one column with another column
+# get three words before a string by checking one column with another column
 s=df['keyword']
 df=df.assign(WordsBefore=df['description'].str.extract("(^\D+(?=f'{s}'))"),
 WordsAfter=df['description'].str.extract("((?<=f'{s}')\D+)"))
 print(df)
 
-# check all rows for a specifci string and get the count (used to check how many products ar out of stock in a category)
+# check all rows for a specific string and get the count (used to check how many products ar out of stock in a category)
 df['count'] = (df[:].values=='Out of stock').sum(axis=1)
 
+# check if a string is found in a column and return a specific string in a different column
+mask = df['col_to_check'].str.contains('partial_string_to_match_on', na=True)
+df.loc[mask, 'Col_to_return_value_in'] = "String to Populate Column With"
 
 # Shift left on empty cells
 v = df.values
@@ -208,13 +211,3 @@ df.drop('Country', axis=1)  # Drop values from columns(axis=1)
 df.sort_index()  # Sort by labels along an axis
 df.sort_values(by='Country')  # Sort by the values along an axis
 df.rank()  # Assign ranks to entries
-
-
-
-
-
-
-
-
-
-

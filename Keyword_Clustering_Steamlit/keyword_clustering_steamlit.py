@@ -5,13 +5,10 @@ from polyfuzz import PolyFuzz
 import streamlit as st
 import os
 
-def file_selector(folder_path='.'):
-    filenames = os.listdir(folder_path)
-    selected_filename = st.selectbox('Select a file', filenames)
-    return os.path.join(folder_path, selected_filename)
-
-df_1 = file_selector()
-st.write('You selected `%s`' % filename)
+uploaded_file = st.file_uploader("Choose a file")
+if uploaded_file is not None:
+  df_1 = pd.read_csv(uploaded_file)
+  st.write(dataframe)
 
 # rename the parent cluster name using the keyword with the highest search volume (recommended)
 parent_by_vol = True

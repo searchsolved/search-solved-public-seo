@@ -2,7 +2,16 @@ import pandas as pd
 import sys
 from polyfuzz import PolyFuzz
 
-#df_1 = pd.read_csv('/python_scripts/keyword_cluster/dos.csv')
+import streamlit as st
+import os
+
+def file_selector(folder_path='.'):
+    filenames = os.listdir(folder_path)
+    selected_filename = st.selectbox('Select a file', filenames)
+    return os.path.join(folder_path, selected_filename)
+
+df_! = file_selector()
+st.write('You selected `%s`' % filename)
 
 # rename the parent cluster name using the keyword with the highest search volume (recommended)
 parent_by_vol = True

@@ -1,7 +1,5 @@
 import pandas as pd
 import sys
-from io import BytesIO
-from pyxlsb import open_workbook as open_xlsb
 from polyfuzz import PolyFuzz
 
 import streamlit as st
@@ -182,18 +180,16 @@ try:
 except NameError:
     pass
 
-def to_excel(df):
-  output = BytesIO()
-  writer = pd.ExcelWriter(output, engine='xlsxwriter')
-  df.to_excel(writer, index=False, sheet_name='Sheet1')
-  workbook = writer.book
-  worksheet = writer.sheets['Sheet1']
-  format1 = workbook.add_format({'num_format': '0.00'}) 
-  worksheet.set_column('A:A', None, format1)  
-  writer.save()
-  processed_data = output.getvalue()
-  return processed_data
-df_xlsx = to_excel(df_matched)
-st.download_button(label='📥 Download Current Result',
-                                data=df_xlsx ,
-                                file_name= 'df_test.xlsx')
+
+def get_table_download_link(df):
+    """Generates a link allowing the data in a given panda dataframe to be downloaded
+    in:  dataframe
+    out: href string
+    """
+    csv = df_matched.to_csv(index=False)
+    b64 = base64.b64encode(csv.encode()).decode()  # some strings <-> bytes conversions necessary here
+    href = f'<a href="data:file/csv;base64,{b64}">Download csv file</a>'
+    
+st.markdown(get_table_download_link(df_matched), unsafe_allow_html=True)
+
+

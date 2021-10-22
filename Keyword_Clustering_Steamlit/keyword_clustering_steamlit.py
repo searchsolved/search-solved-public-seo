@@ -181,6 +181,6 @@ try:
 except NameError:
     pass
 
-st.write(df_matches)
+st.write(df_matched)
 if st.button('save dataframe'):
-    open('df.csv', 'w').write(df_matches.to_csv())
+    open('df.csv', 'w').write(df_matched.to_csv())

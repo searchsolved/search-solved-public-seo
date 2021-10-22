@@ -1,5 +1,6 @@
 import pandas as pd
 import sys
+from io import BytesIO
 from polyfuzz import PolyFuzz
 
 import streamlit as st

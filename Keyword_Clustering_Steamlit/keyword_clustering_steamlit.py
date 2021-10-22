@@ -2,7 +2,7 @@ import pandas as pd
 import sys
 from polyfuzz import PolyFuzz
 
-df_1 = pd.read_csv('/python_scripts/keyword_cluster/dos.csv')
+#df_1 = pd.read_csv('/python_scripts/keyword_cluster/dos.csv')
 
 # rename the parent cluster name using the keyword with the highest search volume (recommended)
 parent_by_vol = True

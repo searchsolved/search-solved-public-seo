@@ -180,12 +180,13 @@ try:
 except NameError:
     pass
 
+import base64
 
 def get_table_download_link(df):
     csv = df_matched.to_csv(index=False)
     b64 = base64.b64encode(csv.encode()).decode()
     href = f'<a href="data:file/csv;base64,{b64}" download="myfilename.csv">Download csv file</a>'
     
-get_table_download_link(df_matched), unsafe_allow_html=True
+st.markdown(get_table_download_link(df), unsafe_allow_html=True)
 
 

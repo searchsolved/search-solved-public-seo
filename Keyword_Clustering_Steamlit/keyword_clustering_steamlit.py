@@ -181,10 +181,10 @@ try:
 except NameError:
     pass
 
-st.write(df_matched)
-if st.button('save dataframe'):
-    open('df_matched.csv', 'w').write(df_matched.to_csv())
-    csv = df_matched.to_csv().encode()
-    b64 = base64.b64encode(csv).decode()
-    href = f'Download CSV File'
+def st_pandas_to_csv_download_link(_df:pd.DataFrame, file_name:str = "dataframe.csv"): 
+    csv_exp = _df.to_csv(index=False)
+    b64 = base64.b64encode(csv_exp.encode()).decode()  # some strings <-> bytes conversions necessary here
+    href = f'<a href="data:file/csv;base64,{b64}" download="{file_name}" > Download Dataframe (CSV) </a>'
     st.markdown(href, unsafe_allow_html=True)
+
+st_pandas_to_csv_download_link(X, file_name = "my_file.csv")

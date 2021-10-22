@@ -8,7 +8,7 @@ import os
 uploaded_file = st.file_uploader("Choose a file")
 if uploaded_file is not None:
   df_1 = pd.read_csv(uploaded_file)
-  st.write(dataframe)
+  st.write(df_1)
 
 # rename the parent cluster name using the keyword with the highest search volume (recommended)
 parent_by_vol = True

@@ -180,4 +180,6 @@ try:
 except NameError:
     pass
 
-df_matched.to_csv('/python_scripts/gsc_output.csv', index=False)
+st.write(df_matched)
+if st.button('save dataframe'):
+    open('df.csv', 'w').write(df_matched.to_csv())

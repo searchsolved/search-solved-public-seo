@@ -183,5 +183,7 @@ except NameError:
 st.write(df_matched)
 if st.button('save dataframe'):
     open('df_matched.csv', 'w').write(df_matched.to_csv())
-  
-
+    csv = df_matched.to_csv().encode()
+    b64 = base64.b64encode(csv).decode()
+    href = f’Download CSV File’
+    st.markdown(href, unsafe_allow_html=True)

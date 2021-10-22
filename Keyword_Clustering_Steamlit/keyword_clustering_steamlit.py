@@ -186,6 +186,6 @@ def get_table_download_link(df):
     b64 = base64.b64encode(csv.encode()).decode()
     href = f'<a href="data:file/csv;base64,{b64}" download="myfilename.csv">Download csv file</a>'
     
-st.markdown(get_table_download_link(df_matched), unsafe_allow_html=True)
+#st.markdown(get_table_download_link(df_matched), unsafe_allow_html=True)
 
 

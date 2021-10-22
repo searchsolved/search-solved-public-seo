@@ -180,4 +180,4 @@ try:
         df_matched.rename(columns={"Cluster Volume": "Cluster Impressions", "Cluster Traffic": "Cluster Clicks", "Traffic": "Clicks", "Volume": "Impressions"}, inplace=True)
 except NameError:
     pass
-
+df_matched.to_csv('test.csv)

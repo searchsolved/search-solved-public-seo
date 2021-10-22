@@ -1,6 +1,7 @@
 import pandas as pd
 import sys
 from io import BytesIO
+from pyxlsb import open_workbook as open_xlsb
 from polyfuzz import PolyFuzz
 
 import streamlit as st

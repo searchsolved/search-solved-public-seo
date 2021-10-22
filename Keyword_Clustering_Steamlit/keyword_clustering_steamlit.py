@@ -1,4 +1,5 @@
 import pandas as pd
+import base64
 import sys
 from polyfuzz import PolyFuzz
 

@@ -179,3 +179,4 @@ try:
         df_matched.rename(columns={"Cluster Volume": "Cluster Impressions", "Cluster Traffic": "Cluster Clicks", "Traffic": "Clicks", "Volume": "Impressions"}, inplace=True)
 except NameError:
     pass
+st.download_button('Download CSV', df_matched, 'text/csv')

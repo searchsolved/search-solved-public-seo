@@ -180,4 +180,19 @@ try:
         df_matched.rename(columns={"Cluster Volume": "Cluster Impressions", "Cluster Traffic": "Cluster Clicks", "Traffic": "Clicks", "Volume": "Impressions"}, inplace=True)
 except NameError:
     pass
-st.download_button('Download CSV', df_matched, 'text/csv')
+
+def to_excel(df):
+  output = BytesIO()
+  writer = pd.ExcelWriter(output, engine='xlsxwriter')
+  df.to_excel(writer, index=False, sheet_name='Sheet1')
+  workbook = writer.book
+  worksheet = writer.sheets['Sheet1']
+  format1 = workbook.add_format({'num_format': '0.00'}) 
+  worksheet.set_column('A:A', None, format1)  
+  writer.save()
+  processed_data = output.getvalue()
+  return processed_data
+df_xlsx = to_excel(df_matched)
+st.download_button(label='📥 Download Current Result',
+                                data=df_xlsx ,
+                                file_name= 'df_test.xlsx')

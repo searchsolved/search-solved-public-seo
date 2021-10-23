@@ -2,7 +2,13 @@ import pandas as pd
 import sys
 from polyfuzz import PolyFuzz
 
-df_1 = pd.read_csv('/python_scripts/keyword_cluster/dos.csv')
+import streamlit as st
+import os
+
+uploaded_file = st.file_uploader("Choose a file")
+if uploaded_file is not None:
+  df_1 = pd.read_csv(uploaded_file)
+  st.write(df_1)
 
 # rename the parent cluster name using the keyword with the highest search volume (recommended)
 parent_by_vol = True
@@ -174,4 +180,12 @@ try:
 except NameError:
     pass
 
-df_matched.to_csv('/python_scripts/gsc_output.csv', index=False)
+import base64
+
+
+
+csv = df_matched.to_csv(index=False)
+b64 = base64.b64encode(csv.encode()).decode()  # some strings <-> bytes conversions necessary here
+href = f'<a href="data:file/csv;base64,{b64}" download="myfilename.csv">Download csv file</a>'
+
+

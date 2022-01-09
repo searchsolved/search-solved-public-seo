@@ -1,4 +1,5 @@
-polyfuzz[fast]==0.3.4
+polyfuzz[fast]
 pandas==1.3.4
 tqdm==4.62.3
 chardet==4.0.0
+streamlit == 0.87

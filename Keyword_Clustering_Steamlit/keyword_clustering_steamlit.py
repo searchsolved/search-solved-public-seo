@@ -631,6 +631,10 @@ if col_len == 1:
     cols = "Keyword", "Cluster Name", "Cluster Size", "Clustered?"
     df_matched = df_matched.reindex(columns=cols)
 
+info_filter = "what|where|why|when|who|how|which|tip|guide|tutorial|ideas|example|learn|wiki|in mm|in cm|in ft|in feet"
+comm_invest_filter = "best|vs|list|compare|review|list|top|difference between"
+trans_filter = "purchase|bargain|cheap|deal|value|closeout|buy|shop|price|coupon|discount|price|pricing|delivery|shipping|order|returns|sale|amazon|target|ebay|walmart|cost of|how much"
+    
 # - add in intent markers
 colname = df_matched.columns[1]
 df_matched.loc[df_matched[colname].str.contains(info_filter), "Informational"] = "Informational"

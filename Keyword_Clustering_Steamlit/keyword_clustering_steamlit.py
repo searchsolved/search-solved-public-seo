@@ -5,7 +5,7 @@ import sys
 import chardet
 
 # For download buttons
-#from functionforDownloadButtons import download_button
+from functionforDownloadButtons import download_button
 import os
 import json
 

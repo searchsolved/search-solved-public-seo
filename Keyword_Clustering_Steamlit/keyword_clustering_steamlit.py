@@ -14,12 +14,11 @@ st.set_page_config(page_title="Keyword Clustering App", page_icon="✨", layout=
 
 c30, c31, c32 = st.columns([2.5, 1, 3])
 
-#with c30:
+# with c30:
 #    st.image("logo_new_2.png", width=400)
 #    st.header("")
 
 with c32:
-
     st.text("")
     st.text("")
     st.text("")
@@ -41,57 +40,54 @@ with c32:
 c30, c32 = st.columns([1.9, 1])
 
 with st.expander("⚡ App features", expanded=False):
-
     st.write(
         """
-Simply upload your SEMRush, Ahrefs or Google Search Console report and get:
-
-1.   The cluster name
-1.   The cluster size (how many keywords in a given cluster)
-1.   The estimated search volume per cluster
-1.   The average keyword difficulty per cluster
-1.   The average CPC per cluster
-1.   The estimated traffic per cluster
-
-        """
+        Simply upload your SEMRush, Ahrefs or Google Search Console report and get:
+        
+        1.   The cluster name
+        1.   The cluster size (how many keywords in a given cluster)
+        1.   The estimated search volume per cluster
+        1.   The average keyword difficulty per cluster
+        1.   The average CPC per cluster
+        1.   The estimated traffic per cluster
+        
+                """
     )
 
     st.markdown("")
 
     st.write(
         """
-The tool is still in Beta, with possible rough edges! [![Gitter](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/DataChaz/keyword-clustering-app) for bug report, questions, or suggestions.
-
-        """
+        The tool is still in Beta, with possible rough edges! [![Gitter](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/DataChaz/keyword-clustering-app) for bug report, questions, or suggestions.
+        
+                """
     )
 
     st.markdown("")
 
-with st.expander("🔥 New in V2!", expanded=False):
-
+with st.expander("🔥 New in V3!", expanded=False):
     st.write(
         """
--   Clusters and calculates AdWords keyword export with metrics 
--   Accepts .txt and .csv files. Header or headerless! (Excel + OpenOffice formats coming soon!)
--   Auto-detects character encoding on CSVs (including UTF-16 Support)
-        """
+        -   Clusters and calculates AdWords keyword export with metrics 
+        -   Accepts .txt and .csv files. Header or headerless! (Excel + OpenOffice formats coming soon!)
+        -   Auto-detects character encoding on CSVs (including UTF-16 Support)
+                """
     )
 
     st.markdown("")
 
 with st.expander("❔ Why cluster your keywords?", expanded=False):
-
     st.write(
         """
-        Grouping your keywords into topic clusters provides mighty insights for your SEO strategy! It can be useful to:
-
--   Build topic clusters around your parent keyword
--   Find out what the main keyword and secondary keywords your pages should target 
--   Find new themes and content ideas
--   Bulk filter-out junk keywords from your keyword lists
--   Find your competitors' most profitable keyword clusters
-
-        """
+                Grouping your keywords into topic clusters provides mighty insights for your SEO strategy! It can be useful to:
+        
+        -   Build topic clusters around your parent keyword
+        -   Find out what the main keyword and secondary keywords your pages should target 
+        -   Find new themes and content ideas
+        -   Bulk filter-out junk keywords from your keyword lists
+        -   Find your competitors' most profitable keyword clusters
+        
+                """
     )
 
     st.markdown("")
@@ -108,7 +104,6 @@ c28, c29, c30, c31 = st.columns([1, 0.3, 1.5, 1])
 #     )
 
 with c30:
-
     uploaded_file = st.file_uploader(
         "Upload your SEMRush, Ahrefs or GSC report (.csv or .txt only)",
         help="""
@@ -141,7 +136,7 @@ Which reports does the tool currently support? (.csv or .txt only)
             df_1 = pd.read_csv(
                 uploaded_file,
                 encoding=encoding_value,
-                nrows=10000,
+                nrows=1000000,
                 delim_whitespace=white_space,
                 error_bad_lines=False,
             )
@@ -159,7 +154,7 @@ Which reports does the tool currently support? (.csv or .txt only)
                 st.caption(
                     "The sheet you uploaded is "
                     + str(number_of_rows)
-                    + " row (cap for our Beta is at 10K rows). Its file encoding is '"
+                    + " row (cap for our Beta is at 1,000,000 rows). Its file encoding is '"
                     + str(encoding_value)
                     + "'"
                 )
@@ -208,17 +203,17 @@ Which reports does the tool currently support? (.csv or .txt only)
             st.warning(
                 # "🚨 The file doesn't seem to load. Check the filetype, file format and Schema.
                 """
-
-🚨 The file doesn't seem to load. Check the filetype, file format and Schema
-
-Which reports does the tool currently support? (.csv or .txt only)
-
--   Google Search Console coverage report
--   SEMrush organic positions report
--   Ahrefs Site Explorer keyword export (V1 or V2)
--   Ahrefs Keyword Explorer export
-
-"""
+                
+                🚨 The file doesn't seem to load. Check the filetype, file format and Schema
+                
+                Which reports does the tool currently support? (.csv or .txt only)
+                
+                -   Google Search Console coverage report
+                -   SEMrush organic positions report
+                -   Ahrefs Site Explorer keyword export (V1 or V2)
+                -   Ahrefs Keyword Explorer export
+                
+                """
             )
 
     #         except UnicodeDecodeError:
@@ -256,7 +251,6 @@ Which reports does the tool currently support? (.csv or .txt only)
                 """
         )
         st.stop()
-
 
 # -------------------------- check if single column import / and write header if missing -------------------------------
 
@@ -448,7 +442,7 @@ try:
                 # make dedicated grouped dataframe
                 df_grouped = (
                     df_matched.groupby("Cluster Name")
-                    .agg(
+                        .agg(
                         {
                             "Volume": sum,
                             "Difficulty": "median",
@@ -456,13 +450,13 @@ try:
                             "Traffic": sum,
                         }
                     )
-                    .reset_index()
+                        .reset_index()
                 )
             except Exception:
                 df_grouped = (
                     df_matched.groupby("Cluster Name")
-                    .agg({"Volume": sum, "Traffic": sum})
-                    .reset_index()
+                        .agg({"Volume": sum, "Traffic": sum})
+                        .reset_index()
                 )
 
             df_grouped = df_grouped.rename(
@@ -479,10 +473,9 @@ try:
             )  # merge in the group stats
 
         if adwords_check:
-
             df_grouped = (
                 df_matched.groupby("Cluster Name")
-                .agg(
+                    .agg(
                     {
                         "Volume": sum,
                         "CTR": "median",
@@ -492,7 +485,7 @@ try:
                         "Conversions": sum,
                     }
                 )
-                .reset_index()
+                    .reset_index()
             )
 
             df_grouped = df_grouped.rename(
@@ -578,7 +571,7 @@ try:
                 inplace=True,
             )
             df_matched["exact_vol_match"] = (
-                df_matched["vol_max"] == df_matched["Volume"]
+                    df_matched["vol_max"] == df_matched["Volume"]
             )
             df_matched.loc[
                 df_matched["exact_vol_match"] == True, "highest_ranked_keyword"
@@ -635,11 +628,12 @@ if col_len == 1:
 info_filter = "what|where|why|when|who|how|which|tip|guide|tutorial|ideas|example|learn|wiki|in mm|in cm|in ft|in feet"
 comm_invest_filter = "best|vs|list|compare|review|list|top|difference between"
 trans_filter = "purchase|bargain|cheap|deal|value|closeout|buy|shop|price|coupon|discount|price|pricing|delivery|shipping|order|returns|sale|amazon|target|ebay|walmart|cost of|how much"
-    
+
 # - add in intent markers
 colname = df_matched.columns[1]
 df_matched.loc[df_matched[colname].str.contains(info_filter), "Informational"] = "Informational"
-df_matched.loc[df_matched[colname].str.contains(comm_invest_filter), "Commercial Investigation"] = "Commercial Investigation"
+df_matched.loc[
+    df_matched[colname].str.contains(comm_invest_filter), "Commercial Investigation"] = "Commercial Investigation"
 df_matched.loc[df_matched[colname].str.contains(trans_filter), "Transactional"] = "Transactional"
 
 # find keywords from one column in another in any order and count the frequency
@@ -653,54 +647,68 @@ df_matched['Forth Word'] = df_matched['Cluster Name'].str.split(" ").str[3]
 
 df_matched['Total Keywords'] = df_matched['First Word'].str.count(' ') + 1
 
+
 def ismatch(s):
     A = set(s["First Word"].split())
     B = set(s['Keyword'].split())
     return A.intersection(B) == A
 
+
 df_matched['Found'] = df_matched.apply(ismatch, axis=1)
 
-df_matched = df_matched. fillna('')
+df_matched = df_matched.fillna('')
+
 
 def ismatch(s):
     A = set(s["Second Word"].split())
     B = set(s['Keyword'].split())
     return A.intersection(B) == A
+
+
 df_matched['Found 2'] = df_matched.apply(ismatch, axis=1)
 
-df_matched = df_matched. fillna('')
+df_matched = df_matched.fillna('')
+
 
 def ismatch(s):
     A = set(s["Third Word"].split())
     B = set(s['Keyword'].split())
     return A.intersection(B) == A
+
+
 df_matched['Found 3'] = df_matched.apply(ismatch, axis=1)
 
-df_matched = df_matched. fillna('')
+df_matched = df_matched.fillna('')
+
 
 def ismatch(s):
     A = set(s["Forth Word"].split())
     B = set(s['Keyword'].split())
     return A.intersection(B) == A
+
+
 df_matched['Found 4'] = df_matched.apply(ismatch, axis=1)
 
 # todo - document this algo. Essentially if it matches on the second word only, it renames the cluster to the second word
 # clean up code nd variable names
 
-df_matched.loc[(df_matched["Found"] == False) & (df_matched["Found 2"] == True), "Cluster Name"] = df_matched["Second Word"]
+df_matched.loc[(df_matched["Found"] == False) & (df_matched["Found 2"] == True), "Cluster Name"] = df_matched[
+    "Second Word"]
 
-df_matched.loc[(df_matched["Found"] == False) & (df_matched["Found 2"] == False) & (df_matched["Found 3"] == True), "Cluster Name"] = df_matched["Third Word"]
+df_matched.loc[(df_matched["Found"] == False) & (df_matched["Found 2"] == False) & (
+            df_matched["Found 3"] == True), "Cluster Name"] = df_matched["Third Word"]
 
-df_matched.loc[(df_matched["Found"] == False) & (df_matched["Found 2"] == False) & (df_matched["Found 3"] == False) & (df_matched["Found 4"] == True), "Cluster Name"] = df_matched["Forth Word"]
+df_matched.loc[(df_matched["Found"] == False) & (df_matched["Found 2"] == False) & (df_matched["Found 3"] == False) & (
+            df_matched["Found 4"] == True), "Cluster Name"] = df_matched["Forth Word"]
 
-df_matched.loc[(df_matched["Found"] == False) & (df_matched["Found 2"] == False) & (df_matched["Found 3"] == False) & (df_matched["Found 4"] == False), "Cluster Name"] = "zzz_no_cluster_available"
-
+df_matched.loc[(df_matched["Found"] == False) & (df_matched["Found 2"] == False) & (df_matched["Found 3"] == False) & (
+            df_matched["Found 4"] == False), "Cluster Name"] = "zzz_no_cluster_available"
 
 # count cluster_size
 df_matched['Cluster Size'] = df_matched['Cluster Name'].map(df_matched.groupby('Cluster Name')['Cluster Name'].count())
 df_matched.loc[df_matched["Cluster Size"] == 1, "Cluster Name"] = "zzz_no_cluster_available"
 
-#delete the helper cols
+# delete the helper cols
 del df_matched['First Word']
 del df_matched['Second Word']
 del df_matched['Third Word']
@@ -714,7 +722,7 @@ del df_matched['Found 4']
 
 # convert empty strings to NaN and fill with no_cluster_available
 df_matched["Cluster Name"] = df_matched["Cluster Name"].replace(r'^\s*$', np.nan, regex=True)
-df_matched = df_matched.fillna("zzz_no_cluster_available") 
+df_matched = df_matched.fillna("zzz_no_cluster_available")
 
 # check if keywords / cluster names are exclusively numbers and bumps them out of the cluster
 df_matched['Number Check'] = df_matched['Cluster Name'].str.isdigit()
@@ -725,20 +733,18 @@ df_matched['Number Check 2'] = df_matched['Keyword'].str.isdigit()
 df_matched["Length Check"] = df_matched["Cluster Name"].str.len()
 df_matched["Length Check 2"] = df_matched["Cluster Name"].str.len()
 
-
 df_matched.loc[(df_matched["Length Check"] == 1), "Cluster Name"] = "zzz_no_cluster_available"
 df_matched.loc[(df_matched["Length Check 2"] == 1), "Cluster Name"] = "zzz_no_cluster_available"
 
 df_matched.loc[(df_matched["Number Check"] == True), "Cluster Name"] = "zzz_no_cluster_available"
 df_matched.loc[(df_matched["Number Check 2"] == True), "Cluster Name"] = "zzz_no_cluster_available"
 
-#df_matched = df_matched.sort_values(by="Cluster Name", ascending=True)
-df_matched.sort_values(["Cluster Name", "Keyword"], ascending=[True, True], inplace=True,) 
+# df_matched = df_matched.sort_values(by="Cluster Name", ascending=True)
+df_matched.sort_values(["Cluster Name", "Keyword"], ascending=[True, True], inplace=True, )
 
 # remove double and triple white space etc
 df_matched['Cluster Name'] = (df_matched['Cluster Name'].str.split()).str.join(' ')
 df_matched['Keyword'] = (df_matched['Keyword'].str.split()).str.join(' ')
-
 
 # delete helper columns
 del df_matched["Number Check"]
@@ -760,17 +766,20 @@ st.write("")
 # Format as per format_dictionary
 df_matched = df_matched.reset_index(drop=True)
 df_matchedstyled = df_matched.style.format(format_dictionary)
+
+
 # CSVButton = download_button(df_matched, "report.csv", "📥 Download your report!")
 # st.dataframe(df_matchedstyled, height=1000)
 
 def convert_df(df):
-# IMPORTANT: Cache the conversion to prevent computation on every rerun
-        return df.to_csv().encode('utf-8')
+    # IMPORTANT: Cache the conversion to prevent computation on every rerun
+    return df.to_csv().encode('utf-8')
+
 
 csv = convert_df(df_matched)
 
 st.download_button(
-        label="Download data as CSV",
-        data=csv,
-        file_name='large_df.csv',
-        mime='text/csv',)
+    label="Download data as CSV",
+    data=csv,
+    file_name='large_df.csv',
+    mime='text/csv', )

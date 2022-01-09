@@ -640,19 +640,14 @@ df_matchedstyled = df_matched.style.format(format_dictionary)
 # CSVButton = download_button(df_matched, "report.csv", "📥 Download your report!")
 # st.dataframe(df_matchedstyled, height=1000)
 
-@st.cache
- def convert_df(df):
-     # IMPORTANT: Cache the conversion to prevent computation on every rerun
-     return df.to_csv().encode('utf-8')
+def convert_df(df):
+# IMPORTANT: Cache the conversion to prevent computation on every rerun
+        return df.to_csv().encode('utf-8')
 
 csv = convert_df(df_matched)
 
 st.download_button(
-     label="Download data as CSV",
-     data=csv,
-     file_name='large_df.csv',
-     mime='text/csv',
-
-# df_matched.to_csv('/python_scripts/gsc_output.csv', index=False)
-
-# endregion last snippet V2
+        label="Download data as CSV",
+        data=csv,
+        file_name='large_df.csv',
+        mime='text/csv',

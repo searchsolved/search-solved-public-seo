@@ -3,7 +3,7 @@ from polyfuzz import PolyFuzz
 import pandas as pd
 import sys
 import chardet
-from tqdm import tqdm
+import tqdm
 
 # For download buttons
 #from functionforDownloadButtons import download_button
@@ -632,6 +632,116 @@ except NameError:
 if col_len == 1:
     cols = "Keyword", "Cluster Name", "Cluster Size", "Clustered?"
     df_matched = df_matched.reindex(columns=cols)
+
+# - add in intent markers
+colname = df_matched.columns[1]
+df_matched.loc[df_matched[colname].str.contains(info_filter), "Informational"] = "Informational"
+df_matched.loc[df_matched[colname].str.contains(comm_invest_filter), "Commercial Investigation"] = "Commercial Investigation"
+df_matched.loc[df_matched[colname].str.contains(trans_filter), "Transactional"] = "Transactional"
+
+# find keywords from one column in another in any order and count the frequency
+df_matched['Cluster Name'] = df_matched['Cluster Name'].str.strip()
+df_matched['Keyword'] = df_matched['Keyword'].str.strip()
+
+df_matched['First Word'] = df_matched['Cluster Name'].str.split(" ").str[0]
+df_matched['Second Word'] = df_matched['Cluster Name'].str.split(" ").str[1]
+df_matched['Third Word'] = df_matched['Cluster Name'].str.split(" ").str[2]
+df_matched['Forth Word'] = df_matched['Cluster Name'].str.split(" ").str[3]
+
+df_matched['Total Keywords'] = df_matched['First Word'].str.count(' ') + 1
+
+def ismatch(s):
+    A = set(s["First Word"].split())
+    B = set(s['Keyword'].split())
+    return A.intersection(B) == A
+
+df_matched['Found'] = df_matched.apply(ismatch, axis=1)
+
+df_matched = df_matched. fillna('')
+
+def ismatch(s):
+    A = set(s["Second Word"].split())
+    B = set(s['Keyword'].split())
+    return A.intersection(B) == A
+df_matched['Found 2'] = df_matched.apply(ismatch, axis=1)
+
+df_matched = df_matched. fillna('')
+
+def ismatch(s):
+    A = set(s["Third Word"].split())
+    B = set(s['Keyword'].split())
+    return A.intersection(B) == A
+df_matched['Found 3'] = df_matched.apply(ismatch, axis=1)
+
+df_matched = df_matched. fillna('')
+
+def ismatch(s):
+    A = set(s["Forth Word"].split())
+    B = set(s['Keyword'].split())
+    return A.intersection(B) == A
+df_matched['Found 4'] = df_matched.apply(ismatch, axis=1)
+
+# todo - document this algo. Essentially if it matches on the second word only, it renames the cluster to the second word
+# clean up code nd variable names
+
+df_matched.loc[(df_matched["Found"] == False) & (df_matched["Found 2"] == True), "Cluster Name"] = df_matched["Second Word"]
+
+df_matched.loc[(df_matched["Found"] == False) & (df_matched["Found 2"] == False) & (df_matched["Found 3"] == True), "Cluster Name"] = df_matched["Third Word"]
+
+df_matched.loc[(df_matched["Found"] == False) & (df_matched["Found 2"] == False) & (df_matched["Found 3"] == False) & (df_matched["Found 4"] == True), "Cluster Name"] = df_matched["Forth Word"]
+
+df_matched.loc[(df_matched["Found"] == False) & (df_matched["Found 2"] == False) & (df_matched["Found 3"] == False) & (df_matched["Found 4"] == False), "Cluster Name"] = "zzz_no_cluster_available"
+
+
+# count cluster_size
+df_matched['Cluster Size'] = df_matched['Cluster Name'].map(df_matched.groupby('Cluster Name')['Cluster Name'].count())
+df_matched.loc[df_matched["Cluster Size"] == 1, "Cluster Name"] = "zzz_no_cluster_available"
+
+#delete the helper cols
+del df_matched['First Word']
+del df_matched['Second Word']
+del df_matched['Third Word']
+del df_matched['Forth Word']
+
+del df_matched['Total Keywords']
+del df_matched['Found']
+del df_matched['Found 2']
+del df_matched['Found 3']
+del df_matched['Found 4']
+
+# convert empty strings to NaN and fill with no_cluster_available
+df_matched["Cluster Name"] = df_matched["Cluster Name"].replace(r'^\s*$', np.nan, regex=True)
+df_matched = df_matched.fillna("zzz_no_cluster_available") 
+
+# check if keywords / cluster names are exclusively numbers and bumps them out of the cluster
+df_matched['Number Check'] = df_matched['Cluster Name'].str.isdigit()
+df_matched['Number Check 2'] = df_matched['Keyword'].str.isdigit()
+
+# check if keywords / cluster names are 1 char in length and bumps them from the cluster
+
+df_matched["Length Check"] = df_matched["Cluster Name"].str.len()
+df_matched["Length Check 2"] = df_matched["Cluster Name"].str.len()
+
+
+df_matched.loc[(df_matched["Length Check"] == 1), "Cluster Name"] = "zzz_no_cluster_available"
+df_matched.loc[(df_matched["Length Check 2"] == 1), "Cluster Name"] = "zzz_no_cluster_available"
+
+df_matched.loc[(df_matched["Number Check"] == True), "Cluster Name"] = "zzz_no_cluster_available"
+df_matched.loc[(df_matched["Number Check 2"] == True), "Cluster Name"] = "zzz_no_cluster_available"
+
+#df_matched = df_matched.sort_values(by="Cluster Name", ascending=True)
+df_matched.sort_values(["Cluster Name", "Keyword"], ascending=[True, True], inplace=True,) 
+
+# remove double and triple white space etc
+df_matched['Cluster Name'] = (df_matched['Cluster Name'].str.split()).str.join(' ')
+df_matched['Keyword'] = (df_matched['Keyword'].str.split()).str.join(' ')
+
+
+# delete helper columns
+del df_matched["Number Check"]
+del df_matched["Number Check 2"]
+del df_matched["Length Check"]
+del df_matched["Length Check 2"]
 
 format_dictionary = {
     "Cluster Size": "{:.0f}",

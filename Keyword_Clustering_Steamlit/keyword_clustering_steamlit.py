@@ -14,9 +14,9 @@ st.set_page_config(page_title="Keyword Clustering App", page_icon="✨", layout=
 
 c30, c31, c32 = st.columns([2.5, 1, 3])
 
-with c30:
-    st.image("logo_new_2.png", width=400)
-    st.header("")
+#with c30:
+#   st.image("logo_new_2.png", width=400)
+#    st.header("")
 
 with c32:
 

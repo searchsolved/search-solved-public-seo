@@ -3,6 +3,7 @@ from polyfuzz import PolyFuzz
 import pandas as pd
 import sys
 import chardet
+import tqdm
 
 # For download buttons
 #from functionforDownloadButtons import download_button
@@ -394,8 +395,18 @@ if col_len > 1:
 df_1_list = df_1.Keyword.tolist()  # create list from df
 model = PolyFuzz("TF-IDF")
 
+cluster_tags = df_1_list[::]
+cluster_tags = set(cluster_tags)
+cluster_tags = list(cluster_tags)
+
+print("Cleaning up the cluster tags.. Please be patient!")
+substrings = {w1 for w1 in tqdm(cluster_tags) for w2 in cluster_tags if w1 in w2 and w1 != w2}
+longest_word = set(cluster_tags) - substrings
+longest_word = list(longest_word)
+shortest_word_list = list(set(cluster_tags) - set(longest_word))
+
 try:
-    model.match(df_1_list, df_1_list)
+    model.match(df_1_list, shortest_word_list)
 
 except ValueError:
     st.warning("🚨 Your sheet seems empty!")
@@ -410,7 +421,6 @@ except AttributeError:
 
 try:
     model.group(link_min_similarity=sim_match_percent)
-
     df_matched = model.get_matches()
 
     # ------------------------------- clean the data post-grouping ---------------------------------------------------------

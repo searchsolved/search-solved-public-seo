@@ -162,7 +162,7 @@ Which reports does the tool currently support? (.csv or .txt only)
                 st.caption(
                     "The sheet you uploaded is "
                     + str(number_of_rows)
-                    + " rows (cap for our Beta is at 10K rows). Its file encoding is '"
+                    + " rows (cap for our Beta is at 1,000,000 rows). Its file encoding is '"
                     + str(encoding_value)
                     + "'"
                 )

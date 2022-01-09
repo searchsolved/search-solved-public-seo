@@ -3,7 +3,7 @@ from polyfuzz import PolyFuzz
 import pandas as pd
 import sys
 import chardet
-import tqdm
+from tqdm import tqdm
 
 # For download buttons
 #from functionforDownloadButtons import download_button

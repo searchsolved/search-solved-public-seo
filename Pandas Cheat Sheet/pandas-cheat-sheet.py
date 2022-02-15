@@ -3,8 +3,36 @@
 # time the code execution
 startTime = time.time()
 # Your code here !
+
+# get the length of all words in a column
+df['Length'] = df['Keyword'].astype(str).map(len)
+
+#check if string values in one column are found in another in the same or different dataframe
+df_final['KW Found in Ads?'] = df_final["Search term"].isin(training_df["Search term"])
+
+# convert columns to snake case
+final_df.columns = [x.lower() for x in final_df.columns]  # make lower case
+final_df.columns = final_df.columns.str.replace(' ', '_')  # replace space with underscore
+
+# list comprehension to only keep urls which containing .html
+
+urls = [val for val in urls if val.endswith(".html")]
+
+# apply a function to a dataframe
+df['question_sentence_count'] = df['questions'].apply(lambda x: textstat.sentence_count(x))
+
+# sort words in column in alphabetical order
+df['New'] = [' '.join(sorted(x)) for x in df['Keyword'].str.split()]
+
+# replace words in one column with words in another
+df['New'] = [' '.join(c for c in a.split() if c != b) for a, b in zip(df['New'], df['Cluster Name'])]
+
 print ('The script took {0} seconds!'.format(time.time() - startTime))
 print(f'Completed in {time.time() - startTime:.2f} Seconds')  # rounded to 2 decimal places
+
+#check if value / string is found in a column and return a value in a new column if found
+df.loc[df["coL_to_check"] == "value_to_check", "col_to_return_result_in"] = "result to return"  # example 1
+df.loc[df["coL_to_check"] == "value_to_check", "col_to_return_result_in"] = df['existing_column_as_value']  # example 2 return another column as the value
 
 # get three words before a string by checking one column with another column
 s=df['keyword']
@@ -29,8 +57,8 @@ new_array = v[a, b]
 df_gsc_data["Depth"] = (df_gsc_data["URL"].str.count("\/") - 3)
 
 # sorting data by a multiple columns
-df_gsc_data.sort_values(["Depth", "URL"], ascending=[True, True], inplace=True)
-df_gsc_data.drop_duplicates(subset=['Keyword'], keep="first", inplace=True)
+df.sort_values(["Depth", "URL"], ascending=[True, True], inplace=True)
+df.drop_duplicates(subset=['Keyword'], keep="first", inplace=True)
 
 # this groups and keeps only the top 5 unique values
 df_gsc_data = df_gsc_data.groupby(['URL']).head(5)
@@ -71,6 +99,7 @@ df = df.groupby(['URL']).head(5)  # this groups and keeps only the top 5 unique 
 
 #                           ==Applying Functions==
 f = lambda x: x*2
+f = lambda x: x*2
 df.apply(f)  # Apply function
 df.applymap(f)  # Apply function element-wise
 
@@ -93,7 +122,6 @@ df["col"] = df["col"].apply(lambda x: x.replace("chars_to_replace", "new_chars")
 list1 = ["indoor outdoor", "indoor outdoor beanbag", "indoor outdoor beanbag lounger", "hello", "hello is it me"]
 substrings = {w1 for w1 in list1 for w2 in list1 if w1 in w2 and w1 != w2}
 longest_word = set(list1) - substrings
-
 
 
 # start strip out all special characters from a column
@@ -130,7 +158,7 @@ drop_words = "wickes|screwfix| uk|price|toolstation|b&q|size|mm |accessories|for
 df = df[~df['column'].str.contains(drop_words)]
 
 #                           ==Merging Data==
-df = pd.merge(df,df2[['Key_Col','Target_Col']],on='Key_Column', how='left')  # merge only certain columns vlookup style
+df = pd.merge(df,df2[['Key_Column','Target_Column']],on='Key_Column', how='left')  # merge only certain columns vlookup style
 df_new = pd.merge(df_1, df_2, on="col_name", how="left")  # merging dataframes when column names are the same
 df_final = df_final.merge(df_pf_h1_merge.drop_duplicates('H1-1'),how='left',left_on='H1-1', right_on="From (H1)")  # merge on first instance only - think different urls with the same title.
 
@@ -169,12 +197,13 @@ df = df[~df["col"].str.contains("string", na=False)]  # drop rows on partial str
 df.drop_duplicates(subset="col_name", inplace=True)  # Drop Duplicate Rows
 df = df[df["col"] != 0]  # drop rows not equal to int [used to drop rows with 0 transactions]
 df.drop_duplicates(subset=["URL", "Keyword"], keep="first", inplace=True) # drop dupes if both cols are duped
+df.drop_duplicates(subset=["URL", "Keyword"], keep="first", inplace=True) # drop dupes if both cols are duped
 df = df[df["Source Page"] != df["Keyword"]] # drop dupes if both cols are duped (alternative way)
 df_s_dist['Combined KWs Deduped'] = (df_s_dist['Combined KWs'].str.split().apply(lambda x: OrderedDict.fromkeys(x).keys()).str.join(' '))  # removes non-consecutive duplicates from a single cell
 
 #                           ==Sorting Data==
 df = df.sort_values(by="col_name", ascending=True)  # sorting data by a single column
-df.sort_values(["Page", "H1"], ascending=[True, False], inplace=True,)  # sorting data by a multiple columns
+df.sort_values(["Page", "H1"], ascending=[True, False], inplace=True)  # sorting data by a multiple columns
 
 #                           ==Grouping Data==
 df = (df.groupby("query").agg({"clicks": "sum", "impressions": "mean", "ctr": "mean",}).reset_index())

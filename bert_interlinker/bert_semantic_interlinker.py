@@ -9,7 +9,7 @@ import chardet
 import pandas as pd
 from sentence_transformers import SentenceTransformer, util
 
-beta_limit = 5000
+beta_limit = 10000
 
 @st.cache(allow_output_mutation=True)
 def get_model():
@@ -129,7 +129,7 @@ with st.form(key='columns_in_form_2'):
         df = df.merge(df_new.drop_duplicates(kw_col), how='left', on=kw_col)
 
         # ------------------------------ rename the clusters to the shortest keyword -----------------------------------
-
+        df.to_csv("/python_scripts/test.csv")
         df['length'] = df[kw_col].astype(str).map(len)
         df = df.sort_values(by="length", ascending=True)
         df['source_h1'] = df.groupby('source_h1')[kw_col].transform('first')
@@ -141,18 +141,18 @@ with st.form(key='columns_in_form_2'):
         df.insert(0, col.name, col)
         col = df.pop('source_h1')
         df.insert(0, col.name, col)
-
-        df2 = df[["Address", "H1-1"]].copy()
-        df2.rename(columns={"Address": "source_url", "H1-1": "source_h1"}, inplace=True)
+        df.to_csv("/python_scripts/test144.csv")
+        df2 = df[["Address", kw_col]].copy()
+        df2.rename(columns={"Address": "source_url", kw_col: "source_h1"}, inplace=True)
         df = df.merge(df2.drop_duplicates('source_h1'), how='left', on="source_h1")  # merge on first instance only
-        df = df[["source_url", "source_h1", "Address", "H1-1"]]
+        df = df[["source_url", "source_h1", "Address", kw_col]]
 
         df.drop_duplicates(subset=["Address", "source_url"], keep="first", inplace=True)
         df = df[df["Address"].str.contains(destination_filter, na=False)]
         df = df[df["source_url"].str.contains(source_filter, na=False)]
 
         df = df[~df["Address"].str.contains("zzz_no_cluster", na=False)]
-        df.rename(columns={"Address": "destination_url", "H1-1": "destination_url_h1"}, inplace=True)
+        df.rename(columns={"Address": "destination_url", kw_col: "destination_url_h1"}, inplace=True)
         df['source_h1'] = df['source_h1'].str.lower()
         df['destination_url_h1'] = df['destination_url_h1'].str.lower()
         df['check'] = df['source_url'] == df['destination_url']

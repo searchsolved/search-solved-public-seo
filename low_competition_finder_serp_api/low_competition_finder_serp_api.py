@@ -18,14 +18,16 @@ st.write(
 st.title("Keyword Difficulty Finder")
 
 # streamlit variables
-uploaded_file = st.file_uploader("Upload your Keyword report")
+uploaded_file = st.file_uploader("Upload your keyword report")
 
-value_serp_key = st.sidebar.text_input('Enter your ValueSERP Key')  #good
+value_serp_key = st.sidebar.text_input('Enter your ValueSERP Key')  # good
 device = st.sidebar.radio("Select the device to search Google", ('Mobile', 'Desktop', 'Tablet'))
-location_select = st.sidebar.selectbox('Select the location to search Google', ('United States', 'United Kingdom', 'Australia', 'India', 'Spain', 'Italy', 'Canada', 'Germany', 'Ireland', 'France', 'Holland'))
+location_select = st.sidebar.selectbox('Select the location to search Google', (
+'United States', 'United Kingdom', 'Australia', 'India', 'Spain', 'Italy', 'Canada', 'Germany', 'Ireland', 'France',
+'Holland'))
 threads = st.sidebar.slider("Set number of threads", value=10, min_value=1, max_value=20)
 common_urls = st.sidebar.slider("Set number of common urls to match", value=3, min_value=2, max_value=5)
-max_diff = st.sidebar.slider("Set maximum Keyword difficulty", value=10, min_value=0, max_value=99)
+max_diff = st.sidebar.slider("Set minimum keyword difficulty", value=10, min_value=0, max_value=99)
 filter_questions = st.sidebar.checkbox('Select only question keywords?', value=False)
 
 if uploaded_file is not None:
@@ -76,7 +78,36 @@ if submitted:
     kws = list(set(df_comp['Keyword']))
     with st.expander("↕ View keywords to process", expanded=False):
         st.write(kws)
-    st.info("Getting SERP Data, this may take some time! Small batches are recommended!")
+
+    # set up the request parameters
+    params = {
+        'api_key': value_serp_key
+    }
+
+    # get account info from valueserp
+    api_result = requests.get('https://api.valueserp.com/account', params)
+    ac_response_df = json.loads(api_result.text)
+    account_result = ac_response_df.get('account_info')
+
+    # assign account variables
+    credits_remain = account_result.get('topup_credits_remaining')
+    rate_limit = account_result.get('rate_limit_per_minute')
+
+    # calculate credits required and time remaining
+    kws_req = len(kws) * 3
+    units = " seconds"
+    minute_calc = kws_req / rate_limit
+    second_calc = minute_calc * 60
+    if second_calc > 59.9:
+        second_calc = second_calc / 60
+        units = " minutes"
+
+    st.info("Keywords to Process: {} - Available Credits: {} - Rate Limit {} - Estimated Completion Time: {}{}".format(
+        kws_req, credits_remain, rate_limit, second_calc, units))
+
+    if kws_req > credits_remain:
+        st.write("Not enough credits to process batch!")
+        st.stop()
 
     # create allintitle and phrase matches
     df_comp['allintitle_kw_temp'] = "allintitle: " + df_comp['Keyword']
@@ -99,6 +130,7 @@ if submitted:
     query_padded_len = []
 
     counter = 0
+
 
     def get_serp(kw):
         global counter
@@ -139,19 +171,15 @@ if submitted:
                 diff = max_list_len - len(query_padded_len)
                 query_padded_len.extend([kw] * diff)
 
+
     # use stqdm with concurrent futures
-    try:
-        with stqdm(total=len(kws)) as pbar:
-            with ThreadPoolExecutor(max_workers=threads) as ex:
-                futures = [ex.submit(get_serp, url) for url in kws]
-                for future in as_completed(futures):
-                    result = future.result()
-                    pbar.set_description("Searching Keywords: ")
-                    pbar.update(1)
-    except Exception:
-        pass
-
-
+    with stqdm(total=len(kws)) as pbar:
+        with ThreadPoolExecutor(max_workers=threads) as ex:
+            futures = [ex.submit(get_serp, url) for url in kws]
+            for future in as_completed(futures):
+                result = future.result()
+                pbar.set_description("Searching Keywords: ")
+                pbar.update(1)
 
     print("Finished searching!")
     df_results = pd.DataFrame(None)
@@ -260,13 +288,14 @@ if submitted:
     df_comp.loc[df_comp["cluster_count"] == 1, "Serp Cluster"] = "zzz_no_cluster"
     del df_comp['cluster_count']
     df_comp = df_comp.sort_values(by="Serp Cluster", ascending=True)
-    df_comp.fillna({"Search Results": 0, "Quoted Results": 0, "Allintite Results": 0}, inplace=True)
+
     # make question dataframe ------------------------------------------------------------------------------------------
     q_words_filter = "who |what |where |why |when |how |is |are |does |do |can "
     df_questions = df_comp[df_comp['Keyword'].str.contains(q_words_filter)]
 
     # save to Excel sheet
     dfs = [df_comp, df_questions]  # make a list of the dataframe to use as a sheet
+
 
     # Function to save all dataframes to one single excel
     @st.cache
@@ -278,6 +307,7 @@ if submitted:
         writer.save()
         processed_data = output.getvalue()
         return processed_data
+
 
     # list of sheet names
     sheets = ['Competitive Analysis', 'Questions Only']

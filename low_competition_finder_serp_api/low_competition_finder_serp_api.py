@@ -313,6 +313,6 @@ if submitted:
     sheets = ['Competitive Analysis', 'Questions Only']
 
     df_xlsx = dfs_tabs(dfs, sheets, 'competitor_analysis.xlsx')
-    st.download_button(label='📥 Download Current Result',
+    st.download_button(label='📥 Download the Results!',
                        data=df_xlsx,
                        file_name='df_serp_difficulty_checks.xlsx')

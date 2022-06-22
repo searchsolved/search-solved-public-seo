@@ -86,16 +86,18 @@ with st.form(key='columns_in_form_2'):
     kw_col = st.selectbox('Select the keyword column:', df.columns)
     submitted = st.form_submit_button('Submit')
     if submitted:
-        st.info("Find Link Opportunities, This May Take a While! Please Wait!")
+        df[kw_col] = df[kw_col].str.encode('ascii', 'ignore').str.decode('ascii')
+        df.drop_duplicates(subset=kw_col, inplace=True) 
+        st.info("Finding Interlinking Opportunities, This May Take a While! Please Wait!")
 
         # store the data
         cluster_name_list = []
         corpus_sentences_list = []
-        df_all = []
+        df_all = []        
 
         corpus_set = set(df[kw_col])
         corpus_set_all = corpus_set
-
+        
         cluster = True
 
         while cluster:
@@ -129,7 +131,6 @@ with st.form(key='columns_in_form_2'):
         df = df.merge(df_new.drop_duplicates(kw_col), how='left', on=kw_col)
 
         # ------------------------------ rename the clusters to the shortest keyword -----------------------------------
-        df.to_csv("/python_scripts/test.csv")
         df['length'] = df[kw_col].astype(str).map(len)
         df = df.sort_values(by="length", ascending=True)
         df['source_h1'] = df.groupby('source_h1')[kw_col].transform('first')
@@ -141,7 +142,6 @@ with st.form(key='columns_in_form_2'):
         df.insert(0, col.name, col)
         col = df.pop('source_h1')
         df.insert(0, col.name, col)
-        df.to_csv("/python_scripts/test144.csv")
         df2 = df[["Address", kw_col]].copy()
         df2.rename(columns={"Address": "source_url", kw_col: "source_h1"}, inplace=True)
         df = df.merge(df2.drop_duplicates('source_h1'), how='left', on="source_h1")  # merge on first instance only

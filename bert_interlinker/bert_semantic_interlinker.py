@@ -1,4 +1,5 @@
 import streamlit as st
+
 finish = False
 # region format
 st.set_page_config(page_title="BERT Semantic Interlinking App", page_icon="🔗",
@@ -11,6 +12,7 @@ from sentence_transformers import SentenceTransformer, util
 
 beta_limit = 10000
 
+
 @st.cache(allow_output_mutation=True)
 def get_model():
     #model = SentenceTransformer('multi-qa-mpnet-base-dot-v1')  # highest semantic scoring card
@@ -19,11 +21,14 @@ def get_model():
 
     return model
 
+
 model = get_model()
 
-st.write("Made in [![this is an image link](https://i.imgur.com/iIOA6kU.png)](https://www.streamlit.io/) by [@LeeFootSEO](https://twitter.com/LeeFootSEO) / [![this is an image link](https://i.imgur.com/bjNRJra.png)](https://www.buymeacoffee.com/leefootseo) [Support My Work! Buy me a coffee!](https://www.buymeacoffee.com/leefootseo)")
+st.write(
+    "Made in [![this is an image link](https://i.imgur.com/iIOA6kU.png)](https://www.streamlit.io/) by [@LeeFootSEO](https://twitter.com/LeeFootSEO) / [![this is an image link](https://i.imgur.com/bjNRJra.png)](https://www.buymeacoffee.com/leefootseo) [Support My Work! Buy me a coffee!](https://www.buymeacoffee.com/leefootseo)")
 
 st.title("BERT Semantic Interlinking Tool")
+st.subheader("Upload a crawl film to find semantically relevant pages to interlink. (Beta limited to 10,000 rows")
 accuracy_slide = st.sidebar.slider("Set Cluster Accuracy: 0-100", value=75)
 min_cluster_size = st.sidebar.slider("Set Minimum Cluster Size: 0-100", value=2)
 source_filter = st.sidebar.text_input('Filter Source URL Type')
@@ -82,22 +87,22 @@ else:
 #
 
 with st.form(key='columns_in_form_2'):
-    st.subheader("Please Select the Column to Match")
+    st.subheader("Please Select the Column to Match (Recommend H1 / Title or Extracted Content)")
     kw_col = st.selectbox('Select the keyword column:', df.columns)
     submitted = st.form_submit_button('Submit')
     if submitted:
         df[kw_col] = df[kw_col].str.encode('ascii', 'ignore').str.decode('ascii')
-        df.drop_duplicates(subset=kw_col, inplace=True) 
+        df.drop_duplicates(subset=kw_col, inplace=True)
         st.info("Finding Interlinking Opportunities, This May Take a While! Please Wait!")
 
         # store the data
         cluster_name_list = []
         corpus_sentences_list = []
-        df_all = []        
+        df_all = []
 
         corpus_set = set(df[kw_col])
         corpus_set_all = corpus_set
-        
+
         cluster = True
 
         while cluster:
@@ -144,11 +149,25 @@ with st.form(key='columns_in_form_2'):
         df.insert(0, col.name, col)
         df2 = df[["Address", kw_col]].copy()
         df2.rename(columns={"Address": "source_url", kw_col: "source_h1"}, inplace=True)
+
+        df2 = df2.loc[:, ~df2.columns.duplicated()].copy()
+        if 'source_url' not in df2.columns:
+            df2['source_url'] = df2['source_h1']
+
         df = df.merge(df2.drop_duplicates('source_h1'), how='left', on="source_h1")  # merge on first instance only
         df = df[["source_url", "source_h1", "Address", kw_col]]
+        try:
+            df.drop_duplicates(subset=["Address", "source_url"], keep="first", inplace=True)
+        except AttributeError:
+            st.warning("No Results Found! Try Matching on a Different Column! (Recommend H1 or Extracted Content)")
+            st.stop()
 
-        df.drop_duplicates(subset=["Address", "source_url"], keep="first", inplace=True)
-        df = df[df["Address"].str.contains(destination_filter, na=False)]
+        try:
+            df = df[df["Address"].str.contains(destination_filter, na=False)]
+        except AttributeError:
+            st.warning("No Results Found! Try Matching on a Different Column! (Recommend H1 / Title or Extracted Content)")
+            st.stop()
+
         df = df[df["source_url"].str.contains(source_filter, na=False)]
 
         df = df[~df["Address"].str.contains("zzz_no_cluster", na=False)]
@@ -167,13 +186,15 @@ if finish == True:
     st.markdown("### **🎈 Download your results!**")
     st.write("")
 
+
     def convert_df(df):  # IMPORTANT: Cache the conversion to prevent computation on every rerun
-      return df.to_csv(index=False).encode('utf-8')
+        return df.to_csv(index=False).encode('utf-8')
+
 
     csv = convert_df(df)
 
     st.download_button(
-      label="📥 Download your report!",
-      data=csv,
-      file_name='your_interlinking_opportunities.csv',
-      mime='text/csv')
+        label="📥 Download your report!",
+        data=csv,
+        file_name='your_interlinking_opportunities.csv',
+        mime='text/csv')

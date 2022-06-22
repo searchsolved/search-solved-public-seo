@@ -28,7 +28,7 @@ st.write(
     "Made in [![this is an image link](https://i.imgur.com/iIOA6kU.png)](https://www.streamlit.io/) by [@LeeFootSEO](https://twitter.com/LeeFootSEO) / [![this is an image link](https://i.imgur.com/bjNRJra.png)](https://www.buymeacoffee.com/leefootseo) [Support My Work! Buy me a coffee!](https://www.buymeacoffee.com/leefootseo)")
 
 st.title("BERT Semantic Interlinking Tool")
-st.subheader("Upload a crawl film to find semantically relevant pages to interlink. (Beta limited to 10,000 rows")
+st.subheader("Upload a crawl film to find semantically relevant pages to interlink. (Beta limited to 10,000 rows)")
 accuracy_slide = st.sidebar.slider("Set Cluster Accuracy: 0-100", value=75)
 min_cluster_size = st.sidebar.slider("Set Minimum Cluster Size: 0-100", value=2)
 source_filter = st.sidebar.text_input('Filter Source URL Type')

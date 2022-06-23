@@ -200,12 +200,14 @@ if finish == True:
     df_autocomplete_full = df.copy()
 
     # extracts the domain from the address column if present
-    extracted_domain = df['source_url'].iloc[0]
-    url = extracted_domain
-    o = urlparse(url)
-    domain = o.netloc
-    df_autocomplete_full['seed'] = domain
-
+    try:
+        extracted_domain = df['source_url'].iloc[0]
+        url = extracted_domain
+        o = urlparse(url)
+        domain = o.netloc
+        df_autocomplete_full['seed'] = domain
+    except IndexError:
+        df_autocomplete_full['seed'] = "crawl"
     filt = list(set(df['source_h1']))
 
     df_list.append(df)

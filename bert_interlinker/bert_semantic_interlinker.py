@@ -13,24 +13,33 @@ from sentence_transformers import SentenceTransformer, util
 
 finish = False
 
-beta_limit = 10000
-
-@st.cache(allow_output_mutation=True)
-def get_model():
-    #model = SentenceTransformer('multi-qa-mpnet-base-dot-v1')  # highest semantic scoring card
-    # model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
-    model = SentenceTransformer('paraphrase-MiniLM-L3-v2')
-
-    return model
-
-
-model = get_model()
 
 st.write(
     "Made in [![this is an image link](https://i.imgur.com/iIOA6kU.png)](https://www.streamlit.io/) by [@LeeFootSEO](https://twitter.com/LeeFootSEO) / [![this is an image link](https://i.imgur.com/bjNRJra.png)](https://www.buymeacoffee.com/leefootseo) [Support My Work! Buy me a coffee!](https://www.buymeacoffee.com/leefootseo)")
 
 st.title("BERT Semantic Interlinking Tool")
-st.subheader("Upload a crawl film to find semantically relevant pages to interlink. (Beta limited to 10,000 rows)")
+st.subheader("Upload a crawl film to find semantically relevant pages to interlink. (Unlimited Version)")
+model_radio_button = st.sidebar.radio(
+    "Transformer model",
+    [
+        "multi-qa-mpnet-base-dot-v1",
+        "paraphrase-multilingual-MiniLM-L12-v2",
+        "paraphrase-MiniLM-L3-v2",
+    ],
+    help="""the model to use for the clustering.
+
+    - multi-qa-mpnet-base-dot-v1 - Best Semantic Clustering (🐌)
+    - paraphrase-multilingual-MiniLM-L12-v2 - Best Multi-Lingual Clustering (💬)
+    - paraphrase-MiniLM-L3-v2 - Best Performance (💨)"""
+)
+
+@st.cache(allow_output_mutation=True)
+def get_model():
+    model = SentenceTransformer(model_radio_button)
+    return model
+
+model = get_model()
+
 accuracy_slide = st.sidebar.slider("Set Cluster Accuracy: 0-100", value=75)
 min_cluster_size = st.sidebar.slider("Set Minimum Cluster Size: 0-100", value=2)
 source_filter = st.sidebar.text_input('Filter Source URL Type')
@@ -61,10 +70,6 @@ if uploaded_file is not None:
         )
 
         number_of_rows = len(df)
-
-        if number_of_rows > beta_limit:
-            df = df[:beta_limit]
-            st.caption("🚨 Imported rows over the beta limit, limiting to first " + str(beta_limit) + " rows.")
 
         if number_of_rows == 0:
             st.caption("Your sheet seems empty!")

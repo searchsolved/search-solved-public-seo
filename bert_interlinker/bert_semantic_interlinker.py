@@ -241,8 +241,10 @@ if finish == True:
 
     # visualise result -----------------------------------------------------------------------------------------------------
     def visualize_autocomplete(df_autocomplete_full):
-
-        query = df_autocomplete_full['seed'].iloc[0]
+        try:
+            query = df_autocomplete_full['seed'].iloc[0]
+        except IndexError:
+            query = ""
 
         for query in df_autocomplete_full['seed'].unique():
             df_autocomplete_full = df_autocomplete_full[df_autocomplete_full['seed'] == query]

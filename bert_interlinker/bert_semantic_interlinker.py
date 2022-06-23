@@ -1,17 +1,19 @@
 import streamlit as st
 
-finish = False
 # region format
 st.set_page_config(page_title="BERT Semantic Interlinking App", page_icon="🔗",
                    layout="wide")  # needs to be the first thing after the streamlit import
 
-import time
+from io import BytesIO
+from streamlit_echarts import st_echarts
+from urllib.parse import urlparse
 import chardet
 import pandas as pd
 from sentence_transformers import SentenceTransformer, util
 
-beta_limit = 10000
+finish = False
 
+beta_limit = 10000
 
 @st.cache(allow_output_mutation=True)
 def get_model():
@@ -64,9 +66,6 @@ if uploaded_file is not None:
             df = df[:beta_limit]
             st.caption("🚨 Imported rows over the beta limit, limiting to first " + str(beta_limit) + " rows.")
 
-        # if remove_dupes:
-        #     df.drop_duplicates(subset="Keyword", inplace=True)
-
         if number_of_rows == 0:
             st.caption("Your sheet seems empty!")
 
@@ -82,9 +81,7 @@ if uploaded_file is not None:
         )
 
 else:
-
     st.stop()
-#
 
 with st.form(key='columns_in_form_2'):
     st.subheader("Please Select the Column to Match (Recommend H1 / Title or Extracted Content)")
@@ -136,6 +133,7 @@ with st.form(key='columns_in_form_2'):
         df = df.merge(df_new.drop_duplicates(kw_col), how='left', on=kw_col)
 
         # ------------------------------ rename the clusters to the shortest keyword -----------------------------------
+
         df['length'] = df[kw_col].astype(str).map(len)
         df = df.sort_values(by="length", ascending=True)
         df['source_h1'] = df.groupby('source_h1')[kw_col].transform('first')
@@ -179,22 +177,139 @@ with st.form(key='columns_in_form_2'):
         del df['check']
         finish = True
 
-        # -------------------------------------- download the csv ----------------------------------------------------------
-
+# make excel output and visualise results ------------------------------------------------------------------------------
 if finish == True:
-    st.success('Finished!')
-    st.markdown("### **🎈 Download your results!**")
-    st.write("")
+
+    df_list = []
+    sheet_list = []
+
+    # clean special characters
+    spec_chars = ["!", '"', "#", "%", "&", "'", "(", ")",
+                  "*", "+", ",", ".", "/", ":", ";", "<",
+                  "=", ">", "?", "@", "[", "\\", "]", "^",
+                  "`", "{", "|", "}", "~", "–"]
+
+    df['source_h1'] = df['source_h1'].str.encode('ascii', 'ignore').str.decode('ascii')
+
+    # make the dataframe for visualisation
+    df_autocomplete_full = df.copy()
+
+    # extracts the domain from the address column if present
+    extracted_domain = df['source_url'].iloc[0]
+    url = extracted_domain
+    o = urlparse(url)
+    domain = o.netloc
+    df_autocomplete_full['seed'] = domain
+
+    filt = list(set(df['source_h1']))
+
+    df_list.append(df)
+    sheet_list.append("All Results")
+
+    for i in filt:
+
+        worksheet_name = i.replace(" ", "_")
+        for char in spec_chars:
+            worksheet_name = worksheet_name.replace(char, "")
+            worksheet_name = worksheet_name.replace("  ", "_")
+
+        worksheet_name = worksheet_name[0:31]
+        sheet_list.append(worksheet_name)
+        df_list.append(df[df['source_h1'].str.contains(i)].copy())
+
+    # save to Excel sheet
+    def dfs_tabs(df_list, sheet_list, file_name):  # function to save all dataframes to one single excel doc
+
+        output = BytesIO()
+        writer = pd.ExcelWriter(output, engine='xlsxwriter')
+        for dataframe, sheet in zip(df_list, sheet_list):
+            dataframe.to_excel(writer, sheet_name=sheet, startrow=0, startcol=0, index=False)
+
+        writer.save()
+        processed_data = output.getvalue()
+        return processed_data
+
+    df_xlsx = dfs_tabs(df_list, sheet_list, 'serp-cluster-output.xlsx')
+    st.download_button(label='📥 Download BERT Interlinking Opportunities', data=df_xlsx, file_name='bert_interlinking_opportunities.xlsx')
+
+    # visualise result -----------------------------------------------------------------------------------------------------
+    def visualize_autocomplete(df_autocomplete_full):
+
+        query = df_autocomplete_full['seed'].iloc[0]
+
+        for query in df_autocomplete_full['seed'].unique():
+            df_autocomplete_full = df_autocomplete_full[df_autocomplete_full['seed'] == query]
+            children_list = []
+            children_list_level_1 = []
+
+            for int_word in df_autocomplete_full['source_h1']:
+                q_lv1_line = {"name": int_word}
+                if not q_lv1_line in children_list_level_1:
+                    children_list_level_1.append(q_lv1_line)
+
+                children_list_level_2 = []
+
+                for query_2 in df_autocomplete_full[df_autocomplete_full['source_h1'] == int_word][
+                    'destination_url_h1']:
+                    q_lv2_line = {"name": query_2}
+                    children_list_level_2.append(q_lv2_line)
+
+                level2_tree = {'name': int_word, 'children': children_list_level_2}
+
+                if not level2_tree in children_list:
+                    children_list.append(level2_tree)
+
+                tree = {'name': query, 'children': children_list}
+
+                opts = {
+                    "backgroundColor": "#F0F2F6",
 
 
-    def convert_df(df):  # IMPORTANT: Cache the conversion to prevent computation on every rerun
-        return df.to_csv(index=False).encode('utf-8')
+                    "title": {
+                        # "subtext": "https://tools.alekseo.com/askey.html",
+                        # "text": f"Questions Map for: «{query}»",
+                        "x": 'center',
+                        "y": 'top',
+                        "top": "5%",
 
+                        "textStyle": {
+                            "fontSize": 22,
 
-    csv = convert_df(df)
+                        },
+                        "subtextStyle": {
+                            "fontSize": 15,
+                            "color": '#2ec4b6',
 
-    st.download_button(
-        label="📥 Download your report!",
-        data=csv,
-        file_name='your_interlinking_opportunities.csv',
-        mime='text/csv')
+                        },
+                    },
+
+                    "series": [
+                        {
+                            "type": "tree",
+                            "data": [tree],
+                            "layout": "radial",
+                            "top": "10%",
+                            "left": "25%",
+                            "bottom": "5%",
+                            "right": "25%",
+                            "symbolSize": 20,
+                            "itemStyle": {
+                                "color": '#2ec4b6',
+                            },
+                            "label": {
+                                "fontSize": 14,
+
+                            },
+
+                            "expandAndCollapse": True,
+                            "animationDuration": 550,
+                            "animationDurationUpdate": 750,
+                        }
+                    ],
+                }
+            st.caption("Right mouse click to save as image.")
+            st_echarts(opts, key=query, height=1700)
+
+    st.header("Visualising First 100 Results")
+    df_autocomplete_full = df_autocomplete_full[:100]
+    visualize_autocomplete(df_autocomplete_full)

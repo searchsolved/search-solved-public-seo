@@ -222,7 +222,10 @@ if finish == True:
 
         worksheet_name = worksheet_name[0:31]
         sheet_list.append(worksheet_name)
-        df_list.append(df[df['source_h1'].str.contains(i)].copy())
+        try:
+            df_list.append(df[df['source_h1'].str.contains(i)].copy())
+        except Exception:
+            pass
 
     # save to Excel sheet
     def dfs_tabs(df_list, sheet_list, file_name):  # function to save all dataframes to one single excel doc

@@ -1,0 +1,6 @@
+stqdm==0.0.4
+pandas==1.1.4
+bs4==0.0.1
+requests==2.27.1
+user_agent2==2021.12.11
+streamlit_echarts==0.4.0

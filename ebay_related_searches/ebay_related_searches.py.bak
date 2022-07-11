@@ -18,7 +18,7 @@ ua = generate_user_agent(navigator="chrome")
 header = {'User-Agent': str(ua)}
 
 css = "body > div.srp-main.srp-main--isLarge > div.s-answer-region.s-answer-region-above-river > div"
-url = "https://www.ebay.co.uk/sch/i.html?_nkw="
+url = "/sch/i.html?_nkw="
 
 # store the data
 related_search_kws = []
@@ -36,16 +36,13 @@ st.write("")
 with st.form(key='columns_in_form_2'):
     seed_keyword = st.text_input('Enter the Keyword to Search eBay')
     submitted = st.form_submit_button('Submit')
-<<<<<<< HEAD
     ccTLD = st.selectbox(
         'Select Which ccTLD to Search',
         ('.com', '.co.uk', '.de', '.es', '.fr', '.nl'))
-=======
->>>>>>> 51f6a05fd6cf76ee73c5f031c8163822601eeaa2
 
 if submitted:
 
-    response = requests.get(url + seed_keyword, headers=header)
+    response = requests.get("http://www.ebay" + ccTLD + url + seed_keyword, headers=header)
     soup = BeautifulSoup(response.text, "html.parser")
     for related in soup.select(css):
         result_str = related.get_text(separator=' ')
@@ -59,7 +56,7 @@ if submitted:
     st.write("Searching eBay for Related keywords")
     for i in stqdm(related_search_kws):
         print(i)
-        response = requests.get(url + i)
+        response = requests.get("http://www.ebay" + ccTLD + url + i)
         soup = BeautifulSoup(response.text, "html.parser")
         for related in soup.select(css):
             result_str = related.get_text(separator=' ')

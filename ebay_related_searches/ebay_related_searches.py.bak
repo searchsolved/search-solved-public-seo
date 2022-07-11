@@ -38,7 +38,7 @@ with st.form(key='columns_in_form_2'):
     submitted = st.form_submit_button('Submit')
     ccTLD = st.selectbox(
         'Select Which ccTLD to Search',
-        ('.com', '.co.uk', '.de', '.es', '.fr', '.nl'))
+        ('.com', '.co.uk', 'de', 'es', 'fr', 'nl'))
 
 if submitted:
 

@@ -18,7 +18,7 @@ st.write(
     "Made in [![this is an image link](https://i.imgur.com/iIOA6kU.png)](https://www.streamlit.io/) by [@LeeFootSEO](https://twitter.com/LeeFootSEO) / [![this is an image link](https://i.imgur.com/bjNRJra.png)](https://www.buymeacoffee.com/leefootseo) [Support My Work! Buy me a coffee!](https://www.buymeacoffee.com/leefootseo)")
 
 st.title("BERT Semantic Interlinking Tool")
-st.subheader("Upload a crawl film to find semantically relevant pages to interlink. (Unlimited Version)")
+st.subheader("Upload a crawl file to find semantically relevant pages to interlink. (Unlimited Version)")
 model_radio_button = st.sidebar.radio(
     "Transformer model",
     [

@@ -68,7 +68,9 @@ if uploaded_file is not None:
             delim_whitespace=white_space,
             error_bad_lines=False,
         )
-
+        
+        # rename multi language columns
+        df.rename(columns={"Adresse": "Address", "Dirección": "Address", "Indirizzo": "Address"}, inplace=True)
         number_of_rows = len(df)
 
         if number_of_rows == 0:

@@ -1,0 +1,6 @@
+neuralprophet==0.3.2
+stqdm==0.0.4
+pandas==1.4.2
+xlsxwriter==3.0.3
+chardet==4.0.0
+pytrends==4.8.0

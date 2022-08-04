@@ -66,19 +66,4 @@ if submitted:
     forecast = model.predict(future)
     ax = model.plot(forecast, ylabel='Google Searches', xlabel='Year', figsize=(14, 9))
     st.subheader(KW[0])
-
-    @st.cache
-    def convert_df(df):  # IMPORTANT: Cache the conversion to prevent computation on every rerun
-        return df.to_csv().encode('utf-8')
-
-    csv = convert_df(data)
-
-    st.download_button(
-        label="📥 Download your predictions!",
-        data=csv,
-        file_name='your_gtrends_predictions.csv',
-        mime='text/csv', )
-
     st.pyplot()
-    st.write(data)
-

@@ -42,8 +42,6 @@ LANGUAGE = st.sidebar.selectbox(
         "cy",
         "no",
         "ja",
-        "ua",
-        "ru"
     ),
 )
 HISTORIC = st.sidebar.checkbox('Make historic predictions?', value=True)

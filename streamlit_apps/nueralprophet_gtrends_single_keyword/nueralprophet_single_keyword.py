@@ -36,6 +36,8 @@ LANGUAGE = st.sidebar.selectbox(
         "cy",
         "no",
         "ja",
+        "ua",
+        "ru"
     ),
 )
 RETRIES = st.sidebar.text_input('Select the number of retries when scraping', value=3)

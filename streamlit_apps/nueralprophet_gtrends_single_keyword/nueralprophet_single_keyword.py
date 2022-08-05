@@ -54,8 +54,11 @@ if submitted:
 
     pt.build_payload(KW)
     df = pt.interest_over_time()
-
-    df = df[df['isPartial'] == False].reset_index()
+    try:
+        df = df[df['isPartial'] == False].reset_index()
+    except KeyError:
+        st.warning("No Data Received from Google Trends, Please Search Again!")
+        st.stop()
     data = df.rename(columns={'date': 'ds', KW[0]: 'y'})[['ds', 'y']]
     model = NeuralProphet(daily_seasonality=True)
     metrics = model.fit(data, freq="W")

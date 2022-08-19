@@ -12,7 +12,6 @@ from bs4 import BeautifulSoup
 import requests
 from user_agent2 import (generate_user_agent)
 
-
 # set fake agent
 ua = generate_user_agent(navigator="chrome")
 header = {'User-Agent': str(ua)}
@@ -30,7 +29,7 @@ st.subheader("Get Related Searches from Ebay")
 st.write(
     "An app which visualises related searches from eBay")
 st.write(
-    "Made in [![this is an image link](https://i.imgur.com/iIOA6kU.png)](https://www.return_streamlit.io/) by [@LeeFootSEO](https://twitter.com/LeeFootSEO) / [![this is an image link](https://i.imgur.com/bjNRJra.png)](https://www.buymeacoffee.com/leefootseo) [Support My Work! Buy me a coffee!](https://www.buymeacoffee.com/leefootseo)")
+"[![this is an image link](https://i.imgur.com/Ex8eeC2.png)](https://www.patreon.com/leefootseo) [Become a Patreon for Early Access, Support & More!](https://www.patreon.com/leefootseo)  |  Made in [![this is an image link](https://i.imgur.com/iIOA6kU.png)](https://www.streamlit.io/) by [@LeeFootSEO](https://twitter.com/LeeFootSEO)")
 st.write("")
 
 with st.form(key='columns_in_form_2'):
@@ -51,7 +50,7 @@ if submitted:
         result_str = result_str.replace("@", " ")
         result_str = result_str.replace("Related:,", "")
         related_search_kws = result_str.split(",")
-    
+
     # second loop
     st.write("Searching eBay for Related keywords")
     for i in stqdm(related_search_kws):
@@ -64,14 +63,14 @@ if submitted:
             result_str = result_str.replace(" ", ",")
             result_str = result_str.replace("@", " ")
             result_str = result_str.replace("Related:,", "")
-    
+
             source_kws.append(i)
             final_kws.append(result_str)
-    
+
     df = pd.DataFrame(None)
     df['seed_keyword'] = source_kws
     df['related_searches'] = final_kws
-    
+
     try:
         df['related_searches'] = df['related_searches'].str.split(',')
     except Exception:
@@ -79,6 +78,7 @@ if submitted:
         st.stop()
 
     df = df.explode('related_searches').reset_index(drop=True)
+
 
     def visualize_autocomplete(df_autocomplete_full):
         df_autocomplete_full['Keyword'] = seed_keyword
@@ -109,7 +109,6 @@ if submitted:
 
                 opts = {
                     "backgroundColor": "#F0F2F6",
-
 
                     "title": {
                         "x": 'center',
@@ -154,9 +153,11 @@ if submitted:
             st.caption("Right mouse click to save as image.")
             st_echarts(opts, key=query, height=1700)
 
+
     # add download button
     def convert_df(df):  # IMPORTANT: Cache the conversion to prevent computation on every rerun
         return df.to_csv().encode('utf-8')
+
 
     csv = convert_df(df)
 

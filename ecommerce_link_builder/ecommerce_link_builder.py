@@ -1,5 +1,6 @@
-"""Script by @LeeFootSEO - Early access to scripts and to request features Join the Patreon: https://www.patreon.com/leefootseo"""
-
+"""Script by @LeeFootSEO -
+For early access to scripts / request features
+Join the Patreon: https://www.patreon.com/leefootseo"""
 
 # import the libraries
 import time

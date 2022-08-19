@@ -1,3 +1,5 @@
+"""Script by @LeeFootSEO - Early access to scripts and to shape the direction: https://www.patreon.com/leefootseo"""
+
 import concurrent.futures
 import logging
 import os

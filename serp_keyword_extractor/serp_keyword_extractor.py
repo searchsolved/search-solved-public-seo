@@ -9,7 +9,7 @@ from fuzzywuzzy import fuzz
 import altair as alt
 
 st.write(
-    "Made in [![this is an image link](https://i.imgur.com/iIOA6kU.png)](https://www.streamlit.io/) by [@LeeFootSEO](https://twitter.com/LeeFootSEO) / [![this is an image link](https://i.imgur.com/bjNRJra.png)](https://www.buymeacoffee.com/leefootseo) [Support My Work! Buy me a coffee!](https://www.buymeacoffee.com/leefootseo)")
+    "[![this is an image link](https://i.imgur.com/Ex8eeC2.png)](https://www.patreon.com/leefootseo) [Become a Patreon for Early Access, Support & More!](https://www.patreon.com/leefootseo)  |  Made in [![this is an image link](https://i.imgur.com/iIOA6kU.png)](https://www.streamlit.io/) by [@LeeFootSEO](https://twitter.com/LeeFootSEO)")
 
 with st.expander("How do I use this app?"):
     st.write("""

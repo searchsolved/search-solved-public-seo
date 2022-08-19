@@ -1,4 +1,6 @@
-""" Internal Search Report Mapper V2 by Lee Foot 11/01/2021 @LeeFootSEO
+""" Script by @LeeFootSEO - Early access to scripts and to request features Join the Patreon: https://www.patreon.com/leefootseo
+
+Internal Search Report Mapper V2 by Lee Foot 11/01/2021 @LeeFootSEO
 Takes the Google Analytics search terms report and merges with a Screaming Frog crawl file to find opportunities to map
 internal searches to.
 

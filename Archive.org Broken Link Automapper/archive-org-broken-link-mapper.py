@@ -1,4 +1,4 @@
-"""Script by @LeeFootSEO - Early access to scripts and to shape the direction: https://www.patreon.com/leefootseo"""
+"""Script by @LeeFootSEO - Early access to scripts and to request features Join the Patreon: https://www.patreon.com/leefootseo"""
 
 import concurrent.futures
 import logging

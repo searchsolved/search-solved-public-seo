@@ -3,7 +3,7 @@ from polyfuzz import PolyFuzz
 import time
 
 # todo add options to
-# only redirect to canonical url - warning to use to respect canonical when crawling staging site.
+# only redirect to canonical url - generate warning to respect canonical when crawling staging site.
 # Option to match on content
 # set priority match order e.g. content > url > title > h1
 

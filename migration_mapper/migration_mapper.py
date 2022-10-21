@@ -42,9 +42,13 @@ df_live_200 = df_live[(df_live['Status Code'] >= 200) & (df_live['Status Code'] 
 df_live_400 = df_live[(df_live['Status Code'] >= 400) & (df_live['Status Code'] <= 499)]
 df_live = pd.concat([df_live_200, df_live_400])
 
-# todo what is this section for? Could an empty string be used here, or is used as a fallback? If so, needs to be better documented
+# --------------------------------------------------------------------------------------------------------- 404 handling
 
-# this fills in title / H1-1 NaN for source 404 pages with the url instead.
+"""As 404s won't have a field populated for the h1 and title, the will need to be matched on the URL. 
+THis section populates the empty values, (NaN's) with the URL. This is preferable to an empty string as an empty
+string will match 100% to another empty value. By populating something unique, we can ensure that doesn't 
+happen, and that the URL column will always be the highest matching value"""
+
 df_live["Title 1"] = df_live["Title 1"].fillna(df_live.Address)
 df_live["H1-1"] = df_live["H1-1"].fillna(df_live.Address)
 df_staging["Title 1"] = df_staging["Title 1"].fillna(df_staging.Address)
@@ -77,8 +81,7 @@ df_pf_h1_merge = pd.merge(df_pf_h1, df_new_h1, left_on="To H1", right_on="H1-1",
 
 # merge back into df_live
 df_final = pd.merge(df_live, df_pf_url, left_on="Address", right_on="From (Address)", how="inner")
-df_final = df_final.merge(df_pf_title_merge.drop_duplicates('Title 1'), how='left', left_on='Title 1',
-                          right_on="From (Title)")
+df_final = df_final.merge(df_pf_title_merge.drop_duplicates('Title 1'), how='left', left_on='Title 1', right_on="From (Title)")
 df_final = df_final.merge(df_pf_h1_merge.drop_duplicates('H1-1'), how='left', left_on='H1-1', right_on="From (H1)")
 
 # rename the columns
@@ -93,16 +96,16 @@ df_final.rename(
 )
 
 # get the max value across the three cells
-df_final['Highest Match On'] = df_final[["URL Similarity", "Title Similarity", "H1 Similarity"]].idxmax(axis=1)
+df_final['Best Match On'] = df_final[["URL Similarity", "Title Similarity", "H1 Similarity"]].idxmax(axis=1)
 
 # Check Value in Max Column and Replace with a Different Cell
-df_final.loc[df_final['Highest Match On'] == "Title Similarity", 'Highest Match Similarity'] = df_final[
+df_final.loc[df_final['Best Match On'] == "Title Similarity", 'Highest Match Similarity'] = df_final[
     'Title Similarity']
-df_final.loc[df_final['Highest Match On'] == "Title Similarity", 'Highest Match URL'] = df_final['URL - Title Match']
-df_final.loc[df_final['Highest Match On'] == "H1 Similarity", 'Highest Match Similarity'] = df_final['H1 Similarity']
-df_final.loc[df_final['Highest Match On'] == "H1 Similarity", 'Highest Match URL'] = df_final['URL - H1 Match']
-df_final.loc[df_final['Highest Match On'] == "URL Similarity", 'Highest Match Similarity'] = df_final['URL Similarity']
-df_final.loc[df_final['Highest Match On'] == "URL Similarity", 'Highest Match URL'] = df_final['URL - URL Match']
+df_final.loc[df_final['Best Match On'] == "Title Similarity", 'Best Matching URL'] = df_final['URL - Title Match']
+df_final.loc[df_final['Best Match On'] == "H1 Similarity", 'Highest Match Similarity'] = df_final['H1 Similarity']
+df_final.loc[df_final['Best Match On'] == "H1 Similarity", 'Best Matching URL'] = df_final['URL - H1 Match']
+df_final.loc[df_final['Best Match On'] == "URL Similarity", 'Highest Match Similarity'] = df_final['URL Similarity']
+df_final.loc[df_final['Best Match On'] == "URL Similarity", 'Best Matching URL'] = df_final['URL - URL Match']
 df_final.drop_duplicates(subset="URL - Source", inplace=True)
 
 """This routine gets the minimum value of the matches. The idea is that when the min and max values are removed, 
@@ -113,7 +116,7 @@ df_final['Lowest Match On'] = df_final[["URL Similarity", "Title Similarity", "H
 
 # this populates a column with all available values. Matching values are subtracted to leave correct value in place.
 df_final['Middle Match On'] = "URL Similarity Title Similarity H1 Similarity"
-df_final['Middle Match On'] = df_final.apply(lambda x: x['Middle Match On'].replace((x['Highest Match On']), ''), 1)
+df_final['Middle Match On'] = df_final.apply(lambda x: x['Middle Match On'].replace((x['Best Match On']), ''), 1)
 df_final['Middle Match On'] = df_final.apply(lambda x: x['Middle Match On'].replace((x['Lowest Match On']), ''), 1)
 df_final['Middle Match On'] = df_final['Middle Match On'].str.strip()  # strip out the whitespace
 
@@ -123,22 +126,22 @@ df_final.loc[df_final['Middle Match On'] == "URL Similarity", 'Middle Match URL'
 
 # rename the secondary match column
 df_final.rename(columns={"Middle Match URL": "Second Highest Match"}, inplace=True)
-df_final.rename(columns={"Middle Match On": "Second Highest Match On"}, inplace=True)
+df_final.rename(columns={"Middle Match On": "Second Match On"}, inplace=True)
 
 # re-order / index the highest match dataframe columns
 new_cols = (
     "URL - Source",
     "Status Code",
-    "Highest Match URL",
-    "Highest Match On",
+    "Best Matching URL",
+    "Best Match On",
     "Highest Match Similarity",
     "Highest Match Source Text",
     "Highest Match Destination Text",
     "Second Highest Match",
-    "Second Highest Match On",
+    "Second Match On",
     "Second Highest Match Similarity",
-    "Second Highest Match Source Text",
-    "Second Highest Match Destination Text",
+    "Second Match Source Text",
+    "Second Match Destination Text",
     "Lowest Match On",
     "Lowest Match Similarity",
     "Lowest Match Source Text",
@@ -158,28 +161,20 @@ new_cols = (
 df_final = df_final.reindex(columns=new_cols)
 
 # # Check Value in Max Column and Replace with a Different Cell
-df_final.loc[df_final["Highest Match On"] == "H1 Similarity", "Highest Match Source Text"] = df_final["From (H1)"]
-df_final.loc[df_final["Highest Match On"] == "H1 Similarity", "Highest Match Destination Text"] = df_final["To H1"]
-df_final.loc[df_final["Highest Match On"] == "Title Similarity", "Highest Match Source Text"] = df_final["From (Title)"]
-df_final.loc[df_final["Highest Match On"] == "Title Similarity", "Highest Match Destination Text"] = df_final[
-    "To Title"]
-df_final.loc[df_final["Highest Match On"] == "URL Similarity", "Highest Match Source Text"] = df_final["URL - Source"]
-df_final.loc[df_final["Highest Match On"] == "URL Similarity", "Highest Match Destination Text"] = df_final[
-    "URL - URL Match"]
+df_final.loc[df_final["Best Match On"] == "H1 Similarity", "Highest Match Source Text"] = df_final["From (H1)"]
+df_final.loc[df_final["Best Match On"] == "H1 Similarity", "Highest Match Destination Text"] = df_final["To H1"]
+df_final.loc[df_final["Best Match On"] == "Title Similarity", "Highest Match Source Text"] = df_final["From (Title)"]
+df_final.loc[df_final["Best Match On"] == "Title Similarity", "Highest Match Destination Text"] = df_final["To Title"]
+df_final.loc[df_final["Best Match On"] == "URL Similarity", "Highest Match Source Text"] = df_final["URL - Source"]
+df_final.loc[df_final["Best Match On"] == "URL Similarity", "Highest Match Destination Text"] = df_final["URL - URL Match"]
 
 # # Check Value in Max Column and Replace with a Different Cell
-df_final.loc[df_final["Second Highest Match On"] == "H1 Similarity", "Second Highest Match Source Text"] = df_final[
-    "From (H1)"]
-df_final.loc[df_final["Second Highest Match On"] == "H1 Similarity", "Second Highest Match Destination Text"] = \
-    df_final["To H1"]
-df_final.loc[df_final["Second Highest Match On"] == "Title Similarity", "Second Highest Match Source Text"] = df_final[
-    "From (Title)"]
-df_final.loc[df_final["Second Highest Match On"] == "Title Similarity", "Second Highest Match Destination Text"] = \
-    df_final["To Title"]
-df_final.loc[df_final["Second Highest Match On"] == "URL Similarity", "Second Highest Match Source Text"] = df_final[
-    "URL - Source"]
-df_final.loc[df_final["Second Highest Match On"] == "URL Similarity", "Second Highest Match Destination Text"] = \
-    df_final["URL - URL Match"]
+df_final.loc[df_final["Second Match On"] == "H1 Similarity", "Second Match Source Text"] = df_final["From (H1)"]
+df_final.loc[df_final["Second Match On"] == "H1 Similarity", "Second Match Destination Text"] = df_final["To H1"]
+df_final.loc[df_final["Second Match On"] == "Title Similarity", "Second Match Source Text"] = df_final["From (Title)"]
+df_final.loc[df_final["Second Match On"] == "Title Similarity", "Second Match Destination Text"] = df_final["To Title"]
+df_final.loc[df_final["Second Match On"] == "URL Similarity", "Second Match Source Text"] = df_final["URL - Source"]
+df_final.loc[df_final["Second Match On"] == "URL Similarity", "Second Match Destination Text"] = df_final["URL - URL Match"]
 
 # # Check Value in Max Column and Replace with a Different Cell
 df_final.loc[df_final["Lowest Match On"] == "H1 Similarity", "Lowest Match Source Text"] = df_final["From (H1)"]
@@ -187,56 +182,48 @@ df_final.loc[df_final["Lowest Match On"] == "H1 Similarity", "Lowest Match Desti
 df_final.loc[df_final["Lowest Match On"] == "Title Similarity", "Lowest Match Source Text"] = df_final["From (Title)"]
 df_final.loc[df_final["Lowest Match On"] == "Title Similarity", "Lowest Match Destination Text"] = df_final["To Title"]
 df_final.loc[df_final["Lowest Match On"] == "URL Similarity", "Lowest Match Source Text"] = df_final["URL - Source"]
-df_final.loc[df_final["Lowest Match On"] == "URL Similarity", "Lowest Match Destination Text"] = df_final[
-    "URL - URL Match"]
+df_final.loc[df_final["Lowest Match On"] == "URL Similarity", "Lowest Match Destination Text"] = df_final["URL - URL Match"]
 
 # get missing similarity scores
-df_final.loc[df_final["Second Highest Match On"] == "H1 Similarity", "Second Highest Match Similarity"] = df_final[
+df_final.loc[df_final["Second Match On"] == "H1 Similarity", "Second Highest Match Similarity"] = df_final[
     "H1 Similarity"]
-df_final.loc[df_final["Second Highest Match On"] == "Title Similarity", "Second Highest Match Similarity"] = df_final[
+df_final.loc[df_final["Second Match On"] == "Title Similarity", "Second Highest Match Similarity"] = df_final[
     "Title Similarity"]
-df_final.loc[df_final["Second Highest Match On"] == "URL Similarity", "Second Highest Match Similarity"] = df_final[
+df_final.loc[df_final["Second Match On"] == "URL Similarity", "Second Highest Match Similarity"] = df_final[
     "URL Similarity"]
 
 df_final.loc[df_final["Lowest Match On"] == "H1 Similarity", "Lowest Match Similarity"] = df_final["H1 Similarity"]
-df_final.loc[df_final["Lowest Match On"] == "Title Similarity", "Lowest Match Similarity"] = df_final[
-    "Title Similarity"]
+df_final.loc[df_final["Lowest Match On"] == "Title Similarity", "Lowest Match Similarity"] = df_final["Title Similarity"]
 df_final.loc[df_final["Lowest Match On"] == "URL Similarity", "Lowest Match Similarity"] = df_final["URL Similarity"]
 
 # check if both url recommendations are the same
-df_final["Best / Second Best URLs Match?"] = df_final['Highest Match URL'].str.lower() == df_final[
-    'Second Highest Match'].str.lower()
+df_final["Double Matched?"] = df_final['Best Matching URL'].str.lower() == df_final['Second Highest Match'].str.lower()
 
 # rename highest match values for final output
-df_final['Highest Match On'] = df_final['Highest Match On'].apply(lambda x: x.replace("Title Similarity", "Page Title"))
-df_final['Highest Match On'] = df_final['Highest Match On'].apply(lambda x: x.replace("H1 Similarity", "H1 Heading"))
-df_final['Highest Match On'] = df_final['Highest Match On'].apply(lambda x: x.replace("URL Similarity", "URL"))
+df_final['Best Match On'] = df_final['Best Match On'].apply(lambda x: x.replace("Title Similarity", "Page Title"))
+df_final['Best Match On'] = df_final['Best Match On'].apply(lambda x: x.replace("H1 Similarity", "H1 Heading"))
+df_final['Best Match On'] = df_final['Best Match On'].apply(lambda x: x.replace("URL Similarity", "URL"))
 
-# last re-index - set the final column order - bin off the helper columns
+# set the final column order - bin off the helper columns
 cols = (
     "URL - Source",
     "Status Code",
-    "Highest Match URL",
-    "Highest Match On",
+    "Best Matching URL",
+    "Best Match On",
     "Highest Match Similarity",
     "Highest Match Source Text",
     "Highest Match Destination Text",
     "Second Highest Match",
-    "Second Highest Match On",
+    "Second Match On",
     "Second Highest Match Similarity",
-    "Second Highest Match Source Text",
-    "Second Highest Match Destination Text",
-    "Lowest Match On",
-    "Lowest Match Similarity",
-    "Lowest Match Source Text",
-    "Lowest Match Destination Text",
-    "Best / Second Best URLs Match?",
+    "Second Match Source Text",
+    "Second Match Destination Text",
+    "Double Matched?",
 )
+
 df_final = df_final.reindex(columns=cols)
 
-# sort the final export
-df_final.sort_values(["Highest Match Similarity", "Best / Second Best URLs Match?"], ascending=[False, False],
-                     inplace=True, )
+df_final.sort_values(["Highest Match Similarity", "Double Matched?"], ascending=[False, False], inplace=True)
 
 df_final.to_csv('/python_scripts/migration_mapper/auto-migration-mapped-all-output.csv', index=False)
 df_3xx_5xx.to_csv('/python_scripts/migration_mapper/auto-migration-non-redirectable-urls.csv', index=False)

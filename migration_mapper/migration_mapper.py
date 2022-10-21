@@ -3,9 +3,8 @@ from polyfuzz import PolyFuzz
 import time
 
 # todo add options to
-# canonicalised URLs to follow canonical
-# don't map to non-indexable destination page. (Warning for staging crawls)
-# match on content
+# only redirect to canonical url - warning to use to respect canonical when crawling staging site.
+# Option to match on content
 # set priority match order e.g. content > url > title > h1
 
 # start timing the script
@@ -23,9 +22,6 @@ df_staging = pd.read_csv(
     usecols=["Address", "Status Code", "Title 1", "H1-1", "Indexability"],
     dtype={'Address': str, 'Status Code': int, 'Title 1': str, 'H1-1': str}
 )
-
-# this drops non-indexable urls from the destination crawl. (So nothing is mapped to 4xx / 3xx /non-canonical pages etc)
-# df_sf_new = df_sf_new[~df_sf_new["Indexability"].isin(["Non-Indexable"])]
 
 # -------------------------------------------------------------------------------------------------- drop duplicate rows
 

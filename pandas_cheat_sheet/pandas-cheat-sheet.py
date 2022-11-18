@@ -4,6 +4,15 @@
 startTime = time.time()
 # Your code here !
 
+df = df[df.colname != 0]
+
+# extract words and models from the dataset (used to extract brands and MPNs)
+df[['words_only', 'contains_number']] = (df['query']
+ .str.extractall(r'(\S*\d\S*)|([^\s\d]+)') # order is important
+ .groupby(level=0).agg(lambda s: ' '.join(s.dropna()))
+ .loc[:, ::-1] # invert 2 columns
+)
+
 # get the length of all words in a column
 df['Length'] = df['Keyword'].astype(str).map(len)
 
@@ -13,6 +22,9 @@ df_final['KW Found in Ads?'] = df_final["Search term"].isin(training_df["Search 
 # convert columns to snake case
 final_df.columns = [x.lower() for x in final_df.columns]  # make lower case
 final_df.columns = final_df.columns.str.replace(' ', '_')  # replace space with underscore
+
+df['totalwords'] = df['col'].str.count(' ') + 1
+
 
 # list comprehension to only keep urls which containing .html
 
@@ -125,10 +137,7 @@ longest_word = set(list1) - substrings
 
 
 # start strip out all special characters from a column
-spec_chars = ["!",'"',"#","%","&","'","(",")",
-              "*","+",",","-",".","/",":",";","<",
-              "=",">","?","@","[","\\","]","^","_",
-              "`","{","|","}","~","–"]
+spec_chars = ["!",'"',"#","%","&","'","(",")","*","+",",","-",".","/",":",";","<","=",">","?","@","[","\\","]","^","_","`","{","|","}","~","–"]
 for char in spec_chars:
     df['Title 1'] = df['Title 1'].str.replace(char, ' ')
 
@@ -197,7 +206,6 @@ df = df[~df["col"].str.contains("string", na=False)]  # drop rows on partial str
 df.drop_duplicates(subset="col_name", inplace=True)  # Drop Duplicate Rows
 df = df[df["col"] != 0]  # drop rows not equal to int [used to drop rows with 0 transactions]
 df.drop_duplicates(subset=["URL", "Keyword"], keep="first", inplace=True) # drop dupes if both cols are duped
-df.drop_duplicates(subset=["URL", "Keyword"], keep="first", inplace=True) # drop dupes if both cols are duped
 df = df[df["Source Page"] != df["Keyword"]] # drop dupes if both cols are duped (alternative way)
 df_s_dist['Combined KWs Deduped'] = (df_s_dist['Combined KWs'].str.split().apply(lambda x: OrderedDict.fromkeys(x).keys()).str.join(' '))  # removes non-consecutive duplicates from a single cell
 
@@ -219,6 +227,7 @@ my_string = my_string.split()  # default split on space
 my_string = my_string.split(',')  # split on any character e.g. ,
 df['SOURCE_NAME'] = df['SOURCE_NAME'].str.rsplit('_', n=1).str.get(0)  # remove everything after special character
 
+# note the difference between str.split() and split() is that str.split() will *treat each cell as a series*
 # note the difference between str.split() and split() is that str.split() will *treat each cell as a series*
 #                           ==Selection: Getting==
 df['col_name']  # get one element

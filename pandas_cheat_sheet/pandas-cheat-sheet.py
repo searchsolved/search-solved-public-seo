@@ -13,6 +13,9 @@ df[['words_only', 'contains_number']] = (df['query']
  .loc[:, ::-1] # invert 2 columns
 )
 
+# drop rows = / != to or above / below a value
+df = df[df.line_race != 0]
+
 # get the length of all words in a column
 df['Length'] = df['Keyword'].astype(str).map(len)
 

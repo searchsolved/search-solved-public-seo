@@ -115,8 +115,7 @@ with st.form(key='columns_in_form_2'):
             check_len = len(corpus_sentences)
             corpus_embeddings = model.encode(corpus_sentences, batch_size=256, show_progress_bar=True,
                                              convert_to_tensor=True)
-            clusters = util.community_detection(corpus_embeddings, min_community_size=2, threshold=0.70,
-                                                init_max_size=len(corpus_embeddings))
+            clusters = util.community_detection(corpus_embeddings, min_community_size=2, threshold=min_similarity)
 
             for keyword, cluster in enumerate(clusters):
                 for sentence_id in cluster[0:]:

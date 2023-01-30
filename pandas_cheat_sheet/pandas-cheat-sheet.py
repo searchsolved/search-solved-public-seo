@@ -1,17 +1,17 @@
-# conda env list
-# from glob import glob  # Used to parse wildcard for csv import
-# time the code execution
+# timing a script
 startTime = time.time()
 # Your code here !
 
-df = df[df.colname != 0]
+print ('The script took {0} seconds!'.format(time.time() - startTime))
+print(f'Completed in {time.time() - startTime:.2f} Seconds')  # rounded to 2 decimal places
 
-# extract words and models from the dataset (used to extract brands and MPNs)
-df[['words_only', 'contains_number']] = (df['query']
- .str.extractall(r'(\S*\d\S*)|([^\s\d]+)') # order is important
- .groupby(level=0).agg(lambda s: ' '.join(s.dropna()))
- .loc[:, ::-1] # invert 2 columns
-)
+# url extractor, extract urls in a pandas dataframe
+from urlextract import URLExtract
+extractor = URLExtract()
+df['extracted_data'] = df['Breadcrumb 1'].apply(lambda x: extractor.find_urls(x))
+
+# drop column on condition. Less than, greater thank, equal to etc
+df = df[df.colname != 0]
 
 # drop rows = / != to or above / below a value
 df = df[df.line_race != 0]
@@ -22,15 +22,14 @@ df['Length'] = df['Keyword'].astype(str).map(len)
 #check if string values in one column are found in another in the same or different dataframe
 df_final['KW Found in Ads?'] = df_final["Search term"].isin(training_df["Search term"])
 
-# convert columns to snake case
+# convert pandas column names to snake case
 final_df.columns = [x.lower() for x in final_df.columns]  # make lower case
 final_df.columns = final_df.columns.str.replace(' ', '_')  # replace space with underscore
 
+# count words in a column by counting the spaces
 df['totalwords'] = df['col'].str.count(' ') + 1
 
-
 # list comprehension to only keep urls which containing .html
-
 urls = [val for val in urls if val.endswith(".html")]
 
 # apply a function to a dataframe
@@ -41,9 +40,6 @@ df['New'] = [' '.join(sorted(x)) for x in df['Keyword'].str.split()]
 
 # replace words in one column with words in another
 df['New'] = [' '.join(c for c in a.split() if c != b) for a, b in zip(df['New'], df['Cluster Name'])]
-
-print ('The script took {0} seconds!'.format(time.time() - startTime))
-print(f'Completed in {time.time() - startTime:.2f} Seconds')  # rounded to 2 decimal places
 
 #check if value / string is found in a column and return a value in a new column if found
 df.loc[df["coL_to_check"] == "value_to_check", "col_to_return_result_in"] = "result to return"  # example 1
@@ -229,26 +225,3 @@ df["Clean Categories"] = df["Category"].str.split(".").str[0]  # split on a spec
 my_string = my_string.split()  # default split on space
 my_string = my_string.split(',')  # split on any character e.g. ,
 df['SOURCE_NAME'] = df['SOURCE_NAME'].str.rsplit('_', n=1).str.get(0)  # remove everything after special character
-
-# note the difference between str.split() and split() is that str.split() will *treat each cell as a series*
-# note the difference between str.split() and split() is that str.split() will *treat each cell as a series*
-#                           ==Selection: Getting==
-df['col_name']  # get one element
-df[:3]  # get a subset of a dataframe
-df.iloc([0],[0])  # select a single value by row and column position
-df.loc([0],  ['col-name'])  # select a single value by row and column label
-
-#                           ==Selection: Boolean Indexing==
-s[~(s > 1)]  # Series s where value is not >1
-s[(s < -1) | (s > 2)]  # s where value is <-1 or >2
-df[df['Population']>1200000000]  # Use filter to adjust DataFrame
-s['a'] = 6  # Set index a of Series s to 6
-
-#                           ==Dropping==
-s.drop(['a',  'c'])  # Drop values from rows (axis=0)
-df.drop('Country', axis=1)  # Drop values from columns(axis=1)
-
-#                           ==Sort and Rank==
-df.sort_index()  # Sort by labels along an axis
-df.sort_values(by='Country')  # Sort by the values along an axis
-df.rank()  # Assign ranks to entries

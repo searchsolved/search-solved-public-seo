@@ -1,119 +1,76 @@
-"""by Lee Foot 5th March 2023
-This script retrieves categories and products from a WooCommerce store, sorts the products based on how closely their names match the category name, and updates the product order based on the sort order. It uses the Woocommerce API, fuzzywuzzy library for string matching, and colorama for terminal output formatting.
-To use this script, the user needs to replace the placeholders "YOUR WEBSITE", "YOUR CONSUMER KEY", and "YOUR CONSUMER SECRET" in the wcapi variable with their actual website URL and API credentials. The credentials can be found by logging into the WooCommerce store and going to the "Settings" page, selecting the "Advanced" tab, and then selecting the "REST API" option. From there, the user can generate API keys for their store.
-It is important to note that this script has a maximum number of retries and retry delay settings, which can be adjusted by changing the MAX_RETRIES and RETRY_DELAY constants. Additionally, the user must have the required libraries installed (woocommerce, fuzzywuzzy, colorama, and requests) before running the script."""
-
 from woocommerce import API
 from fuzzywuzzy import fuzz
-from colorama import Fore, Style
-import requests
 
-import time
-
-MAX_RETRIES = 6
-RETRY_DELAY = 1
-
+# Set up the WooCommerce API connection
 wcapi = API(
-    url="YOUR WEBSITE",
+    url="http://example.com",
     consumer_key="YOUR CONSUMER KEY",
     consumer_secret="YOUR CONSUMER SECRET",
     version="wc/v3",
     timeout=(120, 120)  # timeout for sending / receiving in seconds
 )
-
+# Fetch all the product categories using pagination
 categories = []
 page = 1
-
 while True:
-    for attempt in range(MAX_RETRIES):
-        try:
-            response = wcapi.get("products/categories", params={"per_page": 100, "page": page})
-            if response.ok and response.json():
-                categories += response.json()
-                page += 1
-                break
-        except requests.exceptions.ReadTimeout as e:
-            if attempt < MAX_RETRIES - 1:
-                print(f"Read timeout error. Retrying in {RETRY_DELAY} seconds...")
-                time.sleep(RETRY_DELAY)
-            else:
-                print(f"Maximum number of retries ({MAX_RETRIES}) exceeded. Aborting.")
-                raise e
-
-    if not categories:
+    response = wcapi.get("products/categories", params={"per_page": 100, "page": page})
+    if not response.ok or not response.json():
         break
+    categories += response.json()
+    print(f"Fetched {len(categories)} categories, fetching next page...")
+    page += 1
 
-    print(f"Found {len(categories)} categories in the store")
+print(f"Found {len(categories)} categories in the store")
+# Fetch all the product categories using pagination
+categories = []
+page = 1
+while True:
+    response = wcapi.get("products/categories", params={"per_page": 100, "page": page})
+    if not response.ok or not response.json():
+        break
+    categories += response.json()
+    page += 1
 
-    for category in categories:
-        print(f"Processing category: {category['name']}")
-        category_name = category["name"]
-        category_id = category["id"]
+print(f"Found {len(categories)} categories in the store")
 
-        for attempt in range(MAX_RETRIES):
-            try:
-                products = wcapi.get(f"products?category={category_id}").json()
-                break
-            except requests.exceptions.ReadTimeout as e:
-                if attempt < MAX_RETRIES - 1:
-                    print(f"Read timeout error. Retrying in {RETRY_DELAY} seconds...")
-                    time.sleep(RETRY_DELAY)
-                else:
-                    print(f"Maximum number of retries ({MAX_RETRIES}) exceeded. Aborting.")
-                    raise e
+# Loop through each category
+for category in categories:
+    print(f"Processing category: {category['name']}")
+    category_name = category["name"]
+    category_id = category["id"]
 
-        num_products = len(products)
-        print(f"Found {num_products} products in the category")
+    # Fetch all the products in the category
+    products = wcapi.get(f"products?category={category_id}").json()
+    num_products = len(products)
+    print(f"Found {num_products} products in the category")
 
-        if num_products > 1:
-            products_with_score = {}
-            for product in products:
-                score = fuzz.token_set_ratio(product["name"], category_name)
-                products_with_score[product["name"]] = (score, product["id"])
+    if num_products > 0:
+        # Calculate the relevance score between each product name and the category name
+        products_with_score = {}
+        for product in products:
+            score = fuzz.token_sort_ratio(product["name"], category_name)
+            products_with_score[product["name"]] = (score, product["id"])
+            # print(f"Product: {product['name']}, ID: {product['id']}, Score: {score}")
 
-            sorted_products = {k: v for k, v in
-                               sorted(products_with_score.items(), key=lambda item: (-item[1][0], item[0]))}
-            print(f"Sorted Products: {sorted_products}")
+        # Sort the products by relevance score in descending order, and then by product name alphabetically
+        sorted_products = {k: v for k, v in
+                           sorted(products_with_score.items(), key=lambda item: (-item[1][0], item[0]))}
+        print(f"Sorted Products: {sorted_products}")
 
-            for i, (product_name, relevance_id) in enumerate(sorted_products.items()):
-                product_id = relevance_id[1]
+        # Create a list of product updates
+        product_updates = []
+        for i, (product_name, relevance_id) in enumerate(sorted_products.items()):
+            product_id = relevance_id[1]
 
-                search_query = f"products/{product_id}?search={category_name}"
+            # Add the product update to the list
+            product_updates.append({"id": product_id, "menu_order": i})
 
-                for attempt in range(MAX_RETRIES):
-                    try:
-                        product_search_result = wcapi.get(search_query).json()
-                        break
-                    except requests.exceptions.ReadTimeout as e:
-                        if attempt < MAX_RETRIES - 1:
-                            print(f"Read timeout error. Retrying in {RETRY_DELAY} seconds...")
-                            time.sleep(RETRY_DELAY)
-                        else:
-                            print(f"Maximum number of retries ({MAX_RETRIES}) exceeded. Aborting.")
-                            raise e
-
-                if product_search_result:
-                    existing_order = product_search_result.get("menu_order", -1)
-                    if existing_order != i:
-                        data = {"menu_order": i}
-
-                        for attempt in range(MAX_RETRIES):
-                            try:
-                                wcapi.put(f"products/{product_id}", data).json()
-                                print(
-                                    f"{Fore.GREEN}Posting {product_name} to WooCommerce. ID: {product_id}, Menu Order: {i}{Style.RESET_ALL}")
-                                break
-                            except requests.exceptions.ReadTimeout as e:
-                                if attempt < MAX_RETRIES - 1:
-                                    print(f"Read timeout error. Retrying in {RETRY_DELAY} seconds...")
-                                    time.sleep(RETRY_DELAY)
-                                else:
-                                    print(f"Maximum number of retries ({MAX_RETRIES}) exceeded. Aborting.")
-                                    raise e
-
-                    else:
-                        print(
-                            f"{Fore.YELLOW}Skipping update for {product_name}. ID: {product_id}, Menu Order: {existing_order}. Already optimized!{Style.RESET_ALL}")
-
-                else:
-                    print(f"{Fore.RED}No product found with ID: {product_id}{Style.RESET_ALL}")
+        # Batch update the products
+        response = wcapi.post("products/batch", {"update": product_updates})
+        if response.ok:
+            print("Batch update successful")
+        else:
+            print("Batch update failed")
+            print(response.json())
+    else:
+        print("No products found in the category")

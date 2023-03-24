@@ -1,105 +1,105 @@
-import json
 import os
 import pandas as pd
 from PIL import Image
 import requests
+import concurrent.futures
+import logging
+from typing import List
+from urllib.parse import urlparse
 from google.cloud import vision
+from tqdm import tqdm
 
-header = {'User-Agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Mobile Safari/537.36'}
-
+header = {
+    'User-Agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) '
+                  'AppleWebKit/537.36 (KHTML, like Gecko) '
+                  'Chrome/87.0.4280.88 Mobile Safari/537.36'
+}
 
 # read in the json secrets file and instantiate google vision
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/python_scripts/cloud_vision_api.json"
 client = vision.ImageAnnotatorClient()
-image = vision.Image()
+
+# set up logging
+logging.basicConfig(filename='image_scraper.log', level=logging.ERROR)
+
+# define a function to retrieve image size from metadata
+def get_image_size(url: str) -> tuple:
+    try:
+        r = requests.head(url, headers=header, timeout=20)
+        if 'content-length' in r.headers:
+            return int(r.headers['content-length'])
+        else:
+            with requests.get(url, headers=header, timeout=20, stream=True) as r:
+                return int(r.headers['content-length'])
+    except Exception as e:
+        logging.error(f'Error retrieving image size for {url}: {e}')
+        return 0
+
+# define a function to retrieve image URLs from Google Vision API
+def get_image_urls(url: str) -> List[str]:
+    try:
+        image = vision.Image(source=vision.ImageSource(image_uri=url))
+        response = client.web_detection(image=image).web_detection
+        urls = [img.url for img in response.full_matching_images]
+        return urls
+    except Exception as e:
+        logging.error(f'Error retrieving image URLs for {url}: {e}')
+        return []
+
+# define a function to process a single URL
+def process_url(url: str) -> pd.DataFrame:
+    result = {'original_url': url, 'matching_imgs': [], 'width_diff': [], 'height_diff': []}
+    try:
+        og_size = get_image_size(url)
+        og_width, og_height = Image.open(requests.get(url, headers=header, timeout=20, stream=True).raw).size
+        img_urls = get_image_urls(url)
+        for img_url in img_urls:
+            img_size = get_image_size(img_url)
+            if img_size > og_size:
+                img_width, img_height = Image.open(requests.get(img_url, headers=header, timeout=20, stream=True).raw).size
+                result['matching_imgs'].append(img_url)
+                result['width_diff'].append(img_width - og_width)
+                result['height_diff'].append(img_height - og_height)
+    except Exception as e:
+        logging.error(f'Error processing {url}: {e}')
+    return pd.DataFrame(result)
 
 # read in the datafile of image urls
-df = pd.read_csv('/python_scripts/google_vision/input_file/internal_images_mini.csv')
+df = pd.read_csv('/python_scripts/google_vision/input_file/wc_images.csv')
 
-# store the data
-full_images = []
-matching_img_width = []
-matching_img_height = []
-og_url_df1 = []
+# process the URLs in parallel using a thread pool
+results = []
+with concurrent.futures.ThreadPoolExecutor() as executor:
+    futures = [executor.submit(process_url, url) for url in df['Images']]
+    for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures)):
+        results.append(future.result())
 
-# store the og data for a second dataframe to merge in
+# concatenate the results into a single DataFrame
+df = pd.concat(results)
+df = df.assign(height_matching_imgs=df['matching_imgs'].apply(lambda url: Image.open(requests.get(url, headers=header, timeout=20, stream=True).raw).size[1]))
+df = df.assign(width_matching_imgs=df['matching_imgs'].apply(lambda url: Image.open(requests.get(url, headers=header, timeout=20, stream=True).raw).size[0]))
 
-og_width = []
-og_height = []
-og_url_df2 = []
-
-for url in df['Address']:
-    try:
-        image.source.image_uri = url
-        web_response = client.web_detection(image=image)
-        web_content = web_response.web_detection
-        json_string = type(web_content).to_json(web_content)
-        d = json.loads(json_string)
-        response = d['fullMatchingImages']
-        og_url_df2.append(url)
-
-        # get the image width
-        try:
-            im = Image.open(requests.get(url, timeout=20, headers=header, stream=True).raw)
-            width, height = im.size
-            og_height.append(height)
-            og_width.append(width)
-        except Exception:
-            print("exception at 45")
-            og_height.append(0)
-            og_width.append(0)
-
-
-        for d in response:
-            print(d['url'])
-            full_images.append((d['url']))
-            og_url_df1.append(url)
-            try:
-                im = Image.open(requests.get(d['url'], timeout=20, headers=header, stream=True).raw)
-                width, height = im.size
-                matching_img_height.append(height)
-                matching_img_width.append(width)
-            except Exception:
-                print("exception at 59")
-                matching_img_height.append(0)
-                matching_img_width.append(0)
-    except TypeError:
-        print("exception at 63")
-        pass
-
-df = pd.DataFrame(None)
-df['original_url'] = og_url_df1
-df['matching_imgs'] = full_images
-df['width_matching_imgs'] = matching_img_width
-df['height_matching_imgs'] = matching_img_height
-
-# make second dataframe to blend the data back in vlookup style
-df2 = pd.DataFrame(None)
-df2['original_url'] = og_url_df2
-df2['width_source_img'] = og_width
-df2['height_source_img'] = og_height
-
-# merge the data
-df = pd.merge(df, df2, on="original_url", how="left")
+# calculate source image size
+df[['width_source_img', 'height_source_img']] = df['original_url'].apply(lambda url: Image.open(requests.get(url, headers=header, timeout=20, stream=True).raw).size).apply(pd.Series)
 
 # calculate size difference
 df['width_diff'] = df['width_matching_imgs'] - df['width_source_img']
 df['height_diff'] = df['height_matching_imgs'] - df['height_source_img']
 
-# drop and image recommendations that are the same width / height or smaller
-df = df.loc[~((df['width_diff'] <= 0) | (df['height_diff'] <= 0))]
+# drop image recommendations that are the same width/height or smaller
+df = df.loc[(df['width_diff'] > 0) & (df['height_diff'] > 0)]
 
-# re-order the column
-df = df[['original_url', 'matching_imgs', 'width_diff', 'height_diff', 'width_matching_imgs', 'height_matching_imgs', 'width_source_img', 'height_source_img']]
-
-# drop duplicates if both width and height and duplicated
-df.drop_duplicates(subset=["width_diff", "width_diff"], keep="first", inplace=True)
+# drop duplicates if both width and height are duplicated
+df.drop_duplicates(subset=["width_diff", "height_diff"], keep="first", inplace=True)
 
 # sort on highest values
-df.sort_values(["width_diff", "width_diff"], ascending=[False, False], inplace=True)
+df.sort_values(["width_diff", "height_diff"], ascending=[False, False], inplace=True)
 
-# keep the top 3 highest values
-df = df.groupby(['original_url']).head(3)
+# keep the top 3 highest values for each source image
+df = df.groupby(['original_url']).head(10)
 
+# re-order the columns
+df = df[['original_url', 'matching_imgs', 'width_diff', 'height_diff', 'width_matching_imgs', 'height_matching_imgs', 'width_source_img', 'height_source_img']]
 
-df.to_csv("/python_scripts/higher_resolution_images.csv")
+# write results to CSV
+df.to_csv("/python_scripts/higher_resolution_images_all.csv", index=False)

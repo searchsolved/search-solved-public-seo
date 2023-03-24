@@ -10,6 +10,10 @@ from google.cloud import vision
 from tqdm import tqdm
 import urllib3.exceptions
 import google.api_core.exceptions
+from urllib3.exceptions import MaxRetryError
+
+# read in the datafile of image urls
+df = pd.read_csv('/python_scripts/google_vision/input_file/wc_images.csv')
 
 header = {
     'User-Agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) '
@@ -27,13 +31,13 @@ logging.basicConfig(filename='image_scraper.log', level=logging.ERROR)
 # define a function to retrieve image size from metadata
 def get_image_size(url: str) -> tuple:
     try:
-        r = requests.head(url, headers=header, timeout=30)
+        r = requests.head(url, headers=header, timeout=20)
         if 'content-length' in r.headers:
             return int(r.headers['content-length'])
         else:
-            with requests.get(url, headers=header, timeout=30, stream=True) as r:
+            with requests.get(url, headers=header, timeout=20, stream=True) as r:
                 return int(r.headers['content-length'])
-    except (requests.exceptions.SSLError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, urllib3.exceptions.MaxRetryError) as e:
+    except (requests.exceptions.SSLError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, urllib3.exceptions.MaxRetryError, MaxRetryError) as e:
         logging.error(f'Error retrieving image size for {url}: {e}')
         return 0
 
@@ -55,19 +59,21 @@ def process_url(url: str) -> pd.DataFrame:
         og_size = get_image_size(url)
         og_width, og_height = Image.open(requests.get(url, headers=header, timeout=20, stream=True).raw).size
         img_urls = get_image_urls(url)
-        for img_url in img_urls:
-            img_size = get_image_size(img_url)
-            if img_size > og_size:
-                img_width, img_height = Image.open(requests.get(img_url, headers=header, timeout=20, stream=True).raw).size
-                result['matching_imgs'].append(img_url)
-                result['width_diff'].append(img_width - og_width)
-                result['height_diff'].append(img_height - og_height)
-    except (requests.exceptions.SSLError, requests.exceptions.ConnectionError, requests.exceptions.Timeout, urllib3.exceptions.MaxRetryError, google.api_core.exceptions.GoogleAPIError, OSError, ValueError) as e:
+        with tqdm(desc=f"Processing {len(img_urls)} image URLs for {url}", total=len(img_urls)) as pbar:
+            for img_url in img_urls:
+                try:
+                    img_size = get_image_size(img_url)
+                    if img_size > og_size:
+                        img_width, img_height = Image.open(requests.get(img_url, headers=header, timeout=20, stream=True).raw).size
+                        result['matching_imgs'].append(img_url)
+                        result['width_diff'].append(img_width - og_width)
+                        result['height_diff'].append(img_height - og_height)
+                except (requests.exceptions.SSLError, urllib3.exceptions.MaxRetryError, MaxRetryError) as e:
+                    logging.error(f'Error processing image URL {img_url} for {url}: {e}')
+                pbar.update(1)
+    except (google.api_core.exceptions.GoogleAPIError, urllib3.exceptions.MaxRetryError) as e:
         logging.error(f'Error processing {url}: {e}')
     return pd.DataFrame(result)
-
-# read in the datafile of image urls
-df = pd.read_csv('/python_scripts/google_vision/input_file/wc_images.csv')
 
 # process the URLs in parallel using a thread pool
 results = []
@@ -81,8 +87,23 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
 
 # concatenate the results into a single DataFrame
 df = pd.concat(results)
-df = df.assign(height_matching_imgs=df['matching_imgs'].apply(lambda url: Image.open(requests.get(url, headers=header, timeout=20, stream=True).raw).size[1]))
-df = df.assign(width_matching_imgs=df['matching_imgs'].apply(lambda url: Image.open(requests.get(url, headers=header, timeout=20, stream=True).raw).size[0]))
+
+def get_image_height(url: str) -> int:
+    try:
+        return Image.open(requests.get(url, headers=header, timeout=20, stream=True).raw).size[1]
+    except (requests.exceptions.SSLError, urllib3.exceptions.MaxRetryError, MaxRetryError) as e:
+        logging.error(f'Error retrieving image height for {url}: {e}')
+        return 0
+
+def get_image_width(url: str) -> int:
+    try:
+        return Image.open(requests.get(url, headers=header, timeout=20, stream=True).raw).size[0]
+    except (requests.exceptions.SSLError, urllib3.exceptions.MaxRetryError, MaxRetryError) as e:
+        logging.error(f'Error retrieving image width for {url}: {e}')
+        return 0
+
+df = df.assign(height_matching_imgs=df['matching_imgs'].apply(lambda url: get_image_height(url)))
+df = df.assign(width_matching_imgs=df['matching_imgs'].apply(lambda url: get_image_width(url)))
 
 # calculate source image size
 df[['width_source_img', 'height_source_img']] = df['original_url'].apply(lambda url: Image.open(requests.get(url, headers=header, timeout=20, stream=True).raw).size).apply(pd.Series)

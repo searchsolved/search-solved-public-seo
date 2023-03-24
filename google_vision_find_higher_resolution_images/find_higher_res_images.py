@@ -20,7 +20,7 @@ import imghdr
 
 # read in the datafile of image urls
 df = pd.read_csv('/python_scripts/google_vision/input_file/wc_images.csv')
-df = df[:10]
+
 header = {
     'User-Agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) '
                   'AppleWebKit/537.36 (KHTML, like Gecko) '
@@ -116,4 +116,10 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
 
 # concatenate the results into a single DataFrame
 df = pd.concat(results)
+
+# clean and sort values + drop any negative image sizes
+df.drop_duplicates(subset=["original_url", "matching_imgs"], keep="first", inplace=True)
+df = df.drop(df[(df['width_diff'] <= 0) | (df['height_diff'] <= 0)].index)
+df.sort_values(["matching_imgs", "width_diff", "original_url"], ascending=[False, False, True], inplace=True)
+
 df.to_csv("/python_scripts/higher_resolution_images.csv")

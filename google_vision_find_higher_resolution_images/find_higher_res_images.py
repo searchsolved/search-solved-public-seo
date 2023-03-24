@@ -20,7 +20,7 @@ import imghdr
 
 # read in the datafile of image urls
 df = pd.read_csv('/python_scripts/google_vision/input_file/wc_images.csv')
-
+df = df[:10]
 header = {
     'User-Agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) '
                   'AppleWebKit/537.36 (KHTML, like Gecko) '
@@ -116,48 +116,4 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
 
 # concatenate the results into a single DataFrame
 df = pd.concat(results)
-df.to_csv("/python_scripts/safety119.csv")
-def get_image_height(url: str) -> int:
-    try:
-        return Image.open(requests.get(url, headers=header, timeout=20, stream=True).raw).size[1]
-    except (requests.exceptions.SSLError, urllib3.exceptions.MaxRetryError, MaxRetryError) as e:
-        logging.error(f'Error retrieving image height for {url}: {e}')
-        return 0
-
-def get_image_width(url: str) -> int:
-    try:
-        return Image.open(requests.get(url, headers=header, timeout=20, stream=True).raw).size[0]
-    except (requests.exceptions.SSLError, urllib3.exceptions.MaxRetryError, MaxRetryError) as e:
-        logging.error(f'Error retrieving image width for {url}: {e}')
-        return 0
-
-
-df = df.assign(height_matching_imgs=df['matching_imgs'].apply(lambda url: get_image_height(url) if url is not None else 0))
-df = df.assign(width_matching_imgs=df['matching_imgs'].apply(lambda url: get_image_width(url) if url is not None else 0))
-
-df.to_csv("/python_scripts/safety139.csv")
-
-# calculate source image size
-df[['width_source_img', 'height_source_img']] = df['original_url'].apply(lambda url: Image.open(requests.get(url, headers=header, timeout=20, stream=True).raw).size).apply(pd.Series)
-
-# calculate size difference
-df['width_diff'] = df['width_matching_imgs'] - df['width_source_img']
-df['height_diff'] = df['height_matching_imgs'] - df['height_source_img']
-
-# drop image recommendations that are the same width/height or smaller
-df = df.loc[(df['width_diff'] > 0) & (df['height_diff'] > 0)]
-
-# drop duplicates if both width and height are duplicated
-df.drop_duplicates(subset=["width_diff", "height_diff"], keep="first", inplace=True)
-
-# sort on highest values
-df.sort_values(["width_diff", "height_diff"], ascending=[False, False], inplace=True)
-
-# keep the top 3 highest values for each source image
-df = df.groupby(['original_url']).head(10)
-
-# re-order the columns
-df = df[['original_url', 'matching_imgs', 'width_diff', 'height_diff', 'width_matching_imgs', 'height_matching_imgs', 'width_source_img', 'height_source_img']]
-
-# write results to CSV
-df.to_csv("/python_scripts/higher_resolution_images_all_1000.csv", index=False)
+df.to_csv("/python_scripts/higher_resolution_images.csv")

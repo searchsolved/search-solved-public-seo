@@ -20,7 +20,7 @@ import imghdr
 
 # read in the datafile of image urls
 df = pd.read_csv('/python_scripts/google_vision/input_file/wc_images.csv')
-df = df[:1000]
+
 header = {
     'User-Agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) '
                   'AppleWebKit/537.36 (KHTML, like Gecko) '
@@ -116,7 +116,7 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
 
 # concatenate the results into a single DataFrame
 df = pd.concat(results)
-
+df.to_csv("/python_scripts/safety119.csv")
 def get_image_height(url: str) -> int:
     try:
         return Image.open(requests.get(url, headers=header, timeout=20, stream=True).raw).size[1]
@@ -131,16 +131,11 @@ def get_image_width(url: str) -> int:
         logging.error(f'Error retrieving image width for {url}: {e}')
         return 0
 
-try:
-    df = df.assign(height_matching_imgs=df['matching_imgs'].apply(lambda url: get_image_height(url) if url is not None else 0))
 
-except Exception:
-    pass
+df = df.assign(height_matching_imgs=df['matching_imgs'].apply(lambda url: get_image_height(url) if url is not None else 0))
+df = df.assign(width_matching_imgs=df['matching_imgs'].apply(lambda url: get_image_width(url) if url is not None else 0))
 
-try:
-    df = df.assign(width_matching_imgs=df['matching_imgs'].apply(lambda url: get_image_width(url) if url is not None else 0))
-except Exception:
-    pass
+df.to_csv("/python_scripts/safety139.csv")
 
 # calculate source image size
 df[['width_source_img', 'height_source_img']] = df['original_url'].apply(lambda url: Image.open(requests.get(url, headers=header, timeout=20, stream=True).raw).size).apply(pd.Series)

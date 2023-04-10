@@ -1,11 +1,20 @@
 import streamlit as st
-
+import base64
 st.set_page_config(page_title="Google Trends & NeuralProphet - Explainable Trends at Scale", page_icon="📈",
                    layout="wide")  # needs to be the first thing after the streamlit import
+
 st.set_option('deprecation.showPyplotGlobalUse', False)
+
 from neuralprophet import NeuralProphet
 from neuralprophet import set_random_seed
 from pytrends.request import TrendReq
+import requests
+import matplotlib.pyplot as plt
+
+session = requests.Session()
+session.get('https://trends.google.com')
+cookies_map = session.cookies.get_dict()
+nid_cookie = cookies_map['NID']
 
 set_random_seed(0)
 
@@ -50,7 +59,8 @@ with st.form(key='columns_in_form_2'):
 
 if submitted:
     st.write("Searching & Predicting: %s" % KW[0])
-    pt = TrendReq(hl=LANGUAGE, timeout=(10, 25), retries=RETRIES, backoff_factor=0.5)
+    pt = TrendReq(hl=LANGUAGE, timeout=(10, 25), retries=RETRIES, backoff_factor=0.5,
+                  requests_args={'headers': {'Cookie': f'NID={nid_cookie}'}})
 
     pt.build_payload(KW)
     df = pt.interest_over_time()
@@ -65,24 +75,29 @@ if submitted:
 
     future = model.make_future_dataframe(data, periods=FORECAST_WEEKS, n_historic_predictions=HISTORIC)
 
-    data = model.predict(future)
-    data = data.rename(columns={'ds': 'date', 'y': 'actual', 'yhat1': 'predicted'})[['date', 'actual', 'predicted']]
-
     forecast = model.predict(future)
+    data = forecast[['ds', 'y', 'yhat1']].rename(columns={'ds': 'date', 'y': 'actual', 'yhat1': 'predicted'})
     ax = model.plot(forecast, ylabel='Google Searches', xlabel='Year', figsize=(14, 9))
+
     st.subheader(KW[0])
+    
+    @st.cache_data
+    def get_csv_link(data):
+        csv = data.to_csv(index=False)
+        b64 = base64.b64encode(csv.encode()).decode()
+        href = f'<a href="data:file/csv;base64,{b64}" download="your_gtrends_predictions.csv">📥 Download your predictions!</a>'
+        return href
 
-    @st.cache
-    def convert_df(df):  # IMPORTANT: Cache the conversion to prevent computation on every rerun
-        return df.to_csv().encode('utf-8')
 
-    csv = convert_df(data)
+    st.markdown(get_csv_link(data), unsafe_allow_html=True)
 
-    st.download_button(
-        label="📥 Download your predictions!",
-        data=csv,
-        file_name='your_gtrends_predictions.csv',
-        mime='text/csv', )
+    # create the plot
+    fig, ax = plt.subplots()
+    ax.plot(data['date'], data['actual'], label='Actual')
+    ax.plot(data['date'], data['predicted'], label='Predicted')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Interest Over Time')
+    ax.set_title('Google Trends Predictions')
+    ax.legend()
 
     st.pyplot()
-    st.write(data)

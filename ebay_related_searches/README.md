@@ -26,4 +26,4 @@ This Python code implements a web scraping tool to retrieve related search keywo
 
 9. To **download the scraped data** as a CSV file, click the "Download your report!" button.
 
-![alt text](http://url/to/img.png](https://i.imgur.com/VjahHDW.png)
+![alt text](https://i.imgur.com/VjahHDW.png)

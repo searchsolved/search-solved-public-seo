@@ -26,4 +26,5 @@ This Python code implements a web scraping tool to retrieve related search keywo
 
 9. To **download the scraped data** as a CSV file, click the "Download your report!" button.
 
-![eBay Related Searches](https://imgur.com/VjahHDW)
+![eBay Related Searches]([https://imgur.com/VjahHDW](https://i.imgur.com/VjahHDW.png)
+

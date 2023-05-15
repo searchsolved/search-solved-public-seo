@@ -16,7 +16,7 @@ from user_agent2 import (generate_user_agent)
 ua = generate_user_agent(navigator="chrome")
 header = {'User-Agent': str(ua)}
 
-css = "body > div.srp-main.srp-main--isLarge > div.s-answer-region.s-answer-region-above-river > div"
+css = ".s-answer-region-above-river"
 url = "/sch/i.html?_nkw="
 
 # store the data
@@ -49,22 +49,21 @@ if submitted:
         result_str = result_str.replace(" ", ",")
         result_str = result_str.replace("@", " ")
         result_str = result_str.replace("Related:,", "")
-        related_search_kws = result_str.split(",")
+        related_search_kws = result_str.split(",")  # list of keywords to iterate over
 
     # second loop
     st.write("Searching eBay for Related keywords")
-    for i in stqdm(related_search_kws):
-        print(i)
-        response = requests.get("http://www.ebay" + ccTLD + url + i)
-        soup = BeautifulSoup(response.text, "html.parser")
-        for related in soup.select(css):
-            result_str = related.get_text(separator=' ')
+    for kw in stqdm(related_search_kws):
+        response = requests.get("http://www.ebay" + ccTLD + url + kw, headers=header)
+
+        for lv2_kw in soup.select(css):
+            result_str = lv2_kw.get_text(separator=' ')
             result_str = result_str.replace("  ", "@")
             result_str = result_str.replace(" ", ",")
             result_str = result_str.replace("@", " ")
             result_str = result_str.replace("Related:,", "")
 
-            source_kws.append(i)
+            source_kws.append(kw)
             final_kws.append(result_str)
 
     df = pd.DataFrame(None)
@@ -78,7 +77,6 @@ if submitted:
         st.stop()
 
     df = df.explode('related_searches').reset_index(drop=True)
-
 
     def visualize_autocomplete(df_autocomplete_full):
         df_autocomplete_full['Keyword'] = seed_keyword

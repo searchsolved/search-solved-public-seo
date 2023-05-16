@@ -55,20 +55,22 @@ if submitted:
     st.write("Searching eBay for Related keywords")
     for kw in stqdm(related_search_kws):
         response = requests.get("http://www.ebay" + ccTLD + url + kw, headers=header)
+        soup_lv2 = BeautifulSoup(response.text, "html.parser")  # Create a new soup object for each iteration
 
-        for lv2_kw in soup.select(css):
-            result_str = lv2_kw.get_text(separator=' ')
-            result_str = result_str.replace("  ", "@")
-            result_str = result_str.replace(" ", ",")
-            result_str = result_str.replace("@", " ")
-            result_str = result_str.replace("Related:,", "")
+        for lv2_kw in soup_lv2.select(css):  # Use the new soup object
+            result_str_lv2 = lv2_kw.get_text(separator=' ')
+            result_str_lv2 = result_str_lv2.replace("  ", "@")
+            result_str_lv2 = result_str_lv2.replace(" ", ",")
+            result_str_lv2 = result_str_lv2.replace("@", " ")
+            result_str_lv2 = result_str_lv2.replace("Related:,", "")
 
             source_kws.append(kw)
-            final_kws.append(result_str)
+            final_kws.append(result_str_lv2)
 
     df = pd.DataFrame(None)
     df['seed_keyword'] = source_kws
     df['related_searches'] = final_kws
+    df.to_csv("/python_scripts/test.csv")
 
     try:
         df['related_searches'] = df['related_searches'].str.split(',')

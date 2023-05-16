@@ -2,7 +2,9 @@
 
 This Python code implements a web scraping tool to retrieve related search keywords from eBay. It provides a user-friendly web interface using the Streamlit library. The scraper allows you to search for related keywords on eBay and visualize the results in an interactive tree format.
 
-## Usage
+Run Online: https://searchebay.streamlit.app/
+
+## Usage - Running Locally
 
 1. **Install the required dependencies** listed in the `requirements.txt` file by running the following command:
 

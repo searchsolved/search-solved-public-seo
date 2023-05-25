@@ -1,8 +1,8 @@
-# Bulk Keyword Tagger	
+# Create a BSG Matric from Google Analytics
 
 ## Features
 
-Simple tool to bulk tag keywords.
+Easily identify high value pages and categories. 
 
 ## Support
 

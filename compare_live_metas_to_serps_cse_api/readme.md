@@ -1,8 +1,8 @@
-# Bulk Keyword Tagger	
+# Checks Whether Google Are Re-Writing Your Page Titles and Meta Descriptions
 
 ## Features
 
-Simple tool to bulk tag keywords.
+Compare Your Page Titles and Meta Descriptions to how they appear in Google Search.
 
 ## Support
 

@@ -1,8 +1,8 @@
-# Bulk Keyword Tagger	
+# Automaticalyl Find Distributer Sites to Link to You
 
 ## Features
 
-Simple tool to bulk tag keywords.
+Easily identify 'Where to buy' type links on autopilot. Great for B2B sites.
 
 ## Support
 

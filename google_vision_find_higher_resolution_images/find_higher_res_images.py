@@ -20,7 +20,7 @@ import imghdr
 
 # read in the datafile of image urls
 df = pd.read_csv('/python_scripts/google_vision/input_file/wc_images.csv')
-df = df[:1000]
+
 header = {
     'User-Agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) '
                   'AppleWebKit/537.36 (KHTML, like Gecko) '

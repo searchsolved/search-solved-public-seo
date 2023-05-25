@@ -1,8 +1,8 @@
-# Automatically Find Distributer Sites to Link to You
+# Uses the Google Vision API to Find Higher Quality Images for your Website
 
 ## Features
 
-Easily identify 'Where to buy' type links on autopilot. Great for B2B sites.
+Just plugin your Google Vision API and a csv of image urls and the script will do the rest!
 
 ## Support
 

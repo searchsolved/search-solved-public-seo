@@ -11,6 +11,12 @@ import plotly.io as pio
 from rich import print
 from nltk import ngrams
 import typer
+import platform
+from rich.box import Box
+from rich.console import Console
+from rich.panel import Panel
+
+
 
 app = typer.Typer()
 
@@ -29,15 +35,15 @@ def create_unigram(cluster: str):
 
 def get_model(model_name: str):
     """Create and return a SentenceTransformer model based on the given model name."""
-    print(f"[bold green]Loading the SentenceTransformer model '{model_name}'...[/bold green]")
+    print(f"[white]Loading the SentenceTransformer model '{model_name}'...[/white]")
     model = SentenceTransformer(model_name)
-    print("[bold green]Model loaded.[/bold green]")
+    print("[white]Model loaded.[/white]")
     return model
 
 
 def load_file(file_path: str):
     """Load a CSV file and return a DataFrame."""
-    print(f"[bold green]Loading the CSV file from '{file_path}'...[/bold green]")
+    print(f"[white]Loading the CSV file from '{file_path}'...[/white]")
     result = chardet.detect(open(file_path, 'rb').read())
     encoding_value = result["encoding"]
     white_space = False if encoding_value != "UTF-16" else True
@@ -48,7 +54,7 @@ def load_file(file_path: str):
         delim_whitespace=white_space,
         on_bad_lines='skip',
     )
-    print("[bold green]CSV file loaded.[/bold green]")
+    print("[white]CSV file loaded.[/white]")
     return df
 
 
@@ -83,6 +89,18 @@ def main(
         min_similarity: float = typer.Option(0.85, help="Minimum similarity for clustering."),
         remove_dupes: bool = typer.Option(True, help="Whether to remove duplicates from the dataset."),
 ):
+    # Clear the screen
+    if platform.system() == 'Windows':
+        os.system('cls')
+    else:
+        os.system('clear')
+
+    # Print welcome message
+    console = Console()
+    welcome_message = "[bold white]Semantic Keyword Clustering Script Lee Foot 10-07-2023[/bold white]"
+    panel = Panel(welcome_message, style="bold yellow", title="[b]SBERT Clustering[/b]")
+    console.print(panel)
+
     """
     A command line application for keyword clustering.
 
@@ -112,11 +130,11 @@ def main(
         return
 
     if column_name is None:
-        print("[bold green]Searching for a column from the list of default column names...[/bold green]")
+        print("[white]Searching for a column from the list of default column names...[/white]")
         for common_name in COMMON_COLUMN_NAMES:
             if common_name in df.columns:
                 column_name = common_name
-                print(f"[bold green]Found column '{column_name}'.[/bold green]")
+                print(f"[white]Found column '{column_name}'.[/white]\n")
                 break
         else:
             print(f"[bold red]Could not find a suitable column for processing. Please specify the column name with the --column option.[/bold red]")
@@ -126,15 +144,21 @@ def main(
         print(f"[bold red]The column name {column_name} is not in the DataFrame.[/bold red]")
         return
 
-    print(f"[bold green]Using the following options:[/bold green]\n"
-          f"File path: {file_path}\n"
-          f"Column name: {column_name}\n"
-          f"Output path: {output_path}\n"
-          f"Chart type: {chart_type}\n"
-          f"Device: {device}\n"
-          f"SentenceTransformer model: {model_name}\n"
-          f"Minimum similarity: {min_similarity}\n"
-          f"Remove duplicates: {remove_dupes}\n")
+
+    # Print options
+    options_message = (
+        f"[white]File path:[/white] [bold yellow]{file_path}[/bold yellow]\n"
+        f"[white]Column name:[/white] [bold yellow]{column_name}[/bold yellow]\n"
+        f"[white]Output path:[/white] [bold yellow]{output_path}[/bold yellow]\n"
+        f"[white]Chart type:[/white] [bold yellow]{chart_type}[/bold yellow]\n"
+        f"[white]Device:[/white] [bold yellow]{device}[/bold yellow]\n"
+        f"[white]SentenceTransformer model:[/white] [bold yellow]{model_name}[/bold yellow]\n"
+        f"[white]Minimum similarity:[/white] [bold yellow]{min_similarity}[/bold yellow]\n"
+        f"[white]Remove duplicates:[/white] [bold yellow]{remove_dupes}[/bold yellow]"
+    )
+    panel = Panel.fit(options_message, title="[b]Using The Following Options[/b]", style="white", border_style="white")
+    console.print(panel)
+
 
     df.rename(columns={column_name: 'keyword', "spoke": "spoke Old"}, inplace=True)
 
@@ -149,7 +173,7 @@ def main(
     distance_model = SentenceEmbeddings(embedding_model)
 
     startTime = time.time()
-    print("[bold green]Starting to cluster keywords...[/bold green]")
+    print("[white]Starting to cluster keywords...[/white]")
 
     model = PolyFuzz(distance_model)
     model = model.fit(from_list)
@@ -175,7 +199,7 @@ def main(
 
     df['spoke'] = (df['spoke'].str.split()).str.join(' ')
 
-    print(f"All keywords clustered successfully. Took {time.time() - startTime} seconds!")
+    print(f"All keywords clustered successfully. Took {round(time.time() - startTime, 2)} seconds!")
 
     if output_path is None:
         output_path = os.path.splitext(file_path)[0] + '_output.csv'
@@ -186,7 +210,7 @@ def main(
 
     df.to_csv(output_path, index=False)
 
-    print(f"[bold green]Results saved to '{output_path}'.[/bold green]")
+    print(f"[white]Results saved to '{output_path}'.[/white]")
 
 
 if __name__ == "__main__":

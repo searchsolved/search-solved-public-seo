@@ -15,6 +15,9 @@ import platform
 from rich.box import Box
 from rich.console import Console
 from rich.panel import Panel
+import win32com.client as win32
+win32c = win32.constants
+
 
 
 
@@ -88,6 +91,8 @@ def main(
                                        help="Name of the SentenceTransformer model to use. For available models, refer to https://www.sbert.net/docs/pretrained_models.html"),
         min_similarity: float = typer.Option(0.85, help="Minimum similarity for clustering."),
         remove_dupes: bool = typer.Option(True, help="Whether to remove duplicates from the dataset."),
+        excel_pivot: bool = typer.Option(False, help="Whether to save the output as an Excel pivot table.")
+
 ):
     # Clear the screen
     if platform.system() == 'Windows':
@@ -207,10 +212,59 @@ def main(
     create_chart(df, chart_type, output_path)
 
     df.drop(columns=['cluster_size', 'keyword_len'], inplace=True)
+    # output_path = "/python_scripts/serp_cluster.xlsx"
 
-    df.to_csv(output_path, index=False)
+    if excel_pivot:
+        # Save the DataFrame to an Excel file
+        df.to_excel(output_path, index=False)
 
-    print(f"[white]Results saved to '{output_path}'.[/white]")
+        # Start an instance of Excel
+        excel = win32.gencache.EnsureDispatch('Excel.Application')
+        excel.Visible = False
+
+        # Open the workbook in Excel
+        wb = excel.Workbooks.Open(output_path)
+
+        # Get the active worksheet
+        ws1 = wb.ActiveSheet
+
+        # Create a new worksheet for the pivot table
+        ws2 = wb.Sheets.Add()
+        ws2.Name = "PivotTable"
+
+        # Set up the pivot table source data
+        source_range = ws1.UsedRange
+
+        # Get the range address
+        source_range_address = source_range.GetAddress()
+
+        # Create the pivot cache
+        pc = wb.PivotCaches().Create(SourceType=win32c.xlDatabase, SourceData=ws1.UsedRange)
+
+        # Define the pivot table range
+        pivot_range = ws2.Range(f"A1:C{df.shape[0] + 1}")
+
+        # Create the pivot table
+        pivot_table = pc.CreatePivotTable(TableDestination=pivot_range, TableName="PivotTable")
+
+        # Set up the row fields
+        pivot_table.PivotFields("hub").Orientation = win32c.xlRowField
+        pivot_table.PivotFields("hub").Position = 1
+        pivot_table.PivotFields("spoke").Orientation = win32c.xlRowField
+        pivot_table.PivotFields("spoke").Position = 2
+        pivot_table.PivotFields("keyword").Orientation = win32c.xlRowField
+
+        # Save and close
+        wb.Save()
+        excel.Application.Quit()
+
+        print(f"[white]Results saved to '{output_path}'.[/white]")
+
+    else:
+        # Save dataframe to a CSV file
+        df.to_csv(output_path, index=False)
+
+        print(f"[white]Results saved to '{output_path}'.[/white]")
 
 
 if __name__ == "__main__":

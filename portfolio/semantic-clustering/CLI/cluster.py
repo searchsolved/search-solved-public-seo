@@ -14,6 +14,11 @@ import typer
 
 app = typer.Typer()
 
+COMMON_COLUMN_NAMES = [
+    "Keyword", "Keywords", "keyword", "keywords",
+    "Search Terms", "Search terms", "Search term", "Search Term"
+]
+
 
 def create_unigram(cluster: str):
     """Create unigram from the cluster and return the most common word."""
@@ -24,11 +29,7 @@ def create_unigram(cluster: str):
 
 def get_model(model_name: str):
     """Create and return a SentenceTransformer model based on the given model name."""
-    valid_model_names = ["all-MiniLM-L6-v2", "multi-qa-mpnet-base-dot-v1", "paraphrase-multilingual-MiniLM-L12-v2"]
-    if model_name not in valid_model_names:
-        raise ValueError(f"The model name {model_name} is not valid. Choose from {valid_model_names}.")
-
-    print("[bold green]Loading the SentenceTransformer model...[/bold green]")
+    print(f"[bold green]Loading the SentenceTransformer model '{model_name}'...[/bold green]")
     model = SentenceTransformer(model_name)
     print("[bold green]Model loaded.[/bold green]")
     return model
@@ -36,10 +37,7 @@ def get_model(model_name: str):
 
 def load_file(file_path: str):
     """Load a CSV file and return a DataFrame."""
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"The file {file_path} does not exist.")
-
-    print("[bold green]Loading the CSV file...[/bold green]")
+    print(f"[bold green]Loading the CSV file from '{file_path}'...[/bold green]")
     result = chardet.detect(open(file_path, 'rb').read())
     encoding_value = result["encoding"]
     white_space = False if encoding_value != "UTF-16" else True
@@ -54,7 +52,7 @@ def load_file(file_path: str):
     return df
 
 
-def create_chart(df, chart_type):
+def create_chart(df, chart_type, output_path):
     """Create a sunburst chart or a treemap."""
     if chart_type == "sunburst":
         fig = px.sunburst(df, path=['hub', 'spoke'], values='cluster_size',
@@ -63,7 +61,7 @@ def create_chart(df, chart_type):
         fig = px.treemap(df, path=['hub', 'spoke'], values='cluster_size',
                          color_discrete_sequence=px.colors.qualitative.Pastel2)
     else:
-        print(f"Invalid chart type: {chart_type}. Valid options are 'sunburst' and 'treemap'.")
+        print(f"[bold red]Invalid chart type: {chart_type}. Valid options are 'sunburst' and 'treemap'.[/bold red]")
         return
 
     fig.show()
@@ -75,14 +73,15 @@ def create_chart(df, chart_type):
 
 @app.command()
 def main(
-    file_path: str = typer.Option("/python_scripts/urls_with_images.csv", help="The path to your input CSV file."),
-    column_name: str = typer.Option("Address", help="The name of the column to be processed."),
-    output_path: str = typer.Option("/python_scripts/your_keywords_clustered.csv", help="The path to the output CSV file."),
-    chart_type: str = typer.Option("treemap", help="The type of chart to generate. Possible values are 'sunburst' and 'treemap'."),
-    device: str = typer.Option("cpu", help="The device to be used by the SentenceTransformer. Possible values are 'cpu' and 'cuda'."),
-    model_name: str = typer.Option("all-MiniLM-L6-v2", help="The name of the SentenceTransformer model to use."),
-    min_similarity: float = typer.Option(0.85, help="The minimum similarity for clustering."),
-    remove_dupes: bool = typer.Option(True, help="Whether to remove duplicates from the dataset."),
+        file_path: str = typer.Argument(..., help='Path to your CSV file.'),
+        column_name: str = typer.Option(None, help='Name of the column in your CSV to be processed.'),
+        output_path: str = typer.Option(None, help='Path where the output CSV will be saved.'),
+        chart_type: str = typer.Option("treemap", help="Type of chart to generate. 'sunburst' or 'treemap'."),
+        device: str = typer.Option("cpu", help="Device to be used by SentenceTransformer. 'cpu' or 'cuda'."),
+        model_name: str = typer.Option("all-MiniLM-L6-v2",
+                                       help="Name of the SentenceTransformer model to use. For available models, refer to https://www.sbert.net/docs/pretrained_models.html"),
+        min_similarity: float = typer.Option(0.85, help="Minimum similarity for clustering."),
+        remove_dupes: bool = typer.Option(True, help="Whether to remove duplicates from the dataset."),
 ):
     """
     A command line application for keyword clustering.
@@ -96,21 +95,46 @@ def main(
     min_similarity: Minimum similarity for clustering.
     remove_dupes: Whether to remove duplicates from the dataset.
     """
+    if device not in ["cpu", "cuda"]:
+        print("[bold red]Invalid device. Valid options are 'cpu' and 'cuda'.[/bold red]")
+        return
+
     try:
         model = get_model(model_name)
-    except ValueError as e:
-        print(e)
+    except Exception as e:
+        print(f"[bold red]Failed to load the SentenceTransformer model: {e}[/bold red]")
         return
 
     try:
         df = load_file(file_path)
     except FileNotFoundError as e:
-        print(e)
+        print(f"[bold red]The file {file_path} does not exist.[/bold red]")
         return
 
+    if column_name is None:
+        print("[bold green]Searching for a column from the list of default column names...[/bold green]")
+        for common_name in COMMON_COLUMN_NAMES:
+            if common_name in df.columns:
+                column_name = common_name
+                print(f"[bold green]Found column '{column_name}'.[/bold green]")
+                break
+        else:
+            print(f"[bold red]Could not find a suitable column for processing. Please specify the column name with the --column option.[/bold red]")
+            return
+
     if column_name not in df.columns:
-        print(f"The column name {column_name} is not in the DataFrame.")
+        print(f"[bold red]The column name {column_name} is not in the DataFrame.[/bold red]")
         return
+
+    print(f"[bold green]Using the following options:[/bold green]\n"
+          f"File path: {file_path}\n"
+          f"Column name: {column_name}\n"
+          f"Output path: {output_path}\n"
+          f"Chart type: {chart_type}\n"
+          f"Device: {device}\n"
+          f"SentenceTransformer model: {model_name}\n"
+          f"Minimum similarity: {min_similarity}\n"
+          f"Remove duplicates: {remove_dupes}\n")
 
     df.rename(columns={column_name: 'keyword', "spoke": "spoke Old"}, inplace=True)
 
@@ -139,7 +163,6 @@ def main(
     df.loc[df["cluster_size"] == 1, "spoke"] = "no_cluster"
     df.insert(0, 'spoke', df.pop('spoke'))
     df['spoke'] = df['spoke'].str.encode('ascii', 'ignore').str.decode('ascii')
-
     df['keyword_len'] = df['keyword'].astype(str).apply(len)
     df = df.sort_values(by="keyword_len", ascending=True)
 
@@ -154,11 +177,16 @@ def main(
 
     print(f"All keywords clustered successfully. Took {time.time() - startTime} seconds!")
 
-    create_chart(df, chart_type)
+    if output_path is None:
+        output_path = os.path.splitext(file_path)[0] + '_output.csv'
+
+    create_chart(df, chart_type, output_path)
 
     df.drop(columns=['cluster_size', 'keyword_len'], inplace=True)
 
     df.to_csv(output_path, index=False)
+
+    print(f"[bold green]Results saved to '{output_path}'.[/bold green]")
 
 
 if __name__ == "__main__":

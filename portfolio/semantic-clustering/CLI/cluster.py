@@ -61,13 +61,18 @@ def load_file(file_path: str):
     return df
 
 
-def create_chart(df, chart_type, output_path):
+def create_chart(df, chart_type, output_path, volume):
     """Create a sunburst chart or a treemap."""
+    if volume is not None:
+        size = volume
+    else:
+        size = 'cluster_size'
+
     if chart_type == "sunburst":
-        fig = px.sunburst(df, path=['hub', 'spoke'], values='cluster_size',
+        fig = px.sunburst(df, path=['hub', 'spoke'], values=size,
                           color_discrete_sequence=px.colors.qualitative.Pastel2)
     elif chart_type == "treemap":
-        fig = px.treemap(df, path=['hub', 'spoke'], values='cluster_size',
+        fig = px.treemap(df, path=['hub', 'spoke'], values=size,
                          color_discrete_sequence=px.colors.qualitative.Pastel2)
     else:
         print(f"[bold red]Invalid chart type: {chart_type}. Valid options are 'sunburst' and 'treemap'.[/bold red]")
@@ -89,7 +94,7 @@ def main(
         device: str = typer.Option("cpu", help="Device to be used by SentenceTransformer. 'cpu' or 'cuda'."),
         model_name: str = typer.Option("all-MiniLM-L6-v2",
                                        help="Name of the SentenceTransformer model to use. For available models, refer to https://www.sbert.net/docs/pretrained_models.html"),
-        min_similarity: float = typer.Option(0.85, help="Minimum similarity for clustering."),
+        min_similarity: float = typer.Option(0.95, help="Minimum similarity for clustering."),
         remove_dupes: bool = typer.Option(True, help="Whether to remove duplicates from the dataset."),
         excel_pivot: bool = typer.Option(False, help="Whether to save the output as an Excel pivot table."),
         volume: str = typer.Option(None, help='Name of the column containing numerical values. If --volume is used, the keyword with the largest volume will be used as the name of the cluster. If not, the shortest word will be used.')
@@ -218,7 +223,8 @@ def main(
     if output_path is None:
         output_path = os.path.splitext(file_path)[0] + '_output.csv'
 
-    create_chart(df, chart_type, output_path)
+    create_chart(df, chart_type, output_path, volume)
+
 
     df.drop(columns=['cluster_size', 'keyword_len'], inplace=True)
     output_path = "/python_scripts/serp_cluster.xlsx"

@@ -61,13 +61,19 @@ def load_file(file_path: str):
     return df
 
 
-def create_chart(df, chart_type, output_path):
+def create_chart(df, chart_type, output_path, volume):
     """Create a sunburst chart or a treemap."""
+    if volume is not None:
+        df['total_volume'] = df.groupby('spoke')[volume].transform('sum')
+        values = 'total_volume'
+    else:
+        values = 'cluster_size'
+
     if chart_type == "sunburst":
-        fig = px.sunburst(df, path=['hub', 'spoke'], values='cluster_size',
+        fig = px.sunburst(df, path=['hub', 'spoke'], values=values,
                           color_discrete_sequence=px.colors.qualitative.Pastel2)
     elif chart_type == "treemap":
-        fig = px.treemap(df, path=['hub', 'spoke'], values='cluster_size',
+        fig = px.treemap(df, path=['hub', 'spoke'], values=values,
                          color_discrete_sequence=px.colors.qualitative.Pastel2)
     else:
         print(f"[bold red]Invalid chart type: {chart_type}. Valid options are 'sunburst' and 'treemap'.[/bold red]")
@@ -119,51 +125,18 @@ def main(
     remove_dupes: Whether to remove duplicates from the dataset.
     volume: Name of the column containing numerical values. If --volume is used, the keyword with the largest volume will be used as the name of the cluster. If not, the shortest word will be used.
     """
-    if device not in ["cpu", "cuda"]:
-        print("[bold red]Invalid device. Valid options are 'cpu' and 'cuda'.[/bold red]")
-        return
-
-    try:
-        model = get_model(model_name)
-    except Exception as e:
-        print(f"[bold red]Failed to load the SentenceTransformer model: {e}[/bold red]")
-        return
-
-    try:
-        df = load_file(file_path)
-    except FileNotFoundError as e:
-        print(f"[bold red]The file {file_path} does not exist.[/bold red]")
-        return
-
-    if column_name is None:
-        print("[white]Searching for a column from the list of default column names...[/white]")
-        for common_name in COMMON_COLUMN_NAMES:
-            if common_name in df.columns:
-                column_name = common_name
-                print(f"[white]Found column '{column_name}'.[/white]\n")
-                break
-        else:
-            print(f"[bold red]Could not find a suitable column for processing. Please specify the column name with the --column option.[/bold red]")
-            return
-
-    if column_name not in df.columns:
-        print(f"[bold red]The column name {column_name} is not in the DataFrame.[/bold red]")
-        return
-
-    if volume is not None and volume not in df.columns:
-        print(f"[bold red]The column name {volume} is not in the DataFrame.[/bold red]")
-        return
 
     # Print options
     options_message = (
         f"[white]File path:[/white] [bold yellow]{file_path}[/bold yellow]\n"
-                f"[white]Column name:[/white] [bold yellow]{column_name}[/bold yellow]\n"
+        f"[white]Column name:[/white] [bold yellow]{column_name}[/bold yellow]\n"
         f"[white]Output path:[/white] [bold yellow]{output_path}[/bold yellow]\n"
         f"[white]Chart type:[/white] [bold yellow]{chart_type}[/bold yellow]\n"
         f"[white]Device:[/white] [bold yellow]{device}[/bold yellow]\n"
         f"[white]SentenceTransformer model:[/white] [bold yellow]{model_name}[/bold yellow]\n"
         f"[white]Minimum similarity:[/white] [bold yellow]{min_similarity}[/bold yellow]\n"
         f"[white]Remove duplicates:[/white] [bold yellow]{remove_dupes}[/bold yellow]\n"
+        f"[white]Excel Pivot:[/white] [bold yellow]{excel_pivot}[/bold yellow]\n"
         f"[white]Volume column:[/white] [bold yellow]{volume}[/bold yellow]"
     )
     panel = Panel.fit(options_message, title="[b]Using The Following Options[/b]", style="white", border_style="white")
@@ -218,59 +191,70 @@ def main(
     if output_path is None:
         output_path = os.path.splitext(file_path)[0] + '_output.csv'
 
-    create_chart(df, chart_type, output_path)
+    create_chart(df, chart_type, output_path, volume)
 
     df.drop(columns=['cluster_size', 'keyword_len'], inplace=True)
-    output_path = "/python_scripts/serp_cluster.xlsx"
 
     if excel_pivot:
-        # Save the DataFrame to an Excel file
-        df.to_excel(output_path, index=False)
+        try:
+            # Save the DataFrame to an Excel file
+            df.to_excel(output_path, index=False)
 
-        # Start an instance of Excel
-        excel = win32.gencache.EnsureDispatch('Excel.Application')
-        excel.Visible = False
+            # Start an instance of Excel
+            excel = win32.gencache.EnsureDispatch('Excel.Application')
+            excel.Visible = False
 
-        # Open the workbook in Excel
-        wb = excel.Workbooks.Open(output_path)
+            # Open the workbook in Excel
+            wb = excel.Workbooks.Open(output_path)
 
-        # Get the active worksheet
-        ws1 = wb.ActiveSheet
+            # Get the active worksheet and rename it
+            ws1 = wb.Worksheets(1)
+            ws1.Name = "Keyword Clusters"
 
-        # Create a new worksheet for the pivot table
-        ws2 = wb.Sheets.Add()
-        ws2.Name = "PivotTable"
+            # Create a new worksheet for the pivot table
+            ws2 = wb.Sheets.Add()
+            ws2.Name = "PivotTable"
 
-        # Set up the pivot table source data
-        source_range = ws1.UsedRange
+            # Set up the pivot table source data
+            source_range = ws1.UsedRange
 
-        # Get the range address
-        source_range_address = source_range.GetAddress()
+            # Get the range address
+            source_range_address = source_range.GetAddress()
 
-        # Create the pivot cache
-        pc = wb.PivotCaches().Create(SourceType=win32c.xlDatabase, SourceData=ws1.UsedRange)
+            # Create the pivot cache
+            pc = wb.PivotCaches().Create(SourceType=win32c.xlDatabase, SourceData=ws1.UsedRange)
 
-        # Define the pivot table range
-        pivot_range = ws2.Range(f"A1:C{df.shape[0] + 1}")
+            # Define the pivot table range
+            pivot_range = ws2.Range(f"A1:C{df.shape[0] + 1}")
 
-        # Create the pivot table
-        pivot_table = pc.CreatePivotTable(TableDestination=pivot_range, TableName="PivotTable")
+            # Create the pivot table
+            pivot_table = pc.CreatePivotTable(TableDestination=pivot_range, TableName="PivotTable")
 
-        # Set up the row fields
-        pivot_table.PivotFields("hub").Orientation = win32c.xlRowField
-        pivot_table.PivotFields("hub").Position = 1
-        pivot_table.PivotFields("spoke").Orientation = win32c.xlRowField
-        pivot_table.PivotFields("spoke").Position = 2
-        pivot_table.PivotFields("keyword").Orientation = win32c.xlRowField
+            # Set up the row fields
+            pivot_table.PivotFields("hub").Orientation = win32c.xlRowField
+            pivot_table.PivotFields("hub").Position = 1
+            pivot_table.PivotFields("spoke").Orientation = win32c.xlRowField
+            pivot_table.PivotFields("spoke").Position = 2
+            pivot_table.PivotFields("keyword").Orientation = win32c.xlRowField
 
-        if volume is not None:
-            pivot_table.PivotFields(volume).Orientation = win32c.xlDataField
+            if volume is not None:
+                pivot_table.PivotFields(volume).Orientation = win32c.xlDataField
 
-        # Save and close
-        wb.Save()
-        excel.Application.Quit()
+            # Save and close
+            wb.Save()
+            excel.Application.Quit()
 
-        print(f"[white]Results saved to '{output_path}'.[/white]")
+            print(f"[white]Results saved to '{output_path}'.[/white]")
+
+        except Exception as e:
+            print(f"[bold red]Failed to create an Excel pivot table: {e}[/bold red]")
+            print("[white]Falling back to creating a pandas pivot table...[/white]")
+
+            # Create a pandas pivot table and save it to an Excel file
+            pivot_table = pd.pivot_table(df, index=["hub", "spoke", "keyword"])
+            pivot_table.to_excel(output_path)
+
+            print(f"[white]Results saved to '{output_path}'.[/white]")
 
     else:
         # Save dataframe to a CSV file

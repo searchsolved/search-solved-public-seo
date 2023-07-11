@@ -221,7 +221,10 @@ def main(
     create_chart(df, chart_type, output_path, volume)
 
     df.drop(columns=['cluster_size', 'keyword_len'], inplace=True)
-    output_path = "/python_scripts/serp_cluster.xlsx"
+
+    output_dir = os.getcwd()
+    output_path = os.path.join(output_dir, output_path+ '_output.xlsx')
+    print(output_path)
 
     if excel_pivot:
         # Save the DataFrame to an Excel file

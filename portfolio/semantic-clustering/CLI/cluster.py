@@ -99,7 +99,7 @@ def main(
         device: str = typer.Option("cpu", help="Device to be used by SentenceTransformer. 'cpu' or 'cuda'."),
         model_name: str = typer.Option("all-MiniLM-L6-v2",
                                        help="Name of the SentenceTransformer model to use. For available models, refer to https://www.sbert.net/docs/pretrained_models.html"),
-        min_similarity: float = typer.Option(0.95, help="Minimum similarity for clustering."),
+        min_similarity: float = typer.Option(0.85, help="Minimum similarity for clustering."),
         remove_dupes: bool = typer.Option(True, help="Whether to remove duplicates from the dataset."),
         excel_pivot: bool = typer.Option(False, help="Whether to save the output as an Excel pivot table."),
         volume: str = typer.Option(None, help='Name of the column containing numerical values. If --volume is used, the keyword with the largest volume will be used as the name of the cluster. If not, the shortest word will be used.'),
@@ -188,7 +188,9 @@ def main(
     model.group(link_min_similarity=min_similarity)
 
     df_cluster = model.get_matches()
+    df_cluster["Group"] = df_cluster.apply(lambda row: "no_cluster" if row["Similarity"] < min_similarity else row["Group"], axis=1)
 
+    df_cluster.to_csv('/python_scripts/test_no_min_sim.csv')
     # this logic moves exact matches back into the right group. Sometimes they can stray when they have an identical
     # match score with a different group. for example 2 socks vs two socks with score the same.
 

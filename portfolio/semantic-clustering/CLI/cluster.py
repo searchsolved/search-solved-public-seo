@@ -2,6 +2,7 @@ import time
 import chardet
 import pandas as pd
 import os
+import numpy as np
 from collections import Counter
 from sentence_transformers import SentenceTransformer
 from polyfuzz import PolyFuzz
@@ -16,9 +17,8 @@ from rich.box import Box
 from rich.console import Console
 from rich.panel import Panel
 import win32com.client as win32
+
 win32c = win32.constants
-
-
 
 
 app = typer.Typer()
@@ -91,8 +91,8 @@ def main(
                                        help="Name of the SentenceTransformer model to use. For available models, refer to https://www.sbert.net/docs/pretrained_models.html"),
         min_similarity: float = typer.Option(0.85, help="Minimum similarity for clustering."),
         remove_dupes: bool = typer.Option(True, help="Whether to remove duplicates from the dataset."),
-        excel_pivot: bool = typer.Option(False, help="Whether to save the output as an Excel pivot table.")
-
+        excel_pivot: bool = typer.Option(False, help="Whether to save the output as an Excel pivot table."),
+        volume: str = typer.Option(None, help='Name of the column containing numerical values. If --volume is used, the keyword with the largest volume will be used as the name of the cluster. If not, the shortest word will be used.')
 ):
     # Clear the screen
     if platform.system() == 'Windows':
@@ -117,6 +117,7 @@ def main(
     model_name: Name of the SentenceTransformer model to use.
     min_similarity: Minimum similarity for clustering.
     remove_dupes: Whether to remove duplicates from the dataset.
+    volume: Name of the column containing numerical values. If --volume is used, the keyword with the largest volume will be used as the name of the cluster. If not, the shortest word will be used.
     """
     if device not in ["cpu", "cuda"]:
         print("[bold red]Invalid device. Valid options are 'cpu' and 'cuda'.[/bold red]")
@@ -149,21 +150,24 @@ def main(
         print(f"[bold red]The column name {column_name} is not in the DataFrame.[/bold red]")
         return
 
+    if volume is not None and volume not in df.columns:
+        print(f"[bold red]The column name {volume} is not in the DataFrame.[/bold red]")
+        return
 
     # Print options
     options_message = (
         f"[white]File path:[/white] [bold yellow]{file_path}[/bold yellow]\n"
-        f"[white]Column name:[/white] [bold yellow]{column_name}[/bold yellow]\n"
+                f"[white]Column name:[/white] [bold yellow]{column_name}[/bold yellow]\n"
         f"[white]Output path:[/white] [bold yellow]{output_path}[/bold yellow]\n"
         f"[white]Chart type:[/white] [bold yellow]{chart_type}[/bold yellow]\n"
         f"[white]Device:[/white] [bold yellow]{device}[/bold yellow]\n"
         f"[white]SentenceTransformer model:[/white] [bold yellow]{model_name}[/bold yellow]\n"
         f"[white]Minimum similarity:[/white] [bold yellow]{min_similarity}[/bold yellow]\n"
-        f"[white]Remove duplicates:[/white] [bold yellow]{remove_dupes}[/bold yellow]"
+        f"[white]Remove duplicates:[/white] [bold yellow]{remove_dupes}[/bold yellow]\n"
+        f"[white]Volume column:[/white] [bold yellow]{volume}[/bold yellow]"
     )
     panel = Panel.fit(options_message, title="[b]Using The Following Options[/b]", style="white", border_style="white")
     console.print(panel)
-
 
     df.rename(columns={column_name: 'keyword', "spoke": "spoke Old"}, inplace=True)
 
@@ -193,7 +197,12 @@ def main(
     df.insert(0, 'spoke', df.pop('spoke'))
     df['spoke'] = df['spoke'].str.encode('ascii', 'ignore').str.decode('ascii')
     df['keyword_len'] = df['keyword'].astype(str).apply(len)
-    df = df.sort_values(by="keyword_len", ascending=True)
+
+    if volume is not None:
+        df[volume] = df[volume].replace({'': 0, np.nan: 0}).astype(int)
+        df = df.sort_values(by=volume, ascending=False)
+    else:
+        df = df.sort_values(by="keyword_len", ascending=True)
 
     df.insert(0, 'hub', df['spoke'].apply(create_unigram))
 
@@ -253,6 +262,9 @@ def main(
         pivot_table.PivotFields("spoke").Orientation = win32c.xlRowField
         pivot_table.PivotFields("spoke").Position = 2
         pivot_table.PivotFields("keyword").Orientation = win32c.xlRowField
+
+        if volume is not None:
+            pivot_table.PivotFields(volume).Orientation = win32c.xlDataField
 
         # Save and close
         wb.Save()

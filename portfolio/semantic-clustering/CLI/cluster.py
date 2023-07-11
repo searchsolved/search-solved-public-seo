@@ -1,27 +1,24 @@
-# Importing necessary libraries
-
-import os
-import platform
-import string
 import time
-from collections import Counter
-
 import chardet
-import numpy as np
 import pandas as pd
-import plotly.express as px
-import plotly.io as pio
-import typer
-import win32com.client as win32
-from nltk.stem import PorterStemmer
+import os
+import numpy as np
+from collections import Counter
+from sentence_transformers import SentenceTransformer
 from polyfuzz import PolyFuzz
 from polyfuzz.models import SentenceEmbeddings
+import plotly.express as px
+import plotly.io as pio
 from rich import print
+from nltk import ngrams
+import typer
+import platform
+from rich.box import Box
 from rich.console import Console
 from rich.panel import Panel
-from sentence_transformers import SentenceTransformer
-
-# Define global constants
+import win32com.client as win32
+from nltk.stem import PorterStemmer
+import string
 
 win32c = win32.constants
 
@@ -32,18 +29,27 @@ COMMON_COLUMN_NAMES = [
     "Search Terms", "Search terms", "Search term", "Search Term"
 ]
 
-# Define necessary functions
-
-stemmer = PorterStemmer()
-
-def stem_text(text):
-    return ' '.join([stemmer.stem(word) for word in text.split()])
+def stem_and_remove_punctuation(text: str, stem: bool):
+    stemmer = PorterStemmer()
+    # Remove punctuation
+    text = text.translate(str.maketrans('', '', string.punctuation))
+    # Stem the text if the stem flag is True
+    if stem:
+        text = ' '.join([stemmer.stem(word) for word in text.split()])
+    return text
 
 def create_unigram(cluster: str):
     """Create unigram from the cluster and return the most common word."""
     words = cluster.split()
     most_common_word = Counter(words).most_common(1)[0][0]
     return most_common_word
+
+def get_model(model_name: str):
+    """Create and return a SentenceTransformer model based on the given model name."""
+    print(f"[white]Loading the SentenceTransformer model '{model_name}'...[/white]")
+    model = SentenceTransformer(model_name)
+    print("[white]Model loaded.[/white]")
+    return model
 
 def load_file(file_path: str):
     """Load a CSV file and return a DataFrame."""
@@ -116,7 +122,7 @@ def main(
         return
 
     try:
-        model = SentenceTransformer(model_name)
+        model = get_model(model_name)
     except Exception as e:
         print(f"[bold red]Failed to load the SentenceTransformer model: {e}[/bold red]")
         return
@@ -127,7 +133,6 @@ def main(
         print(f"[bold red]The file {file_path} does not exist.[/bold red]")
         return
 
-    # ...
     if column_name is None:
         print("[white]Searching for a column from the list of default column names...[/white]")
         for common_name in COMMON_COLUMN_NAMES:
@@ -136,8 +141,7 @@ def main(
                 print(f"[white]Found column '{column_name}'.[/white]\n")
                 break
         else:
-            print(
-                f"[bold red]Could not find a suitable column for processing. Please specify the column name with the --column option.[/bold red]")
+            print(f"[bold red]Could not find a suitable column for processing. Please specify the column name with the --column option.[/bold red]")
             return
 
     if column_name not in df.columns:
@@ -148,8 +152,7 @@ def main(
         print(f"[bold red]The column name {volume} is not in the DataFrame.[/bold red]")
         return
 
-    # ...
-    # Print options
+        # Print options
     options_message = (
         f"[white]File path:[/white] [bold yellow]{file_path}[/bold yellow]\n"
         f"[white]Column name:[/white] [bold yellow]{column_name}[/bold yellow]\n"
@@ -226,8 +229,7 @@ def main(
         df = df.sort_values(by="keyword_len", ascending=True)
 
     df.insert(0, 'hub', df['spoke'].apply(create_unigram))
-    df['hub'] = df['hub'].str.lower().str.translate(str.maketrans('', '', string.punctuation))
-    df['hub'] = df['hub'].apply(stem_text)
+    df['hub'] = df['hub'].apply(lambda x: stem_and_remove_punctuation(x, stem))
 
     df = df[
         ['hub', 'spoke', 'cluster_size'] + [col for col in df.columns if col not in ['hub', 'spoke', 'cluster_size']]]
@@ -246,7 +248,7 @@ def main(
     df.drop(columns=['cluster_size', 'keyword_len'], inplace=True)
 
     output_dir = os.getcwd()
-    output_path = os.path.join(output_dir, output_path + '_output.xlsx')
+    output_path = os.path.join(output_dir, output_path+ '_output.xlsx')
     print(output_path)
 
     if excel_pivot:
@@ -292,7 +294,7 @@ def main(
         if volume is not None:
             pivot_table.PivotFields(volume).Orientation = win32c.xlDataField
 
-        # Save and close
+            # Save and close
         wb.Save()
         excel.Application.Quit()
 

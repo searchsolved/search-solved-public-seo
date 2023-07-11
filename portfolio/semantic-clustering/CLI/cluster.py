@@ -188,6 +188,31 @@ def main(
     model.group(link_min_similarity=min_similarity)
 
     df_cluster = model.get_matches()
+
+    # this logic moves exact matches back into the right group. Sometimes they can stray when they have an identical
+    # match score with a different group. for example 2 socks vs two socks with score the same.
+
+    data_dict = df_cluster.groupby('Group')['From'].apply(list).to_dict()
+
+    # Check for each Group if it exists in its corresponding From values
+    for group, from_values in data_dict.items():
+        if group not in from_values:
+            # If it doesn't exist, add it to the From values of that Group
+            from_values.append(group)
+
+    # Convert the updated dictionary back to a DataFrame
+    df_missing = pd.DataFrame([(k, v) for k, vs in data_dict.items() for v in vs], columns=['Group', 'From'])
+
+    df_missing = pd.concat([df_cluster, df_missing], ignore_index=True)
+    df_missing['Match'] = df_missing['From'] == df_missing['Group']
+    df_missing = df_missing[df_missing["Match"].isin([True])]
+    df_missing = df_missing.drop('Match', axis=1)
+    df_missing.drop_duplicates(subset=["Group", "From"], keep="first", inplace=True)
+    df_missing['Similarity'] = 1
+    df_cluster = pd.concat([df_cluster, df_missing])
+    df_cluster = df_cluster.sort_values(by="Similarity", ascending=False)
+    df_cluster = df_cluster[df_cluster.duplicated(subset=['From'], keep='first') == False]  # drop first duplicate only
+
     df_cluster.rename(columns={"From": "keyword", "Similarity": "similarity", "Group": "spoke"}, inplace=True)
     df = pd.merge(df, df_cluster[['keyword', 'spoke']], on='keyword', how='left')
 

@@ -262,8 +262,9 @@ def main(
         # Open the workbook in Excel
         wb = excel.Workbooks.Open(output_path)
 
-        # Get the active worksheet
+        # Get the active worksheet and rename it
         ws1 = wb.ActiveSheet
+        ws1.Name = "Clustered Keywords"
 
         # Create a new worksheet for the pivot table
         ws2 = wb.Sheets.Add()

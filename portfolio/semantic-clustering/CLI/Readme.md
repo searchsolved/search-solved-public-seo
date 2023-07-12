@@ -26,31 +26,32 @@ Replace mycsv.csv with the path to your CSV file.
 
 ## Options
 
-file_path: The path to your CSV file.
-column_name: The name of the column in your CSV to be processed.
-output_path: The path where the output CSV will be saved.
-chart_type: The type of chart to generate. Choose between "sunburst" and "treemap".
-device: The device to be used by SentenceTransformer. Choose between "cpu" and "cuda".
-model_name: The name of the SentenceTransformer model to use. For available models, refer to the SentenceTransformers documentation.
-min_similarity: The minimum similarity for clustering. It's a value between 0 and 1, where 1 means exact match and 0 means no match at all.
-remove_dupes: Whether to remove duplicates from the dataset.
-volume: The name of the column containing numerical values. If --volume is used, the keyword with the largest volume will be used as the name of the cluster. If not, the shortest word will be used.
-stem: Whether to perform stemming on the 'hub' column.
+* **file_path:** The path to your CSV file.
+* **column_name:** The name of the column in your CSV to be processed.
+* **output_path:** The path where the output CSV will be saved.
+* **chart_type:** The type of chart to generate. Choose between "sunburst" and "treemap".
+* **device:** The device to be used by SentenceTransformer. Choose between "cpu" and "cuda".
+* **model_name:** The name of the SentenceTransformer model to use. For available models, refer to the SentenceTransformers documentation.
+* **min_similarity:** The minimum similarity for clustering. It's a value between 0 and 1, where 1 means exact match and 0 means no match at all.
+* **remove_dupes:** Whether to remove duplicates from the dataset.
+* **volume:** The name of the column containing numerical values. If --volume is used, the keyword with the largest volume will be used as the name of the cluster. If not, the shortest word will be used.
+* **stem:** Whether to perform stemming on the 'hub' column.
 
 ## Dependencies
 
 The script depends on several Python libraries:
 
-os, platform, string, time: Standard Python libraries for various system-level tasks.
-collections: For creating a Counter object.
-chardet: For detecting the character encoding of the CSV file.
-numpy and pandas: For data manipulation and analysis.
-plotly.express and plotly.io: For data visualization.
-typer: For creating a command-line interface.
-win32com.client: For saving the output as an Excel pivot table.
-polyfuzz: For clustering similar texts.
-rich: For creating rich console output.
-sentence_transformers: For generating sentence embeddings.
+* os, platform, string, time: Standard Python libraries for various system-level tasks.
+* collections: For creating a Counter object.
+* chardet: For detecting the character encoding of the CSV file.
+* numpy and pandas: For data manipulation and analysis.
+* plotly.express and plotly.io: For data visualization.
+* typer: For creating a command-line interface.
+* win32com.client: For saving the output as an Excel pivot table.
+* polyfuzz: For clustering similar texts.
+* rich: For creating rich console output.
+* sentence_transformers: For generating sentence embeddings.
+
 Make sure to install these dependencies before running the script:
 
 `pip install chardet numpy pandas plotly typer pywin32 polyfuzz rich sentence_transformers`

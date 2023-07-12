@@ -268,17 +268,15 @@ def main(
     if output_path is None:
         output_path = os.path.splitext(file_path)[0] + '_output.csv'
 
-    create_chart(df, chart_type, output_path, volume)
-
+    # drop unused columns
     df.drop(columns=['cluster_size', 'keyword_len'], inplace=True)
 
-    df.rename(columns={"oldName1": "newName1", "oldName2": "newName2"}, inplace=True)
-
-    # clean up
-    df["hub"] = df["hub"].apply(lambda x: x.replace("noclust", "no_cluster"))
-    df["hub"] = df["hub"].apply(lambda x: x.replace("nocluster", "no_cluster"))
+    # logic to fix no_cluster hub and spoke names
+    df["hub"] = df["hub"].apply(lambda x: "no_cluster" if x == "noclust" else x)
+    df["hub"] = df["hub"].apply(lambda x: "no_cluster" if x == "nocluster" else x)
     df.loc[df["hub"] == "no_cluster", "spoke"] = "no_cluster"
 
+    create_chart(df, chart_type, output_path, volume)
 
     output_dir = os.getcwd()
     output_path = os.path.join(output_dir, output_path+ '_output.xlsx')

@@ -37,10 +37,22 @@ def stem_and_remove_punctuation(text: str, stem: bool):
         text = ' '.join([stemmer.stem(word) for word in text.split()])
     return text
 
+
 def create_unigram(cluster: str, stem: bool):
     """Create unigram from the cluster and return the most common word."""
     words = cluster.split()
-    most_common_word = Counter(words).most_common(1)[0][0]
+    word_counts = Counter(words)
+
+    # Filter out number-only words
+    word_counts = Counter({word: count for word, count in word_counts.items() if not word.isdigit()})
+
+    if word_counts:
+        # If there are any words left after filtering, return the most common one
+        most_common_word = word_counts.most_common(1)[0][0]
+    else:
+        # If all words were number-only and thus filtered out, return 'no_keyword'
+        most_common_word = 'no_keyword'
+
     return stem_and_remove_punctuation(most_common_word, stem)
 
 def get_model(model_name: str):

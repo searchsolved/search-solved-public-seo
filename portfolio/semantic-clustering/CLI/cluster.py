@@ -11,7 +11,6 @@ import plotly.express as px
 import plotly.io as pio
 import typer
 import win32com.client as win32
-from nltk.stem import PorterStemmer
 from polyfuzz import PolyFuzz
 from polyfuzz.models import SentenceEmbeddings
 from rich import print
@@ -29,19 +28,20 @@ COMMON_COLUMN_NAMES = [
 ]
 
 def stem_and_remove_punctuation(text: str, stem: bool):
-    stemmer = PorterStemmer()
     # Remove punctuation
     text = text.translate(str.maketrans('', '', string.punctuation))
     # Stem the text if the stem flag is True
     if stem:
+        from nltk.stem import PorterStemmer
+        stemmer = PorterStemmer()
         text = ' '.join([stemmer.stem(word) for word in text.split()])
     return text
 
-def create_unigram(cluster: str):
+def create_unigram(cluster: str, stem: bool):
     """Create unigram from the cluster and return the most common word."""
     words = cluster.split()
     most_common_word = Counter(words).most_common(1)[0][0]
-    return most_common_word
+    return stem_and_remove_punctuation(most_common_word, stem)
 
 def get_model(model_name: str):
     """Create and return a SentenceTransformer model based on the given model name."""
@@ -68,16 +68,16 @@ def load_file(file_path: str):
 
 def create_chart(df, chart_type, output_path, volume):
     """Create a sunburst chart or a treemap."""
+    chart_df = df.groupby(['hub', 'spoke']).size().reset_index(name='cluster_size')
+
     if volume is not None:
-        size = volume
-    else:
-        size = 'cluster_size'
+        chart_df[volume] = df[volume]
 
     if chart_type == "sunburst":
-        fig = px.sunburst(df, path=['hub', 'spoke'], values=size,
+        fig = px.sunburst(chart_df, path=['hub', 'spoke'], values='cluster_size',
                           color_discrete_sequence=px.colors.qualitative.Pastel2)
     elif chart_type == "treemap":
-        fig = px.treemap(df, path=['hub', 'spoke'], values=size,
+        fig = px.treemap(chart_df, path=['hub', 'spoke'], values='cluster_size',
                          color_discrete_sequence=px.colors.qualitative.Pastel2)
     else:
         print(f"[bold red]Invalid chart type: {chart_type}. Valid options are 'sunburst' and 'treemap'.[/bold red]")
@@ -89,6 +89,7 @@ def create_chart(df, chart_type, output_path, volume):
     chart_file_path = os.path.join(os.path.dirname(output_path), f"{chart_type}.html")
     pio.write_html(fig, chart_file_path)
 
+
 @app.command()
 def main(
         file_path: str = typer.Argument(..., help='Path to your CSV file.'),
@@ -98,11 +99,11 @@ def main(
         device: str = typer.Option("cpu", help="Device to be used by SentenceTransformer. 'cpu' or 'cuda'."),
         model_name: str = typer.Option("all-MiniLM-L6-v2",
                                        help="Name of the SentenceTransformer model to use. For available models, refer to https://www.sbert.net/docs/pretrained_models.html"),
-        min_similarity: float = typer.Option(0.85, help="Minimum similarity for clustering."),
+        min_similarity: float = typer.Option(0.80, help="Minimum similarity for clustering."),
         remove_dupes: bool = typer.Option(True, help="Whether to remove duplicates from the dataset."),
         excel_pivot: bool = typer.Option(False, help="Whether to save the output as an Excel pivot table."),
         volume: str = typer.Option(None, help='Name of the column containing numerical values. If --volume is used, the keyword with the largest volume will be used as the name of the cluster. If not, the shortest word will be used.'),
-        stem: bool = typer.Option(True, "--no-stem", help="Whether to perform stemming on the 'hub' column.", show_default=False)
+        stem: bool = typer.Option(False, "--stem", help="Whether to perform stemming on the 'hub' column.", show_default=False)
 ):
     # Clear the screen
     if platform.system() == 'Windows':
@@ -221,18 +222,30 @@ def main(
     df.insert(0, 'spoke', df.pop('spoke'))
     df['spoke'] = df['spoke'].str.encode('ascii', 'ignore').str.decode('ascii')
     df['keyword_len'] = df['keyword'].astype(str).apply(len)
-
     if volume is not None:
         df[volume] = df[volume].replace({'': 0, np.nan: 0}).astype(int)
         df = df.sort_values(by=volume, ascending=False)
     else:
         df = df.sort_values(by="keyword_len", ascending=True)
 
-    df.insert(0, 'hub', df['spoke'].apply(create_unigram))
+    df.insert(0, 'hub', df['spoke'].apply(lambda x: create_unigram(x, stem)))
+
     df['hub'] = df['hub'].apply(lambda x: stem_and_remove_punctuation(x, stem))
 
     df = df[
         ['hub', 'spoke', 'cluster_size'] + [col for col in df.columns if col not in ['hub', 'spoke', 'cluster_size']]]
+
+    # If volume is used, sort by volume. Otherwise, sort by keyword length.
+    if volume is not None:
+        df[volume] = df[volume].replace({'': 0, np.nan: 0}).astype(int)
+        df = df.sort_values(by=volume, ascending=False)
+    else:
+        df['keyword_len'] = df['keyword'].astype(str).apply(len)
+        df = df.sort_values(by="keyword_len", ascending=True)
+
+
+    # Use the first keyword in each sorted group as the cluster name.
+    df['spoke'] = df.groupby('spoke')['keyword'].transform('first')
 
     df.sort_values(["spoke", "cluster_size"], ascending=[True, False], inplace=True)
 

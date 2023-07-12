@@ -80,10 +80,10 @@ def load_file(file_path: str):
 
 def create_chart(df, chart_type, output_path, volume):
     """Create a sunburst chart or a treemap."""
-    chart_df = df.groupby(['hub', 'spoke']).size().reset_index(name='cluster_size')
-
     if volume is not None:
-        chart_df[volume] = df[volume]
+        chart_df = df.groupby(['hub', 'spoke'])[volume].sum().reset_index(name='cluster_size')
+    else:
+        chart_df = df.groupby(['hub', 'spoke']).size().reset_index(name='cluster_size')
 
     if chart_type == "sunburst":
         fig = px.sunburst(chart_df, path=['hub', 'spoke'], values='cluster_size',

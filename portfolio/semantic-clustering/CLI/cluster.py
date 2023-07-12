@@ -1,24 +1,23 @@
-import time
-import chardet
-import pandas as pd
 import os
-import numpy as np
+import platform
+import string
+import time
 from collections import Counter
-from sentence_transformers import SentenceTransformer
-from polyfuzz import PolyFuzz
-from polyfuzz.models import SentenceEmbeddings
+
+import chardet
+import numpy as np
+import pandas as pd
 import plotly.express as px
 import plotly.io as pio
-from rich import print
-from nltk import ngrams
 import typer
-import platform
-from rich.box import Box
-from rich.console import Console
-from rich.panel import Panel
 import win32com.client as win32
 from nltk.stem import PorterStemmer
-import string
+from polyfuzz import PolyFuzz
+from polyfuzz.models import SentenceEmbeddings
+from rich import print
+from rich.console import Console
+from rich.panel import Panel
+from sentence_transformers import SentenceTransformer
 
 win32c = win32.constants
 
@@ -190,7 +189,6 @@ def main(
     df_cluster = model.get_matches()
     df_cluster["Group"] = df_cluster.apply(lambda row: "no_cluster" if row["Similarity"] < min_similarity else row["Group"], axis=1)
 
-    df_cluster.to_csv('/python_scripts/test_no_min_sim.csv')
     # this logic moves exact matches back into the right group. Sometimes they can stray when they have an identical
     # match score with a different group. for example 2 socks vs two socks with score the same.
 

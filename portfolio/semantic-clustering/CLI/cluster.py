@@ -297,9 +297,20 @@ def main(
         ws1 = wb.ActiveSheet
         ws1.Name = "Clustered Keywords"
 
+        # Freeze the top row in ws1
+        ws1.Activate()
+        ws1.Range("A2").Select()
+        ws1.Application.ActiveWindow.FreezePanes = True
+
         # Create a new worksheet for the pivot table
         ws2 = wb.Sheets.Add()
         ws2.Name = "PivotTable"
+
+        # Freeze the top row in ws2
+        ws2.Activate()
+        ws2.Range("A2").Select()
+        ws2.Application.ActiveWindow.FreezePanes = True
+
 
         # Set up the pivot table source data
         source_range = ws1.UsedRange

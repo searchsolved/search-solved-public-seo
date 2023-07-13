@@ -101,7 +101,6 @@ def create_chart(df, chart_type, output_path, volume):
     chart_file_path = os.path.join(os.path.dirname(output_path), f"{chart_type}.html")
     pio.write_html(fig, chart_file_path)
 
-
 @app.command()
 def main(
         file_path: str = typer.Argument(..., help='Path to your CSV file.'),
@@ -114,7 +113,6 @@ def main(
         min_similarity: float = typer.Option(0.80, help="Minimum similarity for clustering."),
         remove_dupes: bool = typer.Option(True, help="Whether to remove duplicates from the dataset."),
         excel_pivot: bool = typer.Option(False, help="Whether to save the output as an Excel pivot table."),
-        pandas_pivot: bool = typer.Option(False, help="Whether to save the output as a pandas pivot table."),
         volume: str = typer.Option(None, help='Name of the column containing numerical values. If --volume is used, the keyword with the largest volume will be used as the name of the cluster. If not, the shortest word will be used.'),
         stem: bool = typer.Option(False, "--stem", help="Whether to perform stemming on the 'hub' column.", show_default=False)
 ):
@@ -176,7 +174,6 @@ def main(
         f"[white]Minimum similarity:[/white] [bold yellow]{min_similarity}[/bold yellow]\n"
         f"[white]Remove duplicates:[/white] [bold yellow]{remove_dupes}[/bold yellow]\n"
         f"[white]Excel Pivot:[/white] [bold yellow]{excel_pivot}[/bold yellow]\n"
-        f"[white]Pandas Pivot:[/white] [bold yellow]{pandas_pivot}[/bold yellow]\n"
         f"[white]Volume column:[/white] [bold yellow]{volume}[/bold yellow]\n"
         f"[white]Stemming enabled:[/white] [bold yellow]{stem}[/bold yellow]"
     )
@@ -349,15 +346,14 @@ def main(
                 f"[bold red]Failed to create an Excel pivot table: {e}. Creating a pandas pivot table instead.[/bold red]")
             pandas_pivot = True  # set pandas_pivot to True as a fallback
 
-    if pandas_pivot:
-        # Set 'hub', 'spoke', and 'keyword' as the index of the DataFrame
+    else:
         df_indexed = df.set_index(['hub', 'spoke', 'keyword'])
-
         # Save the DataFrame to an Excel file
         with pd.ExcelWriter(output_path) as writer:
             df_indexed.to_excel(writer, sheet_name='PivotTable')
             df.to_excel(writer, sheet_name='Clustered Keywords', index=False)
         print(f"[white]Results saved to '{output_path}'.[/white]")
+
 
 if __name__ == "__main__":
     app()

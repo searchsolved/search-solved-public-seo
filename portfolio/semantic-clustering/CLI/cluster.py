@@ -103,18 +103,18 @@ def create_chart(df, chart_type, output_path, volume):
 
 @app.command()
 def main(
-        file_path: str = typer.Argument(..., help='Path to your CSV file.'),
-        column_name: str = typer.Option(None, help='Name of the column in your CSV to be processed.'),
-        output_path: str = typer.Option(None, help='Path where the output CSV will be saved.'),
         chart_type: str = typer.Option("treemap", help="Type of chart to generate. 'sunburst' or 'treemap'."),
+        column_name: str = typer.Option(None, help='Name of the column in your CSV to be processed.'),
         device: str = typer.Option("cpu", help="Device to be used by SentenceTransformer. 'cpu' or 'cuda'."),
+        excel_pivot: bool = typer.Option(False, help="Whether to save the output as an Excel pivot table."),
+        file_path: str = typer.Argument(..., help='Path to your CSV file.'),
+        min_similarity: float = typer.Option(0.80, help="Minimum similarity for clustering."),
         model_name: str = typer.Option("all-MiniLM-L6-v2",
                                        help="Name of the SentenceTransformer model to use. For available models, refer to https://www.sbert.net/docs/pretrained_models.html"),
-        min_similarity: float = typer.Option(0.80, help="Minimum similarity for clustering."),
+        output_path: str = typer.Option(None, help='Path where the output CSV will be saved.'),
         remove_dupes: bool = typer.Option(True, help="Whether to remove duplicates from the dataset."),
-        excel_pivot: bool = typer.Option(False, help="Whether to save the output as an Excel pivot table."),
-        volume: str = typer.Option(None, help='Name of the column containing numerical values. If --volume is used, the keyword with the largest volume will be used as the name of the cluster. If not, the shortest word will be used.'),
-        stem: bool = typer.Option(False, "--stem", help="Whether to perform stemming on the 'hub' column.", show_default=False)
+        stem: bool = typer.Option(False, "--stem", help="Whether to perform stemming on the 'hub' column.", show_default=False),
+        volume: str = typer.Option(None, help='Name of the column containing numerical values. If --volume is used, the keyword with the largest volume will be used as the name of the cluster. If not, the shortest word will be used.')
 ):
     # Clear the screen
     if platform.system() == 'Windows':

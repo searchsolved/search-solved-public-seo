@@ -193,7 +193,7 @@ def main(
     distance_model = SentenceEmbeddings(embedding_model)
 
     startTime = time.time()
-    print("[white]Starting to cluster keywords...[/white]")
+    print("[white]Clustering keywords, this can take a while![/white]")
 
     model = PolyFuzz(distance_model)
     model = model.fit(from_list)

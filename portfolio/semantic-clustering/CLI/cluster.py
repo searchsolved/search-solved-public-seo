@@ -114,6 +114,7 @@ def main(
         min_similarity: float = typer.Option(0.80, help="Minimum similarity for clustering."),
         remove_dupes: bool = typer.Option(True, help="Whether to remove duplicates from the dataset."),
         excel_pivot: bool = typer.Option(False, help="Whether to save the output as an Excel pivot table."),
+        pandas_pivot: bool = typer.Option(False, help="Whether to save the output as a pandas pivot table."),
         volume: str = typer.Option(None, help='Name of the column containing numerical values. If --volume is used, the keyword with the largest volume will be used as the name of the cluster. If not, the shortest word will be used.'),
         stem: bool = typer.Option(False, "--stem", help="Whether to perform stemming on the 'hub' column.", show_default=False)
 ):
@@ -174,6 +175,8 @@ def main(
         f"[white]SentenceTransformer model:[/white] [bold yellow]{model_name}[/bold yellow]\n"
         f"[white]Minimum similarity:[/white] [bold yellow]{min_similarity}[/bold yellow]\n"
         f"[white]Remove duplicates:[/white] [bold yellow]{remove_dupes}[/bold yellow]\n"
+        f"[white]Excel Pivot:[/white] [bold yellow]{excel_pivot}[/bold yellow]\n"
+        f"[white]Pandas Pivot:[/white] [bold yellow]{pandas_pivot}[/bold yellow]\n"
         f"[white]Volume column:[/white] [bold yellow]{volume}[/bold yellow]\n"
         f"[white]Stemming enabled:[/white] [bold yellow]{stem}[/bold yellow]"
     )
@@ -255,7 +258,6 @@ def main(
         df['keyword_len'] = df['keyword'].astype(str).apply(len)
         df = df.sort_values(by="keyword_len", ascending=True)
 
-
     # Use the first keyword in each sorted group as the cluster name.
     df['spoke'] = df.groupby('spoke')['keyword'].transform('first')
 
@@ -283,70 +285,78 @@ def main(
     print(output_path)
 
     if excel_pivot:
+        try:
+            # Save the DataFrame to an Excel file
+            df.to_excel(output_path, index=False)
+
+            # Start an instance of Excel
+            excel = win32.gencache.EnsureDispatch('Excel.Application')
+            excel.Visible = False
+
+            # Open the workbook in Excel
+            wb = excel.Workbooks.Open(output_path)
+
+            # Get the active worksheet and rename it
+            ws1 = wb.ActiveSheet
+            ws1.Name = "Clustered Keywords"
+
+            # Freeze the top row in ws1
+            ws1.Activate()
+            ws1.Range("A2").Select()
+            ws1.Application.ActiveWindow.FreezePanes = True
+
+            # Create a new worksheet for the pivot table
+            ws2 = wb.Sheets.Add()
+            ws2.Name = "PivotTable"
+
+            # Freeze the top row in ws2
+            ws2.Activate()
+            ws2.Range("A2").Select()
+            ws2.Application.ActiveWindow.FreezePanes = True
+
+            # Set up the pivot table source data
+            source_range = ws1.UsedRange
+
+            # Get the range address
+            source_range_address = source_range.GetAddress()
+
+            # Create the pivot cache
+            pc = wb.PivotCaches().Create(SourceType=win32c.xlDatabase, SourceData=ws1.UsedRange)
+
+            # Define the pivot table range
+            pivot_range = ws2.Range(f"A1:C{df.shape[0] + 1}")
+
+            # Create the pivot table
+            pivot_table = pc.CreatePivotTable(TableDestination=pivot_range, TableName="PivotTable")
+
+            # Set up the row fields
+            pivot_table.PivotFields("hub").Orientation = win32c.xlRowField
+            pivot_table.PivotFields("hub").Position = 1
+            pivot_table.PivotFields("spoke").Orientation = win32c.xlRowField
+            pivot_table.PivotFields("spoke").Position = 2
+            pivot_table.PivotFields("keyword").Orientation = win32c.xlRowField
+
+            if volume is not None:
+                pivot_table.PivotFields(volume).Orientation = win32c.xlDataField
+
+                # Save and close
+            wb.Save()
+            excel.Application.Quit()
+
+            print(f"[white]Results saved to '{output_path}'.[/white]")
+        except Exception as e:
+            print(
+                f"[bold red]Failed to create an Excel pivot table: {e}. Creating a pandas pivot table instead.[/bold red]")
+            pandas_pivot = True  # set pandas_pivot to True as a fallback
+
+    if pandas_pivot:
+        # Set 'hub', 'spoke', and 'keyword' as the index of the DataFrame
+        df_indexed = df.set_index(['hub', 'spoke', 'keyword'])
+
         # Save the DataFrame to an Excel file
-        df.to_excel(output_path, index=False)
-
-        # Start an instance of Excel
-        excel = win32.gencache.EnsureDispatch('Excel.Application')
-        excel.Visible = False
-
-        # Open the workbook in Excel
-        wb = excel.Workbooks.Open(output_path)
-
-        # Get the active worksheet and rename it
-        ws1 = wb.ActiveSheet
-        ws1.Name = "Clustered Keywords"
-
-        # Freeze the top row in ws1
-        ws1.Activate()
-        ws1.Range("A2").Select()
-        ws1.Application.ActiveWindow.FreezePanes = True
-
-        # Create a new worksheet for the pivot table
-        ws2 = wb.Sheets.Add()
-        ws2.Name = "PivotTable"
-
-        # Freeze the top row in ws2
-        ws2.Activate()
-        ws2.Range("A2").Select()
-        ws2.Application.ActiveWindow.FreezePanes = True
-
-
-        # Set up the pivot table source data
-        source_range = ws1.UsedRange
-
-        # Get the range address
-        source_range_address = source_range.GetAddress()
-
-        # Create the pivot cache
-        pc = wb.PivotCaches().Create(SourceType=win32c.xlDatabase, SourceData=ws1.UsedRange)
-
-        # Define the pivot table range
-        pivot_range = ws2.Range(f"A1:C{df.shape[0] + 1}")
-
-        # Create the pivot table
-        pivot_table = pc.CreatePivotTable(TableDestination=pivot_range, TableName="PivotTable")
-
-        # Set up the row fields
-        pivot_table.PivotFields("hub").Orientation = win32c.xlRowField
-        pivot_table.PivotFields("hub").Position = 1
-        pivot_table.PivotFields("spoke").Orientation = win32c.xlRowField
-        pivot_table.PivotFields("spoke").Position = 2
-        pivot_table.PivotFields("keyword").Orientation = win32c.xlRowField
-
-        if volume is not None:
-            pivot_table.PivotFields(volume).Orientation = win32c.xlDataField
-
-            # Save and close
-        wb.Save()
-        excel.Application.Quit()
-
-        print(f"[white]Results saved to '{output_path}'.[/white]")
-
-    else:
-        # Save dataframe to a CSV file
-        df.to_csv(output_path, index=False)
-
+        with pd.ExcelWriter(output_path) as writer:
+            df_indexed.to_excel(writer, sheet_name='PivotTable')
+            df.to_excel(writer, sheet_name='Clustered Keywords', index=False)
         print(f"[white]Results saved to '{output_path}'.[/white]")
 
 if __name__ == "__main__":

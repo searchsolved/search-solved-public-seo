@@ -22,6 +22,8 @@ win32c = win32.constants
 
 app = typer.Typer()
 
+startTime = time.time()  # start timing the script
+
 COMMON_COLUMN_NAMES = [
     "Keyword", "Keywords", "keyword", "keywords",
     "Search Terms", "Search terms", "Search term", "Search Term"
@@ -192,7 +194,7 @@ def main(
     embedding_model = SentenceTransformer(model_name, device=device)
     distance_model = SentenceEmbeddings(embedding_model)
 
-    startTime = time.time()
+
     print("[white]Clustering keywords, this can take a while![/white]")
 
     model = PolyFuzz(distance_model)
@@ -232,10 +234,10 @@ def main(
     df['cluster_size'] = df['spoke'].map(df.groupby('spoke')['spoke'].count())
     df.loc[df["cluster_size"] == 1, "spoke"] = "no_cluster"
     df.insert(0, 'spoke', df.pop('spoke'))
-    df['spoke'] = df['spoke'].str.encode('ascii', 'ignore').str.decode('ascii')
     df['keyword_len'] = df['keyword'].astype(str).apply(len)
     if volume is not None:
-        df[volume] = df[volume].replace({'': 0, np.nan: 0}).astype(int)
+        df[volume] = df[volume].astype(str).replace({'': '0', 'nan': '0'}).str.replace('\D', '', regex=True).astype(int)
+
         df = df.sort_values(by=volume, ascending=False)
     else:
         df = df.sort_values(by="keyword_len", ascending=True)

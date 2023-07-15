@@ -1,9 +1,9 @@
+#!/usr/bin/env python3
 import os
 import platform
 import string
 import time
 from collections import Counter
-from rich.live import Live
 
 import chardet
 import numpy as np
@@ -16,6 +16,7 @@ from polyfuzz import PolyFuzz
 from polyfuzz.models import SentenceEmbeddings
 from rich import print
 from rich.console import Console
+from rich.live import Live
 from rich.panel import Panel
 from sentence_transformers import SentenceTransformer
 
@@ -34,7 +35,7 @@ COMMON_COLUMN_NAMES = [
 ]
 
 def print_messages(message):
-    panel = Panel.fit(message, title="[b]Messages[/b]", style="magenta", border_style="magenta")
+    panel = Panel.fit(message, title="[b]Messages[/b]", style="cyan", border_style="black")
     live.update(panel)
     live.refresh()  # Manually refresh the Live display
 
@@ -130,8 +131,9 @@ def main(
 
     # Print welcome message
     console = Console()
-    welcome_message = "[bold magenta]Keyword Clustering CLI Tool to find Semantic Relationships Between Keywords[/bold magenta]"
-    panel = Panel(welcome_message, style="bold magenta", title="[b]SBERT Clustering - V1.0 - www.LeeFoot.co.uk[/b]")
+    welcome_message = "[bold cyan]Keyword Clustering CLI Tool to find Semantic Relationships Between Keywords[/bold cyan]"
+    panel = Panel(welcome_message, style="bold magenta", border_style="black",
+                  title="[b]SBERT Clustering - V1.0 - www.LeeFoot.co.uk[/b]")
     console.print(panel)
 
     if device not in ["cpu", "cuda"]:
@@ -181,7 +183,7 @@ def main(
         f"[cyan]Volume column:[/cyan] [bold magenta]{volume}[/bold magenta]\n"
         f"[cyan]Stemming enabled:[/cyan] [bold magenta]{stem}[/bold magenta]"
     )
-    panel = Panel.fit(options_message, title="[b]Using The Following Options[/b]", style="magenta", border_style="magenta")
+    panel = Panel.fit(options_message, title="[b]Using The Following Options[/b]", style="magenta", border_style="black")
     console.print(panel)
 
     df.rename(columns={column_name: 'keyword', "spoke": "spoke Old"}, inplace=True)

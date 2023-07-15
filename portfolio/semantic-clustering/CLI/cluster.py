@@ -3,6 +3,7 @@ import platform
 import string
 import time
 from collections import Counter
+from rich.live import Live
 
 import chardet
 import numpy as np
@@ -22,12 +23,20 @@ win32c = win32.constants
 
 app = typer.Typer()
 
+live = Live(auto_refresh=False)  # Initialize Live with auto_refresh set to False
+live.start()  # Start the Live context manager
+
 startTime = time.time()  # start timing the script
 
 COMMON_COLUMN_NAMES = [
     "Keyword", "Keywords", "keyword", "keywords",
     "Search Terms", "Search terms", "Search term", "Search Term"
 ]
+
+def print_messages(message):
+    panel = Panel.fit(message, title="[b]Messages[/b]", style="magenta", border_style="magenta")
+    live.update(panel)
+    live.refresh()  # Manually refresh the Live display
 
 def stem_and_remove_punctuation(text: str, stem: bool):
     # Remove punctuation
@@ -38,7 +47,6 @@ def stem_and_remove_punctuation(text: str, stem: bool):
         stemmer = PorterStemmer()
         text = ' '.join([stemmer.stem(word) for word in text.split()])
     return text
-
 
 def create_unigram(cluster: str, stem: bool):
     """Create unigram from the cluster and return the most common word."""
@@ -59,14 +67,11 @@ def create_unigram(cluster: str, stem: bool):
 
 def get_model(model_name: str):
     """Create and return a SentenceTransformer model based on the given model name."""
-    print(f"[white]Loading the SentenceTransformer model '{model_name}'...[/white]")
     model = SentenceTransformer(model_name)
-    print("[white]Model loaded.[/white]")
     return model
 
 def load_file(file_path: str):
     """Load a CSV file and return a DataFrame."""
-    print(f"[white]Loading the CSV file from '{file_path}'...[/white]")
     result = chardet.detect(open(file_path, 'rb').read())
     encoding_value = result["encoding"]
     white_space = False if encoding_value != "UTF-16" else True
@@ -77,7 +82,6 @@ def load_file(file_path: str):
         delim_whitespace=white_space,
         on_bad_lines='skip',
     )
-    print("[white]CSV file loaded.[/white]")
     return df
 
 def create_chart(df, chart_type, output_path, volume):
@@ -94,7 +98,7 @@ def create_chart(df, chart_type, output_path, volume):
         fig = px.treemap(chart_df, path=['hub', 'spoke'], values='cluster_size',
                          color_discrete_sequence=px.colors.qualitative.Pastel2)
     else:
-        print(f"[bold red]Invalid chart type: {chart_type}. Valid options are 'sunburst' and 'treemap'.[/bold red]")
+        print(f"[bold magenta]Invalid chart type: {chart_type}. Valid options are 'sunburst' and 'treemap'.[/bold magenta]")
         return
 
     fig.show()
@@ -126,60 +130,58 @@ def main(
 
     # Print welcome message
     console = Console()
-    welcome_message = "[bold white]Semantic Keyword Clustering Script Lee Foot 10-07-2023[/bold white]"
-    panel = Panel(welcome_message, style="bold yellow", title="[b]SBERT Clustering[/b]")
+    welcome_message = "[bold magenta]Keyword Clustering CLI Tool to find Semantic Relationships Between Keywords[/bold magenta]"
+    panel = Panel(welcome_message, style="bold magenta", title="[b]SBERT Clustering - V1.0 - www.LeeFoot.co.uk[/b]")
     console.print(panel)
 
     if device not in ["cpu", "cuda"]:
-        print("[bold red]Invalid device. Valid options are 'cpu' and 'cuda'.[/bold red]")
+        print("[bold magenta]Invalid device. Valid options are 'cpu' and 'cuda'.[/bold magenta]")
         return
 
     try:
         model = get_model(model_name)
     except Exception as e:
-        print(f"[bold red]Failed to load the SentenceTransformer model: {e}[/bold red]")
+        print(f"[bold magenta]Failed to load the SentenceTransformer model: {e}[/bold magenta]")
         return
 
     try:
         df = load_file(file_path)
     except FileNotFoundError as e:
-        print(f"[bold red]The file {file_path} does not exist.[/bold red]")
+        print(f"[bold magenta]The file {file_path} does not exist.[/bold magenta]")
         return
 
     if column_name is None:
-        print("[white]Searching for a column from the list of default column names...[/white]")
         for common_name in COMMON_COLUMN_NAMES:
             if common_name in df.columns:
                 column_name = common_name
-                print(f"[white]Found column '{column_name}'.[/white]\n")
                 break
         else:
-            print(f"[bold red]Could not find a suitable column for processing. Please specify the column name with the --column option.[/bold red]")
+            print(f"[bold magenta]Could not find a suitable column for processing. Please specify the column name with the --column option.[/bold magenta]")
             return
 
     if column_name not in df.columns:
-        print(f"[bold red]The column name {column_name} is not in the DataFrame.[/bold red]")
+        print(f"[bold magenta]The column name {column_name} is not in the DataFrame.[/bold magenta]")
         return
 
     if volume is not None and volume not in df.columns:
-        print(f"[bold red]The column name {volume} is not in the DataFrame.[/bold red]")
+        print(f"[bold magenta]The column name {volume} is not in the DataFrame.[/bold magenta]")
         return
 
         # Print options
     options_message = (
-        f"[white]File path:[/white] [bold yellow]{file_path}[/bold yellow]\n"
-        f"[white]Column name:[/white] [bold yellow]{column_name}[/bold yellow]\n"
-        f"[white]Output path:[/white] [bold yellow]{output_path}[/bold yellow]\n"
-        f"[white]Chart type:[/white] [bold yellow]{chart_type}[/bold yellow]\n"
-        f"[white]Device:[/white] [bold yellow]{device}[/bold yellow]\n"
-        f"[white]SentenceTransformer model:[/white] [bold yellow]{model_name}[/bold yellow]\n"
-        f"[white]Minimum similarity:[/white] [bold yellow]{min_similarity}[/bold yellow]\n"
-        f"[white]Remove duplicates:[/white] [bold yellow]{remove_dupes}[/bold yellow]\n"
-        f"[white]Excel Pivot:[/white] [bold yellow]{excel_pivot}[/bold yellow]\n"
-        f"[white]Volume column:[/white] [bold yellow]{volume}[/bold yellow]\n"
-        f"[white]Stemming enabled:[/white] [bold yellow]{stem}[/bold yellow]"
+        f"[cyan]File path:[/cyan] [bold magenta]{file_path}[/bold magenta]\n"
+        f"[cyan]Column name:[/cyan] [bold magenta]{column_name}[/bold magenta]\n"
+        f"[cyan]Output path:[/cyan] [bold magenta]{output_path}[/bold magenta]\n"
+        f"[cyan]Chart type:[/cyan] [bold magenta]{chart_type}[/bold magenta]\n"
+        f"[cyan]Device:[/cyan] [bold magenta]{device}[/bold magenta]\n"
+        f"[cyan]SentenceTransformer model:[/cyan] [bold magenta]{model_name}[/bold magenta]\n"
+        f"[cyan]Minimum similarity:[/cyan] [bold magenta]{min_similarity}[/bold magenta]\n"
+        f"[cyan]Remove duplicates:[/cyan] [bold magenta]{remove_dupes}[/bold magenta]\n"
+        f"[cyan]Excel Pivot:[/cyan] [bold magenta]{excel_pivot}[/bold magenta]\n"
+        f"[cyan]Volume column:[/cyan] [bold magenta]{volume}[/bold magenta]\n"
+        f"[cyan]Stemming enabled:[/cyan] [bold magenta]{stem}[/bold magenta]"
     )
-    panel = Panel.fit(options_message, title="[b]Using The Following Options[/b]", style="white", border_style="white")
+    panel = Panel.fit(options_message, title="[b]Using The Following Options[/b]", style="magenta", border_style="magenta")
     console.print(panel)
 
     df.rename(columns={column_name: 'keyword', "spoke": "spoke Old"}, inplace=True)
@@ -194,8 +196,10 @@ def main(
     embedding_model = SentenceTransformer(model_name, device=device)
     distance_model = SentenceEmbeddings(embedding_model)
 
+    # clustering started message
+    message = "Clustering keywords, this can take a while!"
+    print_messages(message)
 
-    print("[white]Clustering keywords, this can take a while![/white]")
 
     model = PolyFuzz(distance_model)
     model = model.fit(from_list)
@@ -264,7 +268,9 @@ def main(
 
     df['spoke'] = (df['spoke'].str.split()).str.join(' ')
 
-    print(f"All keywords clustered successfully. Took {round(time.time() - startTime, 2)} seconds!")
+    message += f"\nAll keywords clustered successfully. Took {round(time.time() - startTime, 2)} seconds!"
+    print_messages(message)
+
 
     if output_path is None:
         output_path = os.path.splitext(file_path)[0] + '_output.csv'
@@ -281,7 +287,6 @@ def main(
 
     output_dir = os.getcwd()
     output_path = os.path.join(output_dir, output_path+ '_output.xlsx')
-    print(output_path)
 
     if excel_pivot:
         try:
@@ -342,10 +347,10 @@ def main(
             wb.Save()
             excel.Application.Quit()
 
-            print(f"[white]Results saved to '{output_path}'.[/white]")
+            message += f"\nResults saved to '{output_path}'."
         except Exception as e:
             print(
-                f"[bold red]Failed to create an Excel pivot table: {e}. Creating a pandas pivot table instead.[/bold red]")
+                f"[bold magenta]Failed to create an Excel pivot table: {e}. Creating a pandas pivot table instead.[/bold magenta]")
             pandas_pivot = True  # set pandas_pivot to True as a fallback
 
     else:
@@ -354,7 +359,13 @@ def main(
         with pd.ExcelWriter(output_path) as writer:
             df_indexed.to_excel(writer, sheet_name='PivotTable')
             df.to_excel(writer, sheet_name='Clustered Keywords', index=False)
-        print(f"[white]Results saved to '{output_path}'.[/white]")
+
+        message += f"\nResults saved to '{output_path}'."
+
+    # message += f"\nResults saved to '{output_path}'."
+    print_messages(message)
+
+    live.stop()  # Stop the Live context manager
 
 
 if __name__ == "__main__":

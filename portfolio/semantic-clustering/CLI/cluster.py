@@ -35,7 +35,7 @@ COMMON_COLUMN_NAMES = [
 ]
 
 def print_messages(message):
-    panel = Panel.fit(message, title="[b]Messages[/b]", style="cyan", border_style="black")
+    panel = Panel.fit(message, title="[b]Clustering Progess[/b]", style="cyan", border_style="black")
     live.update(panel)
     live.refresh()  # Manually refresh the Live display
 
@@ -107,6 +107,17 @@ def create_chart(df, chart_type, output_path, volume):
     # Save the chart in the same directory as the final CSV.
     chart_file_path = os.path.join(os.path.dirname(output_path), f"{chart_type}.html")
     pio.write_html(fig, chart_file_path)
+
+    # Create a message panel for the file saved location
+    file_saved_message = f"[bold]Chart saved to:[/bold] [magenta]{chart_file_path}[/magenta]"
+
+    # Print the file saved location message in the same box as other messages
+    print_messages(file_saved_message)
+
+    # Print message when saving the CSV
+    csv_saved_message = f"[bold]CSV saved to:[/bold] [magenta]{output_path}[/magenta]"
+    print_messages(csv_saved_message)
+
 
 @app.command()
 def main(

@@ -11,7 +11,6 @@ import pandas as pd
 import plotly.express as px
 import plotly.io as pio
 import typer
-import win32com.client as win32
 from polyfuzz import PolyFuzz
 from polyfuzz.models import SentenceEmbeddings
 from rich import print
@@ -20,7 +19,12 @@ from rich.live import Live
 from rich.panel import Panel
 from sentence_transformers import SentenceTransformer
 
-win32c = win32.constants
+# Check if the system is Windows
+IS_WINDOWS = platform.system() == 'Windows'
+
+if IS_WINDOWS:
+    import win32com.client as win32
+    win32c = win32.constants
 
 app = typer.Typer()
 
@@ -301,7 +305,7 @@ def main(
     output_dir = os.getcwd()
     output_path = os.path.join(output_dir, output_path+ '_output.xlsx')
 
-    if excel_pivot:
+    if excel_pivot and IS_WINDOWS:
         try:
             # Save the DataFrame to an Excel file
             df.to_excel(output_path, index=False)
@@ -377,8 +381,6 @@ def main(
 
     # message += f"\nResults saved to '{output_path}'."
     print_messages(message)
-
-    live.stop()  # Stop the Live context manager
 
 
 if __name__ == "__main__":

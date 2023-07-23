@@ -35,7 +35,7 @@ startTime = time.time()  # start timing the script
 
 COMMON_COLUMN_NAMES = [
     "Keyword", "Keywords", "keyword", "keywords",
-    "Search Terms", "Search terms", "Search term", "Search Term"
+    "Search Terms", "Search terms", "Search term", "Search Term, Search Volume"
 ]
 
 def print_messages(message):

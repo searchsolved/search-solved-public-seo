@@ -3,3 +3,4 @@ numpy==1.23.4
 pandas==1.5.1
 sentence-transformers==2.2.2
 inflect==7.0.0
+chardet==5.0.0

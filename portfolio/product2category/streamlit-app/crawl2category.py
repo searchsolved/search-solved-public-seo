@@ -77,8 +77,17 @@ def pluralize_except_numbers(text):
 
 def process_data(uploaded_file, selected_column, n_grams, similarity_threshold, override_delimiter):
     try:
-        uploaded_file.seek(0)  # Ensure file is read from the beginning
-        df = pd.read_csv(uploaded_file, on_bad_lines='skip', low_memory=False)
+        uploaded_file.seek(0)
+        file_extension = os.path.splitext(uploaded_file.name)[1].lower()
+
+        if file_extension == ".csv":
+            df = pd.read_csv(uploaded_file, on_bad_lines='skip', low_memory=False)
+        elif file_extension in [".xls", ".xlsx"]:
+            df = pd.read_excel(uploaded_file, engine='openpyxl')
+        else:
+            st.error("Unsupported file format. Please upload a CSV, XLS, or XLSX file.")
+            return None
+
         df = df[df[selected_column].notna()]
 
         if override_delimiter:
@@ -118,8 +127,10 @@ def process_data(uploaded_file, selected_column, n_grams, similarity_threshold, 
             lambda x: x if x not in existing_categories else np.nan)
 
         return df
+
     except Exception as e:
         st.error(f"An error occurred: {e}")
+
 
 def download_link(object_to_download, download_filename, download_link_text):
     """

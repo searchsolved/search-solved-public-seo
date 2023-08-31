@@ -7,6 +7,7 @@ import pandas as pd
 from sentence_transformers import SentenceTransformer
 import base64
 import inflect
+import chardet
 from nltk.corpus import stopwords
 from collections import Counter
 
@@ -78,14 +79,16 @@ def pluralize_except_numbers(text):
 def process_data(uploaded_file, selected_column, n_grams, similarity_threshold, override_delimiter):
     try:
         uploaded_file.seek(0)
-        file_extension = os.path.splitext(uploaded_file.name)[1].lower()
+        raw_bytes = uploaded_file.read()
+        result = chardet.detect(raw_bytes)
+        file_encoding = result['encoding'].lower()
 
-        if file_extension == ".csv":
+        if file_encoding == 'utf-8':
             df = pd.read_csv(uploaded_file, on_bad_lines='skip', low_memory=False)
-        elif file_extension in [".xls", ".xlsx"]:
-            df = pd.read_excel(uploaded_file, engine='openpyxl')
+        elif file_encoding == 'utf-16':
+            df = pd.read_csv(uploaded_file, on_bad_lines='skip', low_memory=False, encoding='utf-16')
         else:
-            st.error("Unsupported file format. Please upload a CSV, XLS, or XLSX file.")
+            st.error(f"Unsupported encoding: {file_encoding}")
             return None
 
         df = df[df[selected_column].notna()]

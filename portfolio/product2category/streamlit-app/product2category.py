@@ -14,9 +14,9 @@ from collections import Counter
 p = inflect.engine()
 
 # Check if punkt tokenizer is already downloaded
-if not os.path.exists(nltk.data.find('tokenizers/punkt')):
-    nltk.download('punkt')
-
+#if not os.path.exists(nltk.data.find('tokenizers/punkt')):
+#    nltk.download('punkt')
+nltk.download('punkt')
 st.set_page_config(page_title="Product2Category - Automatic Category Suggestion Tool", layout="wide")
 
 

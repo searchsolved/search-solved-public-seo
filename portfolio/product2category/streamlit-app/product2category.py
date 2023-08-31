@@ -94,6 +94,8 @@ def process_data(uploaded_file, selected_column, n_grams, similarity_threshold, 
                 del delimiter_counts[char]
             delimiter = max(delimiter_counts, key=delimiter_counts.get)
 
+        # Display the detected delimiter
+        st.info(f"Detected delimiter: '{delimiter}'")
         existing_categories = set()
         for categories in df['Categories'].dropna():
             existing_categories.update(categories.split(delimiter))

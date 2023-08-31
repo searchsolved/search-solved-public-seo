@@ -1,8 +1,5 @@
-string
-os
 nltk==3.7
 numpy==1.23.4
 pandas==1.5.1
 sentence-transformers==2.2.2
-base64
 inflect==7.0.0

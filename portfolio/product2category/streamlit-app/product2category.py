@@ -12,10 +12,6 @@ from collections import Counter
 
 # Initialize the inflect engine
 p = inflect.engine()
-
-# Check if punkt tokenizer is already downloaded
-#if not os.path.exists(nltk.data.find('tokenizers/punkt')):
-#    nltk.download('punkt')
 nltk.download('punkt')
 st.set_page_config(page_title="Product2Category - Automatic Category Suggestion Tool", layout="wide")
 
@@ -82,8 +78,7 @@ def pluralize_except_numbers(text):
 def process_data(uploaded_file, selected_column, n_grams, similarity_threshold, override_delimiter):
     try:
         uploaded_file.seek(0)  # Ensure file is read from the beginning
-        df = pd.read_csv(uploaded_file, error_bad_lines=False, warn_bad_lines=True)
-
+        df = pd.read_csv(uploaded_file, error_bad_lines=False)
         df = df[df[selected_column].notna()]
 
         if override_delimiter:

@@ -3,22 +3,52 @@
 Uses a grid search to find the highest scoring match between columns specified in the matching_columns varaible.
 """
 
+import os
 import pandas as pd
 from polyfuzz import PolyFuzz
 from tqdm import tqdm
+import chardet
 
-# Define the list of columns to match on including 'Address'
-matching_columns = ['Address', 'H1-1', 'Title 1']  # Example columns
+def file_exists(file_path):
+    if not os.path.isfile(file_path):
+        print(f"File not found: {file_path}")
+        return False
+    return True
 
-# Load CSV files into pandas dataframes
-print("Loading data...")
-df_live = pd.read_csv('/python_scripts/migration_mapper/live.csv', dtype="str")
-df_staging = pd.read_csv('/python_scripts/migration_mapper/staging.csv', dtype="str")
+def read_csv_with_encoding(file_path, dtype):
+    print(f"Detecting encoding for {file_path}...")
+    with open(file_path, 'rb') as file:
+        result = chardet.detect(file.read())
+        encoding = result['encoding']
+
+    print(f"Reading {file_path} with encoding {encoding}...")
+    try:
+        return pd.read_csv(file_path, dtype=dtype, encoding=encoding, on_bad_lines='skip')
+    except Exception as e:
+        print(f"Error reading {file_path}: {e}")
+        return pd.DataFrame()
+
+# Check if files exist before loading
+if file_exists('/python_scripts/migration_mapper/live.csv') and file_exists('/python_scripts/migration_mapper/staging.csv'):
+    df_live = read_csv_with_encoding('/python_scripts/migration_mapper/live.csv', dtype="str")
+    df_staging = read_csv_with_encoding('/python_scripts/migration_mapper/staging.csv', dtype="str")
+else:
+    raise FileNotFoundError("One or more input files are missing.")
+
+# Check if DataFrames are empty
+if df_live.empty or df_staging.empty:
+    raise ValueError("One or more input DataFrames are empty after reading CSV files.")
 
 # Convert to lowercase for case-insensitive matching
 print("Preprocessing data...")
-df_live = df_live.apply(lambda col: col.str.lower())
-df_staging = df_staging.apply(lambda col: col.str.lower())
+try:
+    df_live = df_live.apply(lambda col: col.str.lower())
+    df_staging = df_staging.apply(lambda col: col.str.lower())
+except Exception as e:
+    print(f"Error during preprocessing: {e}")
+
+# Define the list of columns to match on including 'Address'
+matching_columns = ['Address', 'H1-1', 'Title 1']  # Example columns
 
 # Create a PolyFuzz model
 print("Initializing PolyFuzz model...")
@@ -65,18 +95,27 @@ def find_best_overall_match(row):
 
 # Apply the function to find the best overall match
 print("Applying match function to each row...")
-match_results = df_live.apply(find_best_overall_match, axis=1)
+try:
+    match_results = df_live.apply(find_best_overall_match, axis=1)
+except Exception as e:
+    print(f"Error during matching process: {e}")
 
 # Concatenate the match results with the original dataframe
 # Ensure to not include 'Address' from matching_columns in the final DataFrame as it is already present in df_live
 print("Compiling final results...")
-final_columns = ['Address'] + [col for col in matching_columns if col != 'Address']
-df_final = pd.concat([df_live[final_columns], match_results], axis=1)
+try:
+    final_columns = ['Address'] + [col for col in matching_columns if col != 'Address']
+    df_final = pd.concat([df_live[final_columns], match_results], axis=1)
+except Exception as e:
+    print(f"Error during DataFrame operations: {e}")
 
 # Export the results
 output_path = '/python_scripts/migration_mapper_output.csv'
 print(f"Exporting results to {output_path}...")
-df_final.to_csv(output_path, index=False, encoding='utf-8-sig')
+try:
+    df_final.to_csv(output_path, index=False, encoding='utf-8-sig')
+except Exception as e:
+    print(f"Error exporting data: {e}")
 
 print("All operations completed successfully.")
 

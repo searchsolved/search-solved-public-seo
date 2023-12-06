@@ -76,7 +76,7 @@ df_final = pd.concat([df_live[final_columns], match_results], axis=1)
 # Export the results
 output_path = '/python_scripts/migration_mapper_output.csv'
 print(f"Exporting results to {output_path}...")
-df_final.to_csv(output_path, index=False)
+df_final.to_csv(output_path, index=False, encoding='utf-8-sig')
 
 print("All operations completed successfully.")
 

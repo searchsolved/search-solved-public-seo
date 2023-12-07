@@ -176,6 +176,9 @@ def process_files(df_live, df_staging, matching_columns, progress_bar, message_p
     final_columns = ['Address'] + [col for col in matching_columns if col != 'Address']
     df_final = pd.concat([df_live[final_columns], match_results], axis=1)
 
+    # Drop 'Source Hierarchy' and 'Target Hierarchy' columns if they exist
+    df_final.drop(columns=['Source Hierarchy', 'Target Hierarchy'], errors='ignore', inplace=True)
+
     # Generate and display the download link before creating the Sankey chart
     download_link = get_table_download_link(df_final, 'processed_data.csv')
     st.markdown(download_link, unsafe_allow_html=True)

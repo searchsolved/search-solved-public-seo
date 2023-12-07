@@ -180,7 +180,7 @@ def process_files(df_live, df_staging, matching_columns, progress_bar, message_p
     df_final.drop(columns=['Source Hierarchy', 'Target Hierarchy'], errors='ignore', inplace=True)
 
     # Generate and display the download link before creating the Sankey chart
-    download_link = get_table_download_link(df_final, 'processed_data.csv')
+    download_link = get_table_download_link(df_final, 'migration_mapping_data.csv')
     st.markdown(download_link, unsafe_allow_html=True)
 
     # Prepare and create the Sankey chart
@@ -271,9 +271,6 @@ def main():
 
                     # After the sankey chart is displayed, clear the message
                     message_placeholder.empty()
-
-                    # Display download link and balloons after the entire process is complete
-                    st.markdown(get_table_download_link(df_final, 'processed_data.csv'), unsafe_allow_html=True)
                     st.balloons()
 
     # Enhanced Footer

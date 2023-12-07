@@ -1,0 +1,3 @@
+chardet==5.2.0
+polyfuzz==0.4.2
+plotly==5.18.0

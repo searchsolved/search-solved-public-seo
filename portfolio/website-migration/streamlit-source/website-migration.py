@@ -50,9 +50,9 @@ def extract_hierarchy_levels(url):
     return hierarchy_levels
 
 
-def prepare_sankey_data(df, top_x=20):
-    df['Source Hierarchy'] = df['Address'].apply(extract_hierarchy_levels)
-    df['Target Hierarchy'] = df['Highest Matching URL'].apply(extract_hierarchy_levels)
+def prepare_sankey_data(df):
+    df['Source Hierarchy'] = df['Source Address'].apply(extract_hierarchy_levels)  # Change 'Address' to 'Source Address'
+    df['Target Hierarchy'] = df['Destination Address'].apply(extract_hierarchy_levels)  # Ensure this reflects the new column name for the destination address
 
     # Flatten the hierarchy to create source-target pairs for all levels
     rows = []

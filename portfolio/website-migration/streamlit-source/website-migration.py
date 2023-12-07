@@ -119,7 +119,7 @@ def create_sankey_chart(sankey_data):
     return fig
 
 
-def process_files(df_live, df_staging, matching_columns, progress_bar, message_placeholder):
+def process_files(df_live, df_staging, matching_columns, progress_bar, message_placeholder, selected_additional_columns):
     # Convert to lowercase for case-insensitive matching
     df_live = df_live.apply(lambda col: col.str.lower())
     df_staging = df_staging.apply(lambda col: col.str.lower())
@@ -167,6 +167,14 @@ def process_files(df_live, df_staging, matching_columns, progress_bar, message_p
                     ].values[0]
                     best_match_info['Highest Similarity Score'] = match_row.iloc[0]['Similarity']
 
+        # Adding user-selected additional columns from staging dataframe
+        for additional_col in selected_additional_columns:
+            if additional_col in df_staging.columns:
+                staging_value = df_staging.loc[
+                    df_staging['Address'] == best_match_info['Highest Matching URL'], additional_col
+                ].values
+                best_match_info[f'Staging {additional_col}'] = staging_value[0] if staging_value.size > 0 else None
+
         return pd.Series(best_match_info)
 
     # Apply the function to find the best overall match
@@ -190,6 +198,7 @@ def process_files(df_live, df_staging, matching_columns, progress_bar, message_p
     st.plotly_chart(sankey_chart, use_container_width=True)
 
     return df_final
+
 
 
 def main():
@@ -266,8 +275,7 @@ def main():
                     progress_bar = st.progress(0)
 
                     # Pass message_placeholder to process_files
-                    df_final = process_files(df_live, df_staging, all_selected_columns, progress_bar,
-                                             message_placeholder)
+                    df_final = process_files(df_live, df_staging, all_selected_columns, progress_bar, message_placeholder, selected_additional_columns)
 
                     # After the sankey chart is displayed, clear the message
                     message_placeholder.empty()

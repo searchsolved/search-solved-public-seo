@@ -151,7 +151,7 @@ def process_files(df_live, df_staging, matching_columns, progress_bar, message_p
     def find_best_overall_match(row):
         best_match_info = {
             'Best Match on': None,
-            'Highest Matching URL': None,
+            'Destination Address': None,
             'Highest Similarity Score': 0
         }
 
@@ -162,9 +162,7 @@ def process_files(df_live, df_staging, matching_columns, progress_bar, message_p
                 if not match_row.empty and match_row.iloc[0]['Similarity'] > best_match_info[
                     'Highest Similarity Score']:
                     best_match_info['Best Match on'] = col
-                    best_match_info['Highest Matching URL'] = df_staging.loc[
-                        df_staging[col] == match_row.iloc[0]['To'], 'Address'
-                    ].values[0]
+                    best_match_info['Destination Address'] = match_row.iloc[0]['To']
                     best_match_info['Highest Similarity Score'] = match_row.iloc[0]['Similarity']
 
         return pd.Series(best_match_info)
@@ -172,12 +170,17 @@ def process_files(df_live, df_staging, matching_columns, progress_bar, message_p
     # Apply the function to find the best overall match
     match_results = df_live.apply(find_best_overall_match, axis=1)
 
-    # Concatenate the match results with the original dataframe
-    final_columns = ['Address'] + [col for col in matching_columns if col != 'Address']
-    df_final = pd.concat([df_live[final_columns], match_results], axis=1)
+    # Rename the columns of df_live for clarity
+    df_live = df_live.rename(columns=lambda x: 'Source ' + x if x in matching_columns else x)
 
-    # Drop 'Source Hierarchy' and 'Target Hierarchy' columns if they exist
-    df_final.drop(columns=['Source Hierarchy', 'Target Hierarchy'], errors='ignore', inplace=True)
+    # Join the df_staging with match_results to get the 'Destination H1-1' and 'Destination Title 1'
+    df_staging = df_staging.rename(columns=lambda x: 'Destination ' + x if x in matching_columns else x)
+    match_results = match_results.join(df_staging.set_index('Destination Address'), on='Destination Address',
+                                       how='left')
+
+    # Concatenate the match results with the original dataframe
+    final_columns = ['Source Address'] + ['Source ' + col for col in matching_columns if col != 'Address']
+    df_final = pd.concat([df_live[final_columns], match_results], axis=1)
 
     # Generate and display the download link before creating the Sankey chart
     download_link = get_table_download_link(df_final, 'migration_mapping_data.csv')

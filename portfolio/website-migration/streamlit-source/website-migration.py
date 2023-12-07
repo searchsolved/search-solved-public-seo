@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import chardet
 from polyfuzz import PolyFuzz
 from io import BytesIO
@@ -127,6 +128,9 @@ def process_files(df_live, df_staging, matching_columns, progress_bar, message_p
     # Create a PolyFuzz model
     model = PolyFuzz("TF-IDF")
 
+    # Dictionary to store match and score data for each column
+    matches_scores = {}
+
     # Function to match and score each column
     def match_and_score(col):
         live_list = df_live[col].fillna('').tolist()
@@ -134,60 +138,63 @@ def process_files(df_live, df_staging, matching_columns, progress_bar, message_p
 
         if live_list and staging_list:
             model.match(live_list, staging_list)
-            return model.get_matches()
+            matches = model.get_matches()
+            matches_scores[col] = matches
+            return matches
         else:
             return pd.DataFrame(columns=['From', 'To', 'Similarity'])
 
     # Match each column and collect scores
-    matches_scores = {}
-    total_columns = len(matching_columns)
     for index, col in enumerate(matching_columns):
-        matches_scores[col] = match_and_score(col)
-        progress = (index + 1) / total_columns
+        match_and_score(col)
+        progress = (index + 1) / len(matching_columns)
         progress_bar.progress(progress)
         message_placeholder.info('Finalising the processing. Please Wait!')
 
-    # Function to find the overall best match for each row
-    def find_best_overall_match(row):
+    # Function to find the overall best match for each row and calculate row-wise median match score
+    def find_best_overall_match_and_median(row):
+        similarities = []
         best_match_info = {
             'Best Match on': None,
             'Highest Matching URL': None,
-            'Highest Similarity Score': 0
+            'Highest Similarity Score': 0,
+            'Best Match Content': None
         }
 
         for col in matching_columns:
-            matches = matches_scores[col]
+            matches = matches_scores.get(col, pd.DataFrame())
             if not matches.empty:
                 match_row = matches.loc[matches['From'] == row[col]]
-                if not match_row.empty and match_row.iloc[0]['Similarity'] > best_match_info[
-                    'Highest Similarity Score']:
-                    best_match_info['Best Match on'] = col
-                    best_match_info['Highest Matching URL'] = df_staging.loc[
-                        df_staging[col] == match_row.iloc[0]['To'], 'Address'
-                    ].values[0]
-                    best_match_info['Highest Similarity Score'] = match_row.iloc[0]['Similarity']
+                if not match_row.empty:
+                    similarity_score = match_row.iloc[0]['Similarity']
+                    similarities.append(similarity_score)
+                    if similarity_score > best_match_info['Highest Similarity Score']:
+                        best_match_info.update({
+                            'Best Match on': col,
+                            'Highest Matching URL': df_staging.loc[df_staging[col] == match_row.iloc[0]['To'], 'Address'].values[0],
+                            'Highest Similarity Score': similarity_score,
+                            'Best Match Content': match_row.iloc[0]['To']
+                        })
 
         # Adding user-selected additional columns from staging dataframe
         for additional_col in selected_additional_columns:
             if additional_col in df_staging.columns:
-                staging_value = df_staging.loc[
-                    df_staging['Address'] == best_match_info['Highest Matching URL'], additional_col
-                ].values
+                staging_value = df_staging.loc[df_staging['Address'] == best_match_info['Highest Matching URL'], additional_col].values
                 best_match_info[f'Staging {additional_col}'] = staging_value[0] if staging_value.size > 0 else None
+
+        # Calculate the median similarity score for the row
+        best_match_info['Median Match Score'] = np.median(similarities) if similarities else None
 
         return pd.Series(best_match_info)
 
-    # Apply the function to find the best overall match
-    match_results = df_live.apply(find_best_overall_match, axis=1)
+    # Apply the function to find the best overall match and calculate row-wise median match score
+    match_results = df_live.apply(find_best_overall_match_and_median, axis=1)
 
     # Concatenate the match results with the original dataframe
     final_columns = ['Address'] + [col for col in matching_columns if col != 'Address']
     df_final = pd.concat([df_live[final_columns], match_results], axis=1)
 
-    # Drop 'Source Hierarchy' and 'Target Hierarchy' columns if they exist
-    df_final.drop(columns=['Source Hierarchy', 'Target Hierarchy'], errors='ignore', inplace=True)
-
-    # Generate and display the download link before creating the Sankey chart
+    # Generate and display the download link for the final DataFrame
     download_link = get_table_download_link(df_final, 'migration_mapping_data.csv')
     st.markdown(download_link, unsafe_allow_html=True)
 
@@ -198,6 +205,7 @@ def process_files(df_live, df_staging, matching_columns, progress_bar, message_p
     st.plotly_chart(sankey_chart, use_container_width=True)
 
     return df_final
+
 
 
 

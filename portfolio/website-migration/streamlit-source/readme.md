@@ -1,16 +1,9 @@
 # Automatic Website Migration Tool by Lee Foot (https://LeeFoot.co.uk)
 
-## Features
-
-- **Data Comparison**: Compares data from live and staging websites to identify changes and similarities.
-- **Custom Column Matching**: Supports matching based on user-selected columns.
-- **Visual Representation**: Includes a Sankey chart to visually represent the mapping of website structures.
-- **Downloadable Results**: Processed data can be downloaded as a CSV file for further analysis.
-
 ## How to Use
 
 1. **Prepare Data**:
-   - Crawl both the live and staging websites using tools like Screaming Frog SEO Spider.
+   - Crawl both the live and staging websites using Screaming Frog SEO Spider.
    - Export the crawled data as CSV files.
 
 2. **Upload Files**:

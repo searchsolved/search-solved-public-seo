@@ -1,100 +1,121 @@
-""" Automatic Website Migration Tool, By @LeeFootSEO - 03/04/2023"""
+""" Automatic Website Migration Tool V5, By @LeeFootSEO | https://LeeFoot.co.uk | 06/12/2023 
 
+Uses a grid search to find the highest scoring match between columns specified in the matching_columns varaible.
+"""
+
+import os
 import pandas as pd
-import numpy as np
-from sentence_transformers import SentenceTransformer
+from polyfuzz import PolyFuzz
 from tqdm import tqdm
-import torch
+import chardet
 
-# Check if CUDA is available
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"Using device: {device}")
+def file_exists(file_path):
+    if not os.path.isfile(file_path):
+        print(f"File not found: {file_path}")
+        return False
+    return True
 
-# Define a list of column names to match on
-all_columns = ["Address", "H1-1", "Title 1"]
+def read_csv_with_encoding(file_path, dtype):
+    print(f"Detecting encoding for {file_path}...")
+    with open(file_path, 'rb') as file:
+        result = chardet.detect(file.read())
+        encoding = result['encoding']
 
-# Load the first CSV file into a pandas dataframe
-df_live = pd.read_csv('/python_scripts/migration_mapper/live.csv', dtype="str")
+    print(f"Reading {file_path} with encoding {encoding}...")
+    try:
+        return pd.read_csv(file_path, dtype=dtype, encoding=encoding, on_bad_lines='skip')
+    except Exception as e:
+        print(f"Error reading {file_path}: {e}")
+        return pd.DataFrame()
 
-# Load the second CSV file into a pandas dataframe
-df_staging = pd.read_csv('/python_scripts/migration_mapper/staging.csv', dtype="str")
+# Check if files exist before loading
+if file_exists('/python_scripts/migration_mapper/live.csv') and file_exists('/python_scripts/migration_mapper/staging.csv'):
+    df_live = read_csv_with_encoding('/python_scripts/migration_mapper/live.csv', dtype="str")
+    df_staging = read_csv_with_encoding('/python_scripts/migration_mapper/staging.csv', dtype="str")
+else:
+    raise FileNotFoundError("One or more input files are missing.")
 
-# Load a pre-trained BERT model from the sbert library
-model = SentenceTransformer('all-distilroberta-v1')  # best
+# Check if DataFrames are empty
+if df_live.empty or df_staging.empty:
+    raise ValueError("One or more input DataFrames are empty after reading CSV files.")
 
-df_live[all_columns] = df_live[all_columns].apply(lambda x: x.str.lower())
-df_staging[all_columns] = df_staging[all_columns].apply(lambda x: x.str.lower())
+# Convert to lowercase for case-insensitive matching
+print("Preprocessing data...")
+try:
+    df_live = df_live.apply(lambda col: col.str.lower())
+    df_staging = df_staging.apply(lambda col: col.str.lower())
+except Exception as e:
+    print(f"Error during preprocessing: {e}")
 
-# Precompute the embeddings for each column and normalize them
-encoded_cols_live = {}
-encoded_cols_staging = {}
+# Define the list of columns to match on including 'Address'
+matching_columns = ['Address', 'H1-1', 'Title 1']  # Example columns
 
-for col in tqdm(all_columns, desc='Precomputing embeddings'):
-    encoded_cols_live[col] = model.encode(df_live[col].astype(str).tolist(), convert_to_tensor=True).cpu().numpy()
-    encoded_cols_live[col] /= np.linalg.norm(encoded_cols_live[col], axis=1, keepdims=True)
-    encoded_cols_staging[col] = model.encode(df_staging[col].astype(str).tolist(), convert_to_tensor=True).cpu().numpy()
-    encoded_cols_staging[col] /= np.linalg.norm(encoded_cols_staging[col], axis=1, keepdims=True)
+# Create a PolyFuzz model
+print("Initializing PolyFuzz model...")
+model = PolyFuzz("TF-IDF")
 
-all_matches = []
+# Function to match and score each column
+def match_and_score(col):
+    # Handle NaN values by replacing them with an empty string
+    live_list = df_live[col].fillna('').tolist()
+    staging_list = df_staging[col].fillna('').tolist()
 
-for col in all_columns:
-    # Drop NaN values for this column in both dataframes
-    live_col = df_live[col].dropna()
-    staging_col = df_staging[col].dropna()
+    # Perform matching only if both lists have content
+    if live_list and staging_list:
+        print(f"Matching {col}...")
+        model.match(live_list, staging_list)
+        return model.get_matches()
+    else:
+        return pd.DataFrame(columns=['From', 'To', 'Similarity'])
 
-    # Retrieve the precomputed embeddings for each matching column
-    encoded_df_live = encoded_cols_live[col][live_col.index]
-    encoded_df_staging = encoded_cols_staging[col][staging_col.index]
+# Match each column and collect scores
+print("Matching columns and collecting scores...")
+matches_scores = {col: match_and_score(col) for col in tqdm(matching_columns, desc="Matching columns")}
 
-    # Convert NumPy arrays to PyTorch tensors
-    encoded_df_live = torch.from_numpy(encoded_df_live).to(device)
-    encoded_df_staging = torch.from_numpy(encoded_df_staging).to(device)
+# Function to find the overall best match for each row
+def find_best_overall_match(row):
+    best_match_info = {
+        'Best Match on': None,
+        'Highest Matching URL': None,
+        'Highest Similarity Score': 0
+    }
 
-    # Compute the cosine similarity between the two matrices
-    cosine_similarities = torch.matmul(encoded_df_live, encoded_df_staging.T).cpu().numpy()
+    for col in matching_columns:
+        matches = matches_scores[col]
+        if not matches.empty:
+            match_row = matches.loc[matches['From'] == row[col]]
+            if not match_row.empty and match_row.iloc[0]['Similarity'] > best_match_info['Highest Similarity Score']:
+                best_match_info['Best Match on'] = col
+                best_match_info['Highest Matching URL'] = df_staging.loc[
+                    df_staging[col] == match_row.iloc[0]['To'], 'Address'
+                ].values[0]
+                best_match_info['Highest Similarity Score'] = match_row.iloc[0]['Similarity']
 
-    # Find the best match between the two dataframes
-    matches = []
+    return pd.Series(best_match_info)
 
-    # Loop through each row in the live dataframe
-    desc = f'Matching {len(live_col)} rows in live dataframe with column {col}'
-    for i, row in enumerate(tqdm(encoded_df_live, desc=desc)):
-        best_score = np.max(cosine_similarities[i])
-        best_match = np.argmax(cosine_similarities[i])
-        if best_score > 0:
-            matches.append({'Live Address': df_live.loc[live_col.index[i], 'Address'],
-                            'Staging Address': df_staging.loc[staging_col.index[best_match], 'Address'],
-                            'Matching Column': col, 'Highest Score': best_score})
-        else:
-            matches.append({'Live Address': df_live.loc[live_col.index[i], 'Address'], 'Staging Address': '',
-                            'Matching Column': col, 'Highest Score': 0})
+# Apply the function to find the best overall match
+print("Applying match function to each row...")
+try:
+    match_results = df_live.apply(find_best_overall_match, axis=1)
+except Exception as e:
+    print(f"Error during matching process: {e}")
 
-    # Append matches for this column to the overall list of matches
-    all_matches.extend(matches)
+# Concatenate the match results with the original dataframe
+# Ensure to not include 'Address' from matching_columns in the final DataFrame as it is already present in df_live
+print("Compiling final results...")
+try:
+    final_columns = ['Address'] + [col for col in matching_columns if col != 'Address']
+    df_final = pd.concat([df_live[final_columns], match_results], axis=1)
+except Exception as e:
+    print(f"Error during DataFrame operations: {e}")
 
-# Convert the matches to a pandas dataframe
-df = pd.DataFrame(all_matches)
-df = df.sort_values(by="Highest Score", ascending=False)
+# Export the results
+output_path = '/python_scripts/migration_mapper_output.csv'
+print(f"Exporting results to {output_path}...")
+try:
+    df_final.to_csv(output_path, index=False, encoding='utf-8-sig')
+except Exception as e:
+    print(f"Error exporting data: {e}")
 
-# calculate median and number of columns matched on
-median_scores = df.groupby('Live Address')['Highest Score'].median()
-num_matched_cols = df.groupby('Live Address')['Matching Column'].count()
+print("All operations completed successfully.")
 
-# create new columns in the original dataframe
-df['Median Score'] = df['Live Address'].map(median_scores)
-df['Number of Columns Matched'] = df['Live Address'].map(num_matched_cols)
-
-# Drop duplicates based on the "Live Address" column
-df.drop_duplicates(subset=['Live Address'], keep="first", inplace=True)
-
-# Group the matches by the "Live Address" column and select the highest scoring match for each group
-df_max = df.groupby('Live Address').apply(lambda x: x.loc[x['Highest Score'].idxmax()]).reset_index(drop=True)
-
-# Output the final dataframe to a CSV file
-df_max.to_csv("/python_scripts/migration_mapper_output.csv", index=False)
-
-# Find the unmatched rows in the staging dataframe
-staging_unmatched = df_staging[~df_staging['Address'].isin(df_max['Staging Address'])]
-
-# Output the unmatched rows to a separate CSV file
-staging_unmatched.to_csv('/python_scripts/staging_unmatched.csv', index=False)

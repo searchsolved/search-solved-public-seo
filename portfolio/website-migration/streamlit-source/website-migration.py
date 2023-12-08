@@ -5,8 +5,6 @@ import chardet
 from polyfuzz import PolyFuzz
 from io import BytesIO
 import base64
-import plotly.graph_objects as go
-import urllib.parse
 
 
 def read_csv_with_encoding(file, dtype):
@@ -28,115 +26,6 @@ def get_table_download_link(df, filename):
     b64 = base64.b64encode(towrite.read()).decode()
     href = f'<a href="data:file/csv;base64,{b64}" download="{filename}">Download the Migration File</a>'
     return href
-
-
-def clean_name(url_part):
-    return url_part.replace('/', ' ').replace('-', ' ').strip()
-
-
-def extract_hierarchy_levels(url):
-    parsed_url = urllib.parse.urlparse(url)
-
-    # If the netloc is empty, but there is a scheme, the URL may have an issue like "https:/example.com"
-    if not parsed_url.netloc and parsed_url.scheme:
-        # Manually correct the parts by removing the scheme and leading slashes
-        parts = url.split("/")
-        parts = [part for part in parts if part]  # Remove empty parts
-        # The first part should be the netloc
-        netloc = parts[0]
-        # The rest is the path
-        path_parts = parts[1:]
-    else:
-        netloc = parsed_url.netloc
-        path_parts = parsed_url.path.strip("/").split("/")
-        path_parts = [part for part in path_parts if part]
-
-    # Exclude files (e.g., .html pages) from the path parts
-    if path_parts and '.' in path_parts[-1]:
-        path_parts.pop()  # Remove the last part if it's a file
-
-    # Always include the domain as the first level
-    hierarchy_levels = [netloc] + [clean_name(part) for part in path_parts]
-
-    return hierarchy_levels
-
-
-def prepare_sankey_data(df, top_x=20):
-    # Extract and process the hierarchies for source and target
-    df['Source Hierarchy'] = df['Address'].apply(lambda x: extract_hierarchy_levels(x))
-
-    # Extract, reverse, and then assign the target hierarchy
-    df['Target Hierarchy'] = df['Highest Matching URL'].apply(lambda x: extract_hierarchy_levels(x))
-    df['Target Hierarchy'] = df['Target Hierarchy'].apply(lambda x: x[::-1])
-
-    # Debugging: Print sample hierarchies to verify structure
-    print("Sample Source Hierarchy:", df['Source Hierarchy'].iloc[0])
-    print("Sample Target Hierarchy BEFORE reversal:", df['Highest Matching URL'].apply(extract_hierarchy_levels).iloc[0])
-    print("Sample Target Hierarchy AFTER reversal:", df['Target Hierarchy'].iloc[0])
-    print("Sample Target Hierarchy AFTER reversal:", df['Target Hierarchy'].iloc[0])
-
-    rows = []
-    for _, row in df.iterrows():
-        source_hierarchy = row['Source Hierarchy']
-        target_hierarchy = row['Target Hierarchy']
-
-        # Connect every source level with all subsequent levels
-        for i in range(len(source_hierarchy)):
-            for j in range(i + 1, len(source_hierarchy)):
-                rows.append({
-                    'Source Level': source_hierarchy[i],
-                    'Target Level': source_hierarchy[j]
-                })
-
-        # Apply the same logic for the target hierarchy
-        for i in range(len(target_hierarchy)):
-            for j in range(i + 1, len(target_hierarchy)):
-                rows.append({
-                    'Source Level': target_hierarchy[i],
-                    'Target Level': target_hierarchy[j]
-                })
-    sankey_data = pd.DataFrame(rows)
-
-    # Aggregate and count the source-target pairs
-    sankey_data = sankey_data.groupby(['Source Level', 'Target Level']).size().reset_index(name='Count')
-
-    # Get top mappings by count for Sankey Chart
-    top_mappings = sankey_data.nlargest(top_x, 'Count')
-    return top_mappings
-
-
-def create_sankey_chart(sankey_data):
-    # Generate labels for each unique level in the hierarchy
-    labels = sorted(set(
-        label for pair in zip(sankey_data['Source Level'], sankey_data['Target Level']) for label in pair
-    ), key=lambda x: ('No Path' not in x, x))
-    level_index = {level: idx for idx, level in enumerate(labels)}
-
-    # Map levels to indices using the cleaned names
-    source_indices = [level_index[level] for level in sankey_data['Source Level']]
-    target_indices = [level_index[level] for level in sankey_data['Target Level']]
-    weights = sankey_data['Count']
-
-    # Create Sankey diagram with hierarchical data
-    fig = go.Figure(data=[go.Sankey(
-        node=dict(
-            pad=15,
-            thickness=20,
-            line=dict(color="black", width=0.5),
-            label=labels,  # Use the cleaned labels for node names
-            color="blue"
-        ),
-        link=dict(
-            source=source_indices,
-            target=target_indices,
-            value=weights
-        ),
-        # Set the layout for node alignment
-        arrangement='snap'
-    )])
-
-    fig.update_layout(title_text='Top 20 Folder Mappings')
-    return fig
 
 
 def process_files(df_live, df_staging, matching_columns, progress_bar, message_placeholder, selected_additional_columns):
@@ -216,16 +105,9 @@ def process_files(df_live, df_staging, matching_columns, progress_bar, message_p
     # Generate and display the download link for the final DataFrame
     download_link = get_table_download_link(df_final, 'migration_mapping_data.csv')
     st.markdown(download_link, unsafe_allow_html=True)
-
-    # Prepare and create the Sankey chart
-    sankey_data = prepare_sankey_data(df_final)
-    sankey_chart = create_sankey_chart(sankey_data)
-    message_placeholder.empty()
-    st.plotly_chart(sankey_chart, use_container_width=True)
+    st.balloons()
 
     return df_final
-
-
 
 
 def main():
@@ -303,10 +185,6 @@ def main():
 
                     # Pass message_placeholder to process_files
                     df_final = process_files(df_live, df_staging, all_selected_columns, progress_bar, message_placeholder, selected_additional_columns)
-
-                    # After the sankey chart is displayed, clear the message
-                    message_placeholder.empty()
-                    st.balloons()
 
     # Enhanced Footer
     st.markdown("""

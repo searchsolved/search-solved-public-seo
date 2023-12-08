@@ -36,26 +36,45 @@ def clean_name(url_part):
 
 def extract_hierarchy_levels(url):
     parsed_url = urllib.parse.urlparse(url)
-    path_parts = parsed_url.path.strip("/").split("/")
+
+    # If the netloc is empty, but there is a scheme, the URL may have an issue like "https:/example.com"
+    if not parsed_url.netloc and parsed_url.scheme:
+        # Manually correct the parts by removing the scheme and leading slashes
+        parts = url.split("/")
+        parts = [part for part in parts if part]  # Remove empty parts
+        # The first part should be the netloc
+        netloc = parts[0]
+        # The rest is the path
+        path_parts = parts[1:]
+    else:
+        netloc = parsed_url.netloc
+        path_parts = parsed_url.path.strip("/").split("/")
+        path_parts = [part for part in path_parts if part]
 
     # Exclude files (e.g., .html pages) from the path parts
-    if path_parts:
-        if '.' in path_parts[-1]:  # Checks if the last part looks like a file
-            path_parts = path_parts[:-1]  # Remove the last part if it's a file
+    if path_parts and '.' in path_parts[-1]:
+        path_parts.pop()  # Remove the last part if it's a file
 
-    if not path_parts:  # If the URL path is empty or only had a file, it's the homepage
-        return ['No Path']
+    # Always include the domain as the first level
+    hierarchy_levels = [netloc] + [clean_name(part) for part in path_parts]
 
-    # Create a hierarchy list with cleaned folder names
-    hierarchy_levels = [clean_name(part) for part in path_parts]
     return hierarchy_levels
 
 
 def prepare_sankey_data(df, top_x=20):
-    df['Source Hierarchy'] = df['Address'].apply(extract_hierarchy_levels)
-    df['Target Hierarchy'] = df['Highest Matching URL'].apply(extract_hierarchy_levels)
+    # Extract and process the hierarchies for source and target
+    df['Source Hierarchy'] = df['Address'].apply(lambda x: extract_hierarchy_levels(x))
 
-    # Flatten the hierarchy to create source-target pairs for all levels
+    # Extract, reverse, and then assign the target hierarchy
+    df['Target Hierarchy'] = df['Highest Matching URL'].apply(lambda x: extract_hierarchy_levels(x))
+    df['Target Hierarchy'] = df['Target Hierarchy'].apply(lambda x: x[::-1])
+
+    # Debugging: Print sample hierarchies to verify structure
+    print("Sample Source Hierarchy:", df['Source Hierarchy'].iloc[0])
+    print("Sample Target Hierarchy BEFORE reversal:", df['Highest Matching URL'].apply(extract_hierarchy_levels).iloc[0])
+    print("Sample Target Hierarchy AFTER reversal:", df['Target Hierarchy'].iloc[0])
+    print("Sample Target Hierarchy AFTER reversal:", df['Target Hierarchy'].iloc[0])
+
     rows = []
     for _, row in df.iterrows():
         source_hierarchy = row['Source Hierarchy']

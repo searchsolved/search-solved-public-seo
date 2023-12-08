@@ -1,10 +1,10 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import chardet
 from polyfuzz import PolyFuzz
 from io import BytesIO
 import base64
+import numpy as np
 
 # Function Definitions
 def read_csv_with_encoding(file, dtype):
@@ -20,14 +20,11 @@ def get_table_download_link(df, filename):
     href = f'<a href="data:file/csv;base64,{b64}" download="{filename}">Download the Migration File</a>'
     return href
 
-
 def lowercase_dataframe(df):
     return df.apply(lambda col: col.str.lower() if col.dtype == 'object' else col)
 
-
 def create_polyfuzz_model():
     return PolyFuzz("TF-IDF")
-
 
 def match_and_score_columns(model, df_live, df_staging, matching_columns):
     matches_scores = {}
@@ -38,7 +35,6 @@ def match_and_score_columns(model, df_live, df_staging, matching_columns):
             model.match(live_list, staging_list)
             matches_scores[col] = model.get_matches()
     return matches_scores
-
 
 def find_best_match_and_median(df_live, df_staging, matches_scores, matching_columns, selected_additional_columns):
     def find_best_overall_match_and_median(row):
@@ -72,16 +68,13 @@ def find_best_match_and_median(df_live, df_staging, matches_scores, matching_col
 
     return df_live.apply(find_best_overall_match_and_median, axis=1)
 
-
 def prepare_final_dataframe(df_live, match_results, matching_columns):
     final_columns = ['Address'] + [col for col in matching_columns if col != 'Address']
     return pd.concat([df_live[final_columns], match_results], axis=1)
 
-
 def display_download_link(df_final, filename):
     download_link = get_table_download_link(df_final, filename)
     st.markdown(download_link, unsafe_allow_html=True)
-
 
 def process_files(df_live, df_staging, matching_columns, progress_bar, message_placeholder,
                   selected_additional_columns):
@@ -149,7 +142,6 @@ def validate_uploads(file1, file2):
         return False
     return True
 
-
 def upload_files():
     col1, col2 = st.columns(2)
     with col1:
@@ -186,7 +178,6 @@ def select_columns_for_matching(df_live, df_staging):
     selected_additional_columns = st.multiselect("Additional Columns", additional_columns, default=default_selection[:max_additional_columns], max_selections=max_additional_columns)
     return address_column, selected_additional_columns
 
-
 def handle_file_processing(df_live, df_staging, address_column, selected_additional_columns):
     message_placeholder = st.empty()
     message_placeholder.info('Matching Columns, Please Wait!')
@@ -196,8 +187,8 @@ def handle_file_processing(df_live, df_staging, address_column, selected_additio
 
     all_selected_columns = ['Address'] + selected_additional_columns
     progress_bar = st.progress(0)
-    return process_files(df_live, df_staging, all_selected_columns, progress_bar, message_placeholder, selected_additional_columns)
-
+    df_final = process_files(df_live, df_staging, all_selected_columns, progress_bar, message_placeholder, selected_additional_columns)
+    return df_final
 
 def main():
     initialize_interface()

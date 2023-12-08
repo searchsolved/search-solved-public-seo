@@ -108,8 +108,8 @@ def create_sankey_chart(sankey_data):
             color="blue"
         ),
         link=dict(
-            source=target_indices,
-            target=source_indices,
+            source=source_indices,
+            target=target_indices,
             value=weights
         ),
         # Set the layout for node alignment

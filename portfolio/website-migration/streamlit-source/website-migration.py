@@ -9,6 +9,10 @@ import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 
 
+def read_excel(file, dtype):
+    return pd.read_excel(file, dtype=dtype)
+
+
 # Function Definitions
 def read_csv_with_encoding(file, dtype):
     result = chardet.detect(file.getvalue())
@@ -131,8 +135,9 @@ def process_files(df_live, df_staging, matching_columns, progress_bar, message_p
     return df_final
 
 
-def upload_file(column, file_type):
-    return st.file_uploader(f"Upload {column} CSV", type=[file_type])
+def upload_file(column, file_types):
+    file_type_label = "/".join(file_types).upper()  # Creating a string like "CSV/XLSX/XLS"
+    return st.file_uploader(f"Upload {column} {file_type_label}", type=file_types)
 
 
 def select_columns(title, options, default_value, max_selections):
@@ -193,16 +198,26 @@ def validate_uploads(file1, file2):
 def upload_files():
     col1, col2 = st.columns(2)
     with col1:
-        file_live = upload_file("Live", 'csv')
+        file_live = upload_file("Live", ['csv', 'xlsx', 'xls'])
     with col2:
-        file_staging = upload_file("Staging", 'csv')
+        file_staging = upload_file("Staging", ['csv', 'xlsx', 'xls'])
     return file_live, file_staging
 
 
 def process_and_validate_uploads(file_live, file_staging):
     if validate_uploads(file_live, file_staging):
-        df_live = read_csv_with_encoding(file_live, "str")
-        df_staging = read_csv_with_encoding(file_staging, "str")
+        # Determine file type and read accordingly
+        if file_live.name.endswith('.csv'):
+            df_live = read_csv_with_encoding(file_live, "str")
+        else:  # Excel file
+            df_live = read_excel(file_live, "str")
+
+        if file_staging.name.endswith('.csv'):
+            df_staging = read_csv_with_encoding(file_staging, "str")
+        else:  # Excel file
+            df_staging = read_excel(file_staging, "str")
+
+        # Check if dataframes are empty
         if df_live.empty or df_staging.empty:
             display_warning("Warning: One or both of the uploaded files are empty.")
             return None, None

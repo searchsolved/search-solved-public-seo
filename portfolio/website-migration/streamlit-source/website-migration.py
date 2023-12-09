@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import chardet
 from polyfuzz import PolyFuzz
-from io import BytesIO
 import base64
 import numpy as np
 import plotly.graph_objects as go
@@ -54,18 +53,19 @@ def prepare_score_distribution_data(df_final):
 
 def create_and_write_excel(df, score_data, filename):
     excel_writer = pd.ExcelWriter(filename, engine='xlsxwriter')
-    df.to_excel(excel_writer, sheet_name='Sheet1', index=False)
+    df.to_excel(excel_writer, sheet_name='Mapped URLs', index=False)
     score_data.to_excel(excel_writer, sheet_name='Median Score Distribution', index=False)
     return excel_writer
 
 
 def format_excel_sheets(excel_writer, df):
     workbook = excel_writer.book
-    worksheet1 = excel_writer.sheets['Sheet1']
-    worksheet2 = excel_writer.sheets['Median Score Distribution']
+    worksheet1 = excel_writer.sheets['Mapped URLs']
 
+    # Formats
+    # center_align_format = workbook.add_format({'align': 'center'})
     left_align_format = workbook.add_format({'align': 'left'})
-    percentage_format = workbook.add_format({'num_format': '0.00%', 'align': 'left'})
+    percentage_format = workbook.add_format({'num_format': '0.00%', 'align': 'center'})
 
     num_rows = len(df)
     num_cols = len(df.columns)
@@ -76,11 +76,22 @@ def format_excel_sheets(excel_writer, df):
     for i, col in enumerate(df.columns):
         col_width = max(len(col), max(df[col].astype(str).apply(len).max(), 10)) + 2
         col_width = min(col_width, max_col_width)
-        if i == 4 or i == 7:
+
+        # Apply specific formatting for columns 'E', 'F', and 'H' (indices 4, 5, and 7)
+        if i in [3, 5, 7]:  # Adjusting the indices for columns E, F, and H
             worksheet1.set_column(i, i, col_width, percentage_format)
-            worksheet1.conditional_format(1, i, num_rows, i, {'type': '3_color_scale'})
+            # Apply 3-color scale formatting with specified colors
+            worksheet1.conditional_format(1, i, num_rows, i, {
+                'type': '3_color_scale',
+                'min_color': "#f8696b",  # Custom red for lowest values
+                'mid_color': "#ffeb84",  # Custom yellow for middle values
+                'max_color': "#63be7b"  # Custom green for highest values
+            })
         else:
             worksheet1.set_column(i, i, col_width, left_align_format)
+
+    return workbook
+
 
 
 def insert_chart_into_excel(excel_writer, score_data):
@@ -90,15 +101,16 @@ def insert_chart_into_excel(excel_writer, score_data):
     max_row = len(score_data) + 1
 
     chart.add_series({
-        'name': '=Median Score Distribution!$B$1',
-        'categories': f'=Median Score Distribution!$A$2:$A${max_row}',
-        'values': f'=Median Score Distribution!$B$2:$B${max_row}',
+        'name': "='Median Score Distribution'!$B$1",
+        'categories': "='Median Score Distribution'!$A$2:$A$" + str(max_row),
+        'values': "='Median Score Distribution'!$B$2:$B$" + str(max_row),
     })
 
     chart.set_title({'name': 'Distribution of Median Match Scores'})
     chart.set_x_axis({'name': 'Median Match Score Brackets'})
     chart.set_y_axis({'name': 'URL Count'})
     worksheet2.insert_chart('D2', chart)
+
 
 
 def generate_download_link(filename):
@@ -181,7 +193,8 @@ def find_best_match_and_median(df_live, df_staging, matches_scores, matching_col
     def process_row(row):
         best_match_info, similarities = find_best_match(row, matches_scores, matching_columns, df_staging)
         best_match_info = aggregate_additional_info(best_match_info, df_staging, selected_additional_columns)
-        best_match_info['All Column Match Scores'] = [(col, round(score, 2)) for col, score in
+        # Convert scores to percentage format with '%' sign
+        best_match_info['All Column Match Scores'] = [(col, f"{round(score * 100)}%") for col, score in
                                                       zip(matching_columns, similarities)]
         return pd.Series(best_match_info)
 

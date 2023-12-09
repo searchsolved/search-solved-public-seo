@@ -11,7 +11,7 @@ import xlsxwriter
 
 
 # Function to dynamically import and create model
-def create_polyfuzz_model(selected_model="TF-IDF"):
+def initialize_matching_model(selected_model="TF-IDF"):
     if selected_model == "Edit Distance":
         from polyfuzz.models import EditDistance
         model = EditDistance()
@@ -24,19 +24,17 @@ def create_polyfuzz_model(selected_model="TF-IDF"):
     return model
 
 
-def read_excel(file, dtype):
-    return pd.read_excel(file, dtype=dtype)
+def read_excel_file(file, dtype):
+    return pd.read_excel_file(file, dtype=dtype)
 
 
-# Function Definitions
-def read_csv_with_encoding(file, dtype):
+def read_csv_file_with_detected_encoding(file, dtype):
     result = chardet.detect(file.getvalue())
     encoding = result['encoding']
     return pd.read_csv(file, dtype=dtype, encoding=encoding, on_bad_lines='skip')
 
 
-def prepare_score_distribution_data(df_final):
-    # Assuming 'Median Match Score' is already calculated and needs to be scaled to a 0-100 scale.
+def generate_score_distribution_dataframe(df_final):
     df_final['Median Match Score Scaled'] = df_final['Median Match Score'] * 100
     bins = range(0, 110, 10)
     labels = [f'{i}-{i + 10}' for i in range(0, 100, 10)]
@@ -51,19 +49,18 @@ def prepare_score_distribution_data(df_final):
     return score_data
 
 
-def create_and_write_excel(df, score_data, filename):
+def create_excel_with_dataframes(df, score_data, filename):
     excel_writer = pd.ExcelWriter(filename, engine='xlsxwriter')
     df.to_excel(excel_writer, sheet_name='Mapped URLs', index=False)
     score_data.to_excel(excel_writer, sheet_name='Median Score Distribution', index=False)
     return excel_writer
 
 
-def format_excel_sheets(excel_writer, df):
+def apply_formatting_to_excel_sheets(excel_writer, df):
     workbook = excel_writer.book
     worksheet1 = excel_writer.sheets['Mapped URLs']
 
     # Formats
-    # center_align_format = workbook.add_format({'align': 'center'})
     left_align_format = workbook.add_format({'align': 'left'})
     percentage_format = workbook.add_format({'num_format': '0.00%', 'align': 'center'})
 
@@ -94,7 +91,7 @@ def format_excel_sheets(excel_writer, df):
 
 
 
-def insert_chart_into_excel(excel_writer, score_data):
+def add_chart_to_excel_sheet(excel_writer, score_data):
     workbook = excel_writer.book
     worksheet2 = excel_writer.sheets['Median Score Distribution']
     chart = workbook.add_chart({'type': 'column'})
@@ -113,27 +110,27 @@ def insert_chart_into_excel(excel_writer, score_data):
 
 
 
-def generate_download_link(filename):
+def create_excel_download_link(filename):
     with open(filename, 'rb') as file:
         b64 = base64.b64encode(file.read()).decode()
     return f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="{filename}">Click here to download {filename}</a>'
 
 
-def get_table_download_link(df, filename, score_data):
-    excel_writer = create_and_write_excel(df, score_data, filename)
-    format_excel_sheets(excel_writer, df)
-    insert_chart_into_excel(excel_writer, score_data)
+def generate_excel_download_and_display_link(df, filename, score_data):
+    excel_writer = create_excel_with_dataframes(df, score_data, filename)
+    apply_formatting_to_excel_sheets(excel_writer, df)
+    add_chart_to_excel_sheet(excel_writer, score_data)
     excel_writer.close()
 
-    download_link = generate_download_link(filename)
+    download_link = create_excel_download_link(filename)
     st.markdown(download_link, unsafe_allow_html=True)
 
 
-def lowercase_dataframe(df):
+def convert_dataframe_to_lowercase(df):
     return df.apply(lambda col: col.str.lower() if col.dtype == 'object' else col)
 
 
-def initialize_model(selected_model):
+def setup_matching_model(selected_model):
     if selected_model == "Edit Distance":
         model = PolyFuzz(EditDistance())
     elif selected_model == "RapidFuzz":
@@ -143,7 +140,7 @@ def initialize_model(selected_model):
     return model
 
 
-def match_and_score_columns(model, df_live, df_staging, matching_columns):
+def match_columns_and_compute_scores(model, df_live, df_staging, matching_columns):
     matches_scores = {}
     for col in matching_columns:
         live_list = df_live[col].fillna('').tolist()
@@ -155,7 +152,7 @@ def match_and_score_columns(model, df_live, df_staging, matching_columns):
     return matches_scores
 
 
-def find_best_match(row, matches_scores, matching_columns, df_staging):
+def identify_best_matching_url(row, matches_scores, matching_columns, df_staging):
     best_match_info = {'Best Match on': None, 'Highest Matching URL': None,
                        'Highest Similarity Score': 0, 'Best Match Content': None}
     similarities = []
@@ -180,7 +177,7 @@ def find_best_match(row, matches_scores, matching_columns, df_staging):
     return best_match_info, similarities
 
 
-def aggregate_additional_info(best_match_info, df_staging, selected_additional_columns):
+def add_additional_info_to_match_results(best_match_info, df_staging, selected_additional_columns):
     for additional_col in selected_additional_columns:
         if additional_col in df_staging.columns:
             staging_value = df_staging.loc[
@@ -189,10 +186,10 @@ def aggregate_additional_info(best_match_info, df_staging, selected_additional_c
     return best_match_info
 
 
-def find_best_match_and_median(df_live, df_staging, matches_scores, matching_columns, selected_additional_columns):
+def identify_best_matching_url_and_median(df_live, df_staging, matches_scores, matching_columns, selected_additional_columns):
     def process_row(row):
-        best_match_info, similarities = find_best_match(row, matches_scores, matching_columns, df_staging)
-        best_match_info = aggregate_additional_info(best_match_info, df_staging, selected_additional_columns)
+        best_match_info, similarities = identify_best_matching_url(row, matches_scores, matching_columns, df_staging)
+        best_match_info = add_additional_info_to_match_results(best_match_info, df_staging, selected_additional_columns)
         # Convert scores to percentage format with '%' sign
         best_match_info['All Column Match Scores'] = [(col, f"{round(score * 100)}%") for col, score in
                                                       zip(matching_columns, similarities)]
@@ -201,86 +198,86 @@ def find_best_match_and_median(df_live, df_staging, matches_scores, matching_col
     return df_live.apply(process_row, axis=1)
 
 
-def format_match_scores_column(df):
+def format_match_scores_as_strings(df):
     df['All Column Match Scores'] = df['All Column Match Scores'].apply(lambda x: str(x) if x is not None else None)
     return df
 
 
-def concatenate_dataframes(df_live, match_results, matching_columns):
+def merge_live_and_matched_dataframes(df_live, match_results, matching_columns):
     final_columns = ['Address'] + [col for col in matching_columns if col != 'Address']
     return pd.concat([df_live[final_columns], match_results], axis=1)
 
 
-def prepare_final_dataframe(df_live, match_results, matching_columns):
-    final_df = concatenate_dataframes(df_live, match_results, matching_columns)
-    final_df = format_match_scores_column(final_df)
+def prepare_concatenated_dataframe_for_display(df_live, match_results, matching_columns):
+    final_df = merge_live_and_matched_dataframes(df_live, match_results, matching_columns)
+    final_df = format_match_scores_as_strings(final_df)
     return final_df
 
 
-def display_download_link(df_final, filename):
+def show_download_link_for_final_excel(df_final, filename):
     df_for_score_data = df_final.drop(['Median Match Score Scaled', 'Score Bracket'], axis=1, inplace=False,
                                       errors='ignore')
-    score_data = prepare_score_distribution_data(df_for_score_data)
-    get_table_download_link(df_final, 'migration_mapping_data.xlsx', score_data)
+    score_data = generate_score_distribution_dataframe(df_for_score_data)
+    generate_excel_download_and_display_link(df_final, 'migration_mapping_data.xlsx', score_data)
 
 
-def process_matches_and_scores(model, df_live, df_staging, matching_columns):
-    return match_and_score_columns(model, df_live, df_staging, matching_columns)
+def process_column_matches_and_scores(model, df_live, df_staging, matching_columns):
+    return match_columns_and_compute_scores(model, df_live, df_staging, matching_columns)
 
 
-def finalize_processing(df_live, df_staging, matches_scores, matching_columns, selected_additional_columns):
-    match_results = find_best_match_and_median(df_live, df_staging, matches_scores, matching_columns,
+def finalise_match_results_processing(df_live, df_staging, matches_scores, matching_columns, selected_additional_columns):
+    match_results = identify_best_matching_url_and_median(df_live, df_staging, matches_scores, matching_columns,
                                                selected_additional_columns)
-    df_final = prepare_final_dataframe(df_live, match_results, matching_columns)
+    df_final = prepare_concatenated_dataframe_for_display(df_live, match_results, matching_columns)
     return df_final
 
 
-def display_results(df_final, filename):
-    display_download_link(df_final, filename)
-    plot_median_score_brackets(df_final)
+def display_final_results_and_download_link(df_final, filename):
+    show_download_link_for_final_excel(df_final, filename)
+    display_median_score_brackets_chart(df_final)
     st.balloons()
 
 
-def process_files(df_live, df_staging, matching_columns, progress_bar, message_placeholder, selected_additional_columns,
+def process_uploaded_files_and_match_data(df_live, df_staging, matching_columns, progress_bar, message_placeholder, selected_additional_columns,
                   selected_model):
-    df_live = lowercase_dataframe(df_live)
-    df_staging = lowercase_dataframe(df_staging)
+    df_live = convert_dataframe_to_lowercase(df_live)
+    df_staging = convert_dataframe_to_lowercase(df_staging)
 
-    model = initialize_model(selected_model)
-    matches_scores = process_matches_and_scores(model, df_live, df_staging, matching_columns)
+    model = setup_matching_model(selected_model)
+    matches_scores = process_column_matches_and_scores(model, df_live, df_staging, matching_columns)
 
     for index, _ in enumerate(matching_columns):
         progress = (index + 1) / len(matching_columns)
         progress_bar.progress(progress)
 
     message_placeholder.info('Finalising the processing. Please Wait!')
-    df_final = finalize_processing(df_live, df_staging, matches_scores, matching_columns, selected_additional_columns)
+    df_final = finalise_match_results_processing(df_live, df_staging, matches_scores, matching_columns, selected_additional_columns)
 
-    display_results(df_final, 'migration_mapping_data.xlsx')
+    display_final_results_and_download_link(df_final, 'migration_mapping_data.xlsx')
     message_placeholder.success('Complete!')
 
     return df_final
 
 
-def upload_file(column, file_types):
+def create_file_uploader_widget(column, file_types):
     file_type_label = "/".join(file_types).upper()  # Creating a string like "CSV/XLSX/XLS"
     return st.file_uploader(f"Upload {column} {file_type_label}", type=file_types)
 
 
-def select_columns(title, options, default_value, max_selections):
+def select_columns_for_data_matching(title, options, default_value, max_selections):
     st.write(title)
     return st.multiselect(title, options, default=default_value, max_selections=max_selections)
 
 
-def display_warning(message):
+def show_warning_message(message):
     st.warning(message)
 
 
-def rename_column(df, old_name, new_name):
+def rename_dataframe_column(df, old_name, new_name):
     df.rename(columns={old_name: new_name}, inplace=True)
 
 
-def display_instructions():
+def show_instructions_expander():
     with st.expander("How to Use This Tool"):
         st.write("""
             - Crawl both the staging and live Websites using Screaming Frog SEO Spider.
@@ -294,14 +291,14 @@ def display_instructions():
         """)
 
 
-def create_footer():
+def create_page_footer_with_contact_info():
     st.markdown("""
         <hr style="height:2px;border-width:0;color:gray;background-color:gray">
         <p style="font-style: italic;">Need an app? Need this run as a managed service? <a href="mailto:hello@leefoot.co.uk">Hire Me!</a></p>
         """, unsafe_allow_html=True)
 
 
-def initialize_interface():
+def setup_streamlit_interface():
     st.set_page_config(page_title="Automatic Website Migration Tool | LeeFoot.co.uk", layout="wide")
     st.title("Automatic Website Migration Tool")
     st.markdown("### Effortlessly migrate your website data")
@@ -311,49 +308,49 @@ def initialize_interface():
         <p style="font-style: italic;">Created by <a href="https://twitter.com/LeeFootSEO" target="_blank">LeeFootSEO</a> | <a href="https://leefoot.co.uk" target="_blank">Website</a></p>
         """, unsafe_allow_html=True)
 
-    display_instructions()
+    show_instructions_expander()
 
 
-def validate_uploads(file1, file2):
+def validate_uploaded_files(file1, file2):
     if not file1 or not file2 or file1.getvalue() == file2.getvalue():
-        display_warning(
+        show_warning_message(
             "Warning: The same file has been uploaded for both live and staging. Please upload different files.")
         return False
     return True
 
 
-def upload_files():
+def create_file_uploader_widgets():
     col1, col2 = st.columns(2)
     with col1:
-        file_live = upload_file("Live", ['csv', 'xlsx', 'xls'])
+        file_live = create_file_uploader_widget("Live", ['csv', 'xlsx', 'xls'])
     with col2:
-        file_staging = upload_file("Staging", ['csv', 'xlsx', 'xls'])
+        file_staging = create_file_uploader_widget("Staging", ['csv', 'xlsx', 'xls'])
     return file_live, file_staging
 
 
-def process_and_validate_uploads(file_live, file_staging):
-    if validate_uploads(file_live, file_staging):
+def process_and_validate_uploaded_files(file_live, file_staging):
+    if validate_uploaded_files(file_live, file_staging):
         # Determine file type and read accordingly
         if file_live.name.endswith('.csv'):
-            df_live = read_csv_with_encoding(file_live, "str")
+            df_live = read_csv_file_with_detected_encoding(file_live, "str")
         else:  # Excel file
-            df_live = read_excel(file_live, "str")
+            df_live = read_excel_file(file_live, "str")
 
         if file_staging.name.endswith('.csv'):
-            df_staging = read_csv_with_encoding(file_staging, "str")
+            df_staging = read_csv_file_with_detected_encoding(file_staging, "str")
         else:  # Excel file
-            df_staging = read_excel(file_staging, "str")
+            df_staging = read_excel_file(file_staging, "str")
 
         # Check if dataframes are empty
         if df_live.empty or df_staging.empty:
-            display_warning("Warning: One or both of the uploaded files are empty.")
+            show_warning_message("Warning: One or both of the uploaded files are empty.")
             return None, None
         else:
             return df_live, df_staging
     return None, None
 
 
-def select_columns_for_matching(df_live, df_staging):
+def select_columns_for_data_matching_for_matching(df_live, df_staging):
     common_columns = list(set(df_live.columns) & set(df_staging.columns))
     address_defaults = ['Address', 'URL', 'url', 'Adresse', 'Dirección', 'Indirizzo']
     default_address_column = next((col for col in address_defaults if col in common_columns), common_columns[0])
@@ -375,33 +372,33 @@ def select_columns_for_matching(df_live, df_staging):
     return address_column, selected_additional_columns
 
 
-def handle_file_processing(df_live, df_staging, address_column, selected_additional_columns, selected_model):
+def handle_data_matching_and_processing(df_live, df_staging, address_column, selected_additional_columns, selected_model):
     message_placeholder = st.empty()
     message_placeholder.info('Matching Columns, Please Wait!')
 
-    rename_column(df_live, address_column, 'Address')
-    rename_column(df_staging, address_column, 'Address')
+    rename_dataframe_column(df_live, address_column, 'Address')
+    rename_dataframe_column(df_staging, address_column, 'Address')
 
     all_selected_columns = ['Address'] + selected_additional_columns
     progress_bar = st.progress(0)
-    df_final = process_files(df_live, df_staging, all_selected_columns, progress_bar, message_placeholder,
+    df_final = process_uploaded_files_and_match_data(df_live, df_staging, all_selected_columns, progress_bar, message_placeholder,
                              selected_additional_columns, selected_model)
     return df_final
 
 
-def scale_median_match_scores(df_final):
+def scale_median_match_scores_to_percentage(df_final):
     df_final['Median Match Score Scaled'] = df_final['Median Match Score'] * 100
     return df_final
 
 
-def group_scores_into_brackets(df_final):
+def group_median_scores_into_brackets(df_final):
     bins = range(0, 110, 10)
     labels = [f'{i}-{i + 10}' for i in range(0, 100, 10)]
     df_final['Score Bracket'] = pd.cut(df_final['Median Match Score Scaled'], bins=bins, labels=labels, include_lowest=True)
     return df_final
 
 
-def plot_histogram_in_column(df_final, col):
+def plot_median_score_histogram(df_final, col):
     bracket_counts = df_final['Score Bracket'].value_counts().sort_index()
 
     with col:
@@ -417,17 +414,17 @@ def plot_histogram_in_column(df_final, col):
         st.pyplot(plt)
 
 
-def plot_median_score_brackets(df_final):
-    df_scaled = scale_median_match_scores(df_final)
-    df_bracketed = group_scores_into_brackets(df_scaled)
+def display_median_score_brackets_chart(df_final):
+    df_scaled = scale_median_match_scores_to_percentage(df_final)
+    df_bracketed = group_median_scores_into_brackets(df_scaled)
 
     col1, col2 = st.columns(2)
-    plot_histogram_in_column(df_bracketed, col1)
-    plot_indicator_chart_in_column(df_final, col2)
+    plot_median_score_histogram(df_bracketed, col1)
+    display_median_similarity_indicator_chart(df_final, col2)
 
 
 
-def plot_indicator_chart_in_column(df_final, col):
+def display_median_similarity_indicator_chart(df_final, col):
     median_similarity_score = df_final['Highest Similarity Score'].median()
 
     if 'previous_score' in st.session_state:
@@ -456,7 +453,7 @@ def plot_indicator_chart_in_column(df_final, col):
 
 
 def main():
-    initialize_interface()
+    setup_streamlit_interface()
 
     # Advanced settings expander for model selection
     with st.expander("Advanced Settings"):
@@ -471,16 +468,16 @@ def main():
         elif selected_model == "RapidFuzz":
             st.write("RapidFuzz is efficient for large datasets, offering fast and approximate string matching.")
 
-    file_live, file_staging = upload_files()
+    file_live, file_staging = create_file_uploader_widgets()
     if file_live and file_staging:
-        df_live, df_staging = process_and_validate_uploads(file_live, file_staging)
+        df_live, df_staging = process_and_validate_uploaded_files(file_live, file_staging)
         if df_live is not None and df_staging is not None:
-            address_column, selected_additional_columns = select_columns_for_matching(df_live, df_staging)
+            address_column, selected_additional_columns = select_columns_for_data_matching_for_matching(df_live, df_staging)
             if st.button("Process Files"):
-                df_final = handle_file_processing(df_live, df_staging, address_column, selected_additional_columns,
+                df_final = handle_data_matching_and_processing(df_live, df_staging, address_column, selected_additional_columns,
                                                   selected_model)
 
-    create_footer()
+    create_page_footer_with_contact_info()
 
 
 if __name__ == "__main__":

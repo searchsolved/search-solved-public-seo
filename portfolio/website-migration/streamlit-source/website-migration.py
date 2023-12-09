@@ -138,6 +138,7 @@ def display_instructions():
             - Select up to 3 columns that you want to match.
             - Click the 'Process Files' button to start the matching process.
             - Once processed, a download link for the output file will be provided.
+            - Statistic such as median match score and a total mediam similarity score will be shown. Run the script with a different combination of columns to get the best score!
         """)
 
 
@@ -272,7 +273,7 @@ def plot_indicator_chart(df_final):
         value=median_similarity_score,
         delta={'reference': reference_value, 'relative': False, 'valueformat': '.2%'},
         number={'valueformat': '.2%', 'font': {'color': 'black'}},
-        title={'text': "Median Similarity Score", 'font': {'color': 'black'}},
+        title={'text': "Total Median Similarity Score for Selected Columns", 'font': {'color': 'black'}},
         domain={'row': 0, 'column': 0}))
 
     # Update the layout of the figure

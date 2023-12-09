@@ -37,7 +37,7 @@ def read_csv_with_encoding(file, dtype):
 
 def get_table_download_link(df, filename):
     towrite = BytesIO()
-    df.to_csv(towrite, index=False, encoding='utf-8-sig')
+    df.to_excel(towrite, index=False)  # Removed the encoding parameter
     towrite.seek(0)
     b64 = base64.b64encode(towrite.read()).decode()
 
@@ -58,7 +58,7 @@ def get_table_download_link(df, filename):
         label="Download the Migration File",
         data=towrite,
         file_name=filename,
-        mime='text/csv'
+        mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'  # Correct MIME type for Excel files
     )
 
 
@@ -91,7 +91,7 @@ def match_and_score_columns(selected_model, df_live, df_staging, matching_column
 def find_best_match_and_median(df_live, df_staging, matches_scores, matching_columns, selected_additional_columns):
     def find_best_overall_match_and_median(row):
         similarities = []
-        individual_match_scores = []  # Store individual match scores
+        individual_match_scores = []  # Store All Column Match Scores
         best_match_info = {'Best Match on': None, 'Highest Matching URL': None, 'Highest Similarity Score': 0,
                            'Best Match Content': None}
         for col in matching_columns:
@@ -118,7 +118,7 @@ def find_best_match_and_median(df_live, df_staging, matches_scores, matching_col
                 best_match_info[f'Staging {additional_col}'] = staging_value[0] if staging_value.size > 0 else None
 
         best_match_info['Median Match Score'] = np.median(similarities) if similarities else None
-        best_match_info['Individual Match Scores'] = individual_match_scores  # Store the individual match scores
+        best_match_info['All Column Match Scores'] = individual_match_scores  # Store the All Column Match Scores
         return pd.Series(best_match_info)
 
     return df_live.apply(find_best_overall_match_and_median, axis=1)
@@ -130,13 +130,13 @@ def prepare_final_dataframe(df_live, match_results, matching_columns):
     final_df = pd.concat([df_live[final_columns], match_results], axis=1)
 
     # Convert the list of tuples into a string representation
-    final_df['All Column Match Scores'] = final_df['Individual Match Scores'].apply(lambda x: str(x) if x is not None else None)
+    final_df['All Column Match Scores'] = final_df['All Column Match Scores'].apply(lambda x: str(x) if x is not None else None)
 
     return final_df
 
 
 def display_download_link(df_final, filename):
-    get_table_download_link(df_final, filename)
+    get_table_download_link(df_final, filename + '.xlsx')  # Add the extension '.xlsx'
 
 
 def process_files(df_live, df_staging, matching_columns, progress_bar, message_placeholder,
@@ -156,7 +156,7 @@ def process_files(df_live, df_staging, matching_columns, progress_bar, message_p
                                                selected_additional_columns)
 
     df_final = prepare_final_dataframe(df_live, match_results, matching_columns)
-    display_download_link(df_final, 'migration_mapping_data.csv')
+    display_download_link(df_final, 'migration_mapping_data')
     plot_median_score_brackets(df_final)
     st.balloons()
 

@@ -145,40 +145,46 @@ def match_and_score_columns(model, df_live, df_staging, matching_columns):
     return matches_scores
 
 
+def find_best_match(row, matches_scores, matching_columns, df_staging):
+    best_match_info = {'Best Match on': None, 'Highest Matching URL': None,
+                       'Highest Similarity Score': 0, 'Best Match Content': None}
+    similarities = []
+
+    for col in matching_columns:
+        matches = matches_scores.get(col, pd.DataFrame())
+        if not matches.empty:
+            match_row = matches.loc[matches['From'] == row[col]]
+            if not match_row.empty:
+                similarity_score = match_row.iloc[0]['Similarity']
+                similarities.append(similarity_score)
+                if similarity_score > best_match_info['Highest Similarity Score']:
+                    best_match_info.update({
+                        'Best Match on': col,
+                        'Highest Matching URL': df_staging.loc[df_staging[col] == match_row.iloc[0]['To'], 'Address'].values[0],
+                        'Highest Similarity Score': similarity_score,
+                        'Best Match Content': match_row.iloc[0]['To']
+                    })
+
+    best_match_info['Median Match Score'] = np.median(similarities) if similarities else None
+    return best_match_info, similarities
+
+
+def aggregate_additional_info(best_match_info, df_staging, selected_additional_columns):
+    for additional_col in selected_additional_columns:
+        if additional_col in df_staging.columns:
+            staging_value = df_staging.loc[df_staging['Address'] == best_match_info['Highest Matching URL'], additional_col].values
+            best_match_info[f'Staging {additional_col}'] = staging_value[0] if staging_value.size > 0 else None
+    return best_match_info
+
+
 def find_best_match_and_median(df_live, df_staging, matches_scores, matching_columns, selected_additional_columns):
-    def find_best_overall_match_and_median(row):
-        similarities = []
-        individual_match_scores = []  # Store All Column Match Scores
-        best_match_info = {'Best Match on': None, 'Highest Matching URL': None, 'Highest Similarity Score': 0,
-                           'Best Match Content': None}
-        for col in matching_columns:
-            matches = matches_scores.get(col, pd.DataFrame())
-            if not matches.empty:
-                match_row = matches.loc[matches['From'] == row[col]]
-                if not match_row.empty:
-                    similarity_score = match_row.iloc[0]['Similarity']
-                    similarities.append(similarity_score)
-                    individual_match_scores.append((col, round(similarity_score, 2)))  # Add individual match score
-                    if similarity_score > best_match_info['Highest Similarity Score']:
-                        best_match_info.update({
-                            'Best Match on': col,
-                            'Highest Matching URL':
-                                df_staging.loc[df_staging[col] == match_row.iloc[0]['To'], 'Address'].values[0],
-                            'Highest Similarity Score': similarity_score,
-                            'Best Match Content': match_row.iloc[0]['To']
-                        })
-
-        for additional_col in selected_additional_columns:
-            if additional_col in df_staging.columns:
-                staging_value = df_staging.loc[
-                    df_staging['Address'] == best_match_info['Highest Matching URL'], additional_col].values
-                best_match_info[f'Staging {additional_col}'] = staging_value[0] if staging_value.size > 0 else None
-
-        best_match_info['Median Match Score'] = np.median(similarities) if similarities else None
-        best_match_info['All Column Match Scores'] = individual_match_scores  # Store the All Column Match Scores
+    def process_row(row):
+        best_match_info, similarities = find_best_match(row, matches_scores, matching_columns, df_staging)
+        best_match_info = aggregate_additional_info(best_match_info, df_staging, selected_additional_columns)
+        best_match_info['All Column Match Scores'] = [(col, round(score, 2)) for col, score in zip(matching_columns, similarities)]
         return pd.Series(best_match_info)
 
-    return df_live.apply(find_best_overall_match_and_median, axis=1)
+    return df_live.apply(process_row, axis=1)
 
 
 

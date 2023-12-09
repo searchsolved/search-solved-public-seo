@@ -7,6 +7,21 @@ import base64
 import numpy as np
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt
+from polyfuzz.models import TFIDF, EditDistance
+
+
+# Function to dynamically import and create model
+def create_polyfuzz_model(selected_model="TF-IDF"):
+    if selected_model == "Edit Distance":
+        from polyfuzz.models import EditDistance
+        model = EditDistance()
+    elif selected_model == "RapidFuzz":
+        from polyfuzz.models import RapidFuzz
+        model = RapidFuzz()
+    else:  # Default to TF-IDF
+        from polyfuzz.models import TFIDF
+        model = TFIDF(min_similarity=0)
+    return model
 
 
 def read_excel(file, dtype):
@@ -51,18 +66,25 @@ def lowercase_dataframe(df):
     return df.apply(lambda col: col.str.lower() if col.dtype == 'object' else col)
 
 
-def create_polyfuzz_model():
-    return PolyFuzz("TF-IDF")
-
-
-def match_and_score_columns(model, df_live, df_staging, matching_columns):
+def match_and_score_columns(selected_model, df_live, df_staging, matching_columns):
     matches_scores = {}
+
+    # Initialize the model based on the selected model
+    if selected_model == "Edit Distance":
+        model = PolyFuzz(EditDistance())
+    elif selected_model == "RapidFuzz":
+        model = PolyFuzz(RapidFuzz())
+    else:  # Default to TF-IDF
+        model = PolyFuzz(TFIDF())
+
     for col in matching_columns:
         live_list = df_live[col].fillna('').tolist()
         staging_list = df_staging[col].fillna('').tolist()
         if live_list and staging_list:
             model.match(live_list, staging_list)
-            matches_scores[col] = model.get_matches()
+            matches = model.get_matches()
+            matches_scores[col] = matches
+
     return matches_scores
 
 
@@ -331,6 +353,23 @@ def plot_indicator_chart(df_final):
 
 def main():
     initialize_interface()
+
+    # Advanced settings expander for model selection
+    with st.expander("Advanced Settings"):
+        model_options = ['TF-IDF', 'Edit Distance', 'RapidFuzz']
+        selected_model = st.selectbox("Select Matching Model", model_options)
+
+        if selected_model == "TF-IDF":
+            st.write("Use TF-IDF for comprehensive text analysis, suitable for most use cases.")
+        elif selected_model == "Edit Distance":
+            st.write(
+                "Edit Distance is useful for matching based on character-level differences, such as small text variations.")
+        elif selected_model == "RapidFuzz":
+            st.write("RapidFuzz is efficient for large datasets, offering fast and approximate string matching.")
+
+    # Model initialization
+    polyfuzz_model = create_polyfuzz_model(selected_model)
+
     file_live, file_staging = upload_files()
     if file_live and file_staging:
         df_live, df_staging = process_and_validate_uploads(file_live, file_staging)

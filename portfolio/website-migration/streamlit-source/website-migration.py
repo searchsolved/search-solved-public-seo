@@ -21,8 +21,28 @@ def get_table_download_link(df, filename):
     df.to_csv(towrite, index=False, encoding='utf-8-sig')
     towrite.seek(0)
     b64 = base64.b64encode(towrite.read()).decode()
-    href = f'<a href="data:file/csv;base64,{b64}" download="{filename}">Download the Migration File</a>'
-    return href
+
+    # Custom CSS to inject into the Streamlit app
+    custom_css = """
+    <style>
+        div.stDownloadButton > button {
+            color: green;       /* Text color */
+            border-color: green; /* Border color */
+            border-width: 2px;   /* Border width */
+        }
+    </style>
+    """
+
+    st.markdown(custom_css, unsafe_allow_html=True)
+
+    st.download_button(
+        label="Download the Migration File",
+        data=towrite,
+        file_name=filename,
+        mime='text/csv'
+    )
+
+
 
 
 def lowercase_dataframe(df):
@@ -83,8 +103,7 @@ def prepare_final_dataframe(df_live, match_results, matching_columns):
 
 
 def display_download_link(df_final, filename):
-    download_link = get_table_download_link(df_final, filename)
-    st.markdown(download_link, unsafe_allow_html=True)
+    get_table_download_link(df_final, filename)
 
 
 def process_files(df_live, df_staging, matching_columns, progress_bar, message_placeholder,

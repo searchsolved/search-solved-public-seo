@@ -5,8 +5,8 @@ from polyfuzz import PolyFuzz
 from io import BytesIO
 import base64
 import numpy as np
+import plotly.graph_objects as go
 import matplotlib.pyplot as plt
-
 
 # Function Definitions
 def read_csv_with_encoding(file, dtype):
@@ -222,11 +222,47 @@ def plot_median_score_brackets(df_final):
         plt.tight_layout()
         st.pyplot(plt)
 
-    # Second plot in the second column
-    # with col2:
-        # Your code for the second graph goes here
-        # Example: plt.plot([1, 2, 3, 4])
-        # st.pyplot(plt)
+    # Second plot (Plotly indicator) in the second column
+    with col2:
+        plot_indicator_chart(df_final)
+
+def plot_indicator_chart(df_final):
+    # Calculate the median of the 'Highest Similarity Score'
+    median_similarity_score = df_final['Highest Similarity Score'].median() * 100
+
+    # Check if there's a previous score stored in session state
+    if 'previous_score' in st.session_state:
+        reference_value = st.session_state['previous_score'] * 100
+    else:
+        # If not, use the current score as reference (delta will be zero)
+        reference_value = median_similarity_score
+
+    # Create the Plotly figure
+    fig = go.Figure()
+
+    # Add the indicator trace using the median_similarity_score
+    fig.add_trace(go.Indicator(
+        mode="number+delta",
+        value=median_similarity_score,
+        delta={'reference': reference_value},
+        domain={'row': 0, 'column': 0}))
+
+    # Update the layout of the figure
+    fig.update_layout(
+        grid={'rows': 1, 'columns': 1, 'pattern': "independent"},
+        template={'data': {'indicator': [{
+            'title': {'text': "Median Similarity Score"},
+            'mode': "number+delta+gauge",
+            'delta': {'reference': reference_value}}]  # Using the reference value
+        }})
+
+    st.plotly_chart(fig)
+
+    # Update the session state with the new score
+    st.session_state['previous_score'] = median_similarity_score
+
+
+
 
 
 def main():

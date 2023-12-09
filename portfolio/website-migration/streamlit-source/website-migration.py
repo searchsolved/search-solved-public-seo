@@ -367,9 +367,6 @@ def main():
         elif selected_model == "RapidFuzz":
             st.write("RapidFuzz is efficient for large datasets, offering fast and approximate string matching.")
 
-    # Model initialization
-    polyfuzz_model = create_polyfuzz_model(selected_model)
-
     file_live, file_staging = upload_files()
     if file_live and file_staging:
         df_live, df_staging = process_and_validate_uploads(file_live, file_staging)

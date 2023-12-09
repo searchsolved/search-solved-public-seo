@@ -43,8 +43,6 @@ def get_table_download_link(df, filename):
     )
 
 
-
-
 def lowercase_dataframe(df):
     return df.apply(lambda col: col.str.lower() if col.dtype == 'object' else col)
 
@@ -127,6 +125,9 @@ def process_files(df_live, df_staging, matching_columns, progress_bar, message_p
     plot_median_score_brackets(df_final)
     st.balloons()
 
+    # Update the message after all processing is complete
+    message_placeholder.success('Complete!')
+
     return df_final
 
 
@@ -164,8 +165,7 @@ def display_instructions():
 def create_footer():
     st.markdown("""
         <hr style="height:2px;border-width:0;color:gray;background-color:gray">
-        <p style="font-style: italic;">Created by <a href="https://twitter.com/LeeFootSEO" target="_blank">LeeFootSEO</a> | <a href="https://leefoot.co.uk" target="_blank">Website</a></p>
-        <p style="font-style: italic;">Need an app? <a href="mailto:hello@leefoot.co.uk">Hire Me!</a></p>
+        <p style="font-style: italic;">Need an app? Need this run as a managed service? <a href="mailto:hello@leefoot.co.uk">Hire Me!</a></p>
         """, unsafe_allow_html=True)
 
 
@@ -173,6 +173,13 @@ def initialize_interface():
     st.set_page_config(page_title="Automatic Website Migration Tool | LeeFoot.co.uk", layout="wide")
     st.title("Automatic Website Migration Tool")
     st.markdown("### Effortlessly migrate your website data")
+
+    # Add the creator information here
+    st.markdown("""
+        <p style="font-style: italic;">Created by <a href="https://twitter.com/LeeFootSEO" target="_blank">LeeFootSEO</a> | <a href="https://leefoot.co.uk" target="_blank">Website</a></p>
+        <hr style="height:2px;border-width:0;color:gray;background-color:gray">
+        """, unsafe_allow_html=True)
+
     display_instructions()
 
 
@@ -225,8 +232,6 @@ def select_columns_for_matching(df_live, df_staging):
                                                  default=default_selection,
                                                  max_selections=max_additional_columns)
     return address_column, selected_additional_columns
-
-
 
 
 def handle_file_processing(df_live, df_staging, address_column, selected_additional_columns):
@@ -308,7 +313,6 @@ def plot_indicator_chart(df_final):
 
     # Update the session state with the new score
     st.session_state['previous_score'] = median_similarity_score
-
 
 
 def main():

@@ -5,6 +5,8 @@ from polyfuzz import PolyFuzz
 from io import BytesIO
 import base64
 import numpy as np
+import matplotlib.pyplot as plt
+
 
 # Function Definitions
 def read_csv_with_encoding(file, dtype):
@@ -94,6 +96,7 @@ def process_files(df_live, df_staging, matching_columns, progress_bar, message_p
 
     df_final = prepare_final_dataframe(df_live, match_results, matching_columns)
     display_download_link(df_final, 'migration_mapping_data.csv')
+    plot_median_score_brackets(df_final)
     st.balloons()
 
     return df_final
@@ -189,6 +192,42 @@ def handle_file_processing(df_live, df_staging, address_column, selected_additio
     progress_bar = st.progress(0)
     df_final = process_files(df_live, df_staging, all_selected_columns, progress_bar, message_placeholder, selected_additional_columns)
     return df_final
+
+
+def plot_median_score_brackets(df_final):
+    # Scale 'Median Match Score' values to 0-100
+    df_final['Median Match Score'] *= 100
+
+    # Define the bins and labels for the histogram
+    bins = range(0, 110, 10)
+    labels = [f'{i}-{i + 10}' for i in range(0, 100, 10)]
+
+    # Group the scores into brackets
+    df_final['Score Bracket'] = pd.cut(df_final['Median Match Score'], bins=bins, labels=labels, include_lowest=True)
+    bracket_counts = df_final['Score Bracket'].value_counts().sort_index()
+
+    # Create two columns for plots
+    col1, col2 = st.columns(2)
+
+    # First plot in the first column
+    with col1:
+        plt.figure(figsize=(5, 3))
+        ax = bracket_counts.plot(kind='bar', width=0.9)
+        ax.set_title('Distribution of Median Match Scores', fontsize=10)
+        ax.set_xlabel('Median Match Score Brackets', fontsize=8)
+        ax.set_ylabel('URL Count', fontsize=8)
+        ax.tick_params(axis='both', which='major', labelsize=8)
+        ax.grid(axis='y')
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: int(x)))
+        plt.tight_layout()
+        st.pyplot(plt)
+
+    # Second plot in the second column
+    # with col2:
+        # Your code for the second graph goes here
+        # Example: plt.plot([1, 2, 3, 4])
+        # st.pyplot(plt)
+
 
 def main():
     initialize_interface()

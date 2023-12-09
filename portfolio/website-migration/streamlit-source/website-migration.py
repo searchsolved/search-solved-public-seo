@@ -122,17 +122,19 @@ def lowercase_dataframe(df):
     return df.apply(lambda col: col.str.lower() if col.dtype == 'object' else col)
 
 
-def match_and_score_columns(selected_model, df_live, df_staging, matching_columns):
-    matches_scores = {}
-
-    # Initialize the model based on the selected model
+def initialize_model(selected_model):
     if selected_model == "Edit Distance":
         model = PolyFuzz(EditDistance())
     elif selected_model == "RapidFuzz":
         model = PolyFuzz(RapidFuzz())
     else:  # Default to TF-IDF
         model = PolyFuzz(TFIDF())
+    return model
 
+
+
+def match_and_score_columns(model, df_live, df_staging, matching_columns):
+    matches_scores = {}
     for col in matching_columns:
         live_list = df_live[col].fillna('').tolist()
         staging_list = df_staging[col].fillna('').tolist()
@@ -140,7 +142,6 @@ def match_and_score_columns(selected_model, df_live, df_staging, matching_column
             model.match(live_list, staging_list)
             matches = model.get_matches()
             matches_scores[col] = matches
-
     return matches_scores
 
 
@@ -199,12 +200,14 @@ def display_download_link(df_final, filename):
     get_table_download_link(df_final, 'migration_mapping_data.xlsx', score_data)
 
 
-def process_files(df_live, df_staging, matching_columns, progress_bar, message_placeholder,
-                  selected_additional_columns):
+def process_files(df_live, df_staging, matching_columns, progress_bar, message_placeholder, selected_additional_columns, selected_model):
     df_live = lowercase_dataframe(df_live)
     df_staging = lowercase_dataframe(df_staging)
 
-    model = create_polyfuzz_model()
+    # Initialize the model here
+    model = initialize_model(selected_model)
+
+    # Use the model in the match_and_score_columns function
     matches_scores = match_and_score_columns(model, df_live, df_staging, matching_columns)
 
     for index, _ in enumerate(matching_columns):
@@ -212,8 +215,7 @@ def process_files(df_live, df_staging, matching_columns, progress_bar, message_p
         progress_bar.progress(progress)
 
     message_placeholder.info('Finalising the processing. Please Wait!')
-    match_results = find_best_match_and_median(df_live, df_staging, matches_scores, matching_columns,
-                                               selected_additional_columns)
+    match_results = find_best_match_and_median(df_live, df_staging, matches_scores, matching_columns, selected_additional_columns)
 
     df_final = prepare_final_dataframe(df_live, match_results, matching_columns)
     display_download_link(df_final, 'migration_mapping_data')
@@ -339,7 +341,7 @@ def select_columns_for_matching(df_live, df_staging):
     return address_column, selected_additional_columns
 
 
-def handle_file_processing(df_live, df_staging, address_column, selected_additional_columns):
+def handle_file_processing(df_live, df_staging, address_column, selected_additional_columns, selected_model):
     message_placeholder = st.empty()
     message_placeholder.info('Matching Columns, Please Wait!')
 
@@ -348,9 +350,9 @@ def handle_file_processing(df_live, df_staging, address_column, selected_additio
 
     all_selected_columns = ['Address'] + selected_additional_columns
     progress_bar = st.progress(0)
-    df_final = process_files(df_live, df_staging, all_selected_columns, progress_bar, message_placeholder,
-                             selected_additional_columns)
+    df_final = process_files(df_live, df_staging, all_selected_columns, progress_bar, message_placeholder, selected_additional_columns, selected_model)
     return df_final
+
 
 
 def plot_median_score_brackets(df_final):
@@ -442,7 +444,7 @@ def main():
         if df_live is not None and df_staging is not None:
             address_column, selected_additional_columns = select_columns_for_matching(df_live, df_staging)
             if st.button("Process Files"):
-                df_final = handle_file_processing(df_live, df_staging, address_column, selected_additional_columns)
+                df_final = handle_file_processing(df_live, df_staging, address_column, selected_additional_columns, selected_model)
                 score_data = prepare_score_distribution_data(df_final)
                 get_table_download_link(df_final, 'migration_mapping_data.xlsx', score_data)
 

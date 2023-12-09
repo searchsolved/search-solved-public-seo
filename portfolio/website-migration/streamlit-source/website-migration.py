@@ -11,7 +11,6 @@ from polyfuzz.models import TFIDF, EditDistance
 import xlsxwriter
 
 
-
 # Function to dynamically import and create model
 def create_polyfuzz_model(selected_model="TF-IDF"):
     if selected_model == "Edit Distance":
@@ -42,7 +41,8 @@ def prepare_score_distribution_data(df_final):
     df_final['Median Match Score Scaled'] = df_final['Median Match Score'] * 100
     bins = range(0, 110, 10)
     labels = [f'{i}-{i + 10}' for i in range(0, 100, 10)]
-    df_final['Score Bracket'] = pd.cut(df_final['Median Match Score Scaled'], bins=bins, labels=labels, include_lowest=True)
+    df_final['Score Bracket'] = pd.cut(df_final['Median Match Score Scaled'], bins=bins, labels=labels,
+                                       include_lowest=True)
     score_brackets = df_final['Score Bracket'].value_counts().sort_index().reindex(labels, fill_value=0)
 
     score_data = pd.DataFrame({
@@ -107,7 +107,6 @@ def generate_download_link(filename):
     return f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="{filename}">Click here to download {filename}</a>'
 
 
-
 def get_table_download_link(df, filename, score_data):
     excel_writer = create_and_write_excel(df, score_data, filename)
     format_excel_sheets(excel_writer, df)
@@ -130,7 +129,6 @@ def initialize_model(selected_model):
     else:  # Default to TF-IDF
         model = PolyFuzz(TFIDF())
     return model
-
 
 
 def match_and_score_columns(model, df_live, df_staging, matching_columns):
@@ -160,7 +158,8 @@ def find_best_match(row, matches_scores, matching_columns, df_staging):
                 if similarity_score > best_match_info['Highest Similarity Score']:
                     best_match_info.update({
                         'Best Match on': col,
-                        'Highest Matching URL': df_staging.loc[df_staging[col] == match_row.iloc[0]['To'], 'Address'].values[0],
+                        'Highest Matching URL':
+                            df_staging.loc[df_staging[col] == match_row.iloc[0]['To'], 'Address'].values[0],
                         'Highest Similarity Score': similarity_score,
                         'Best Match Content': match_row.iloc[0]['To']
                     })
@@ -172,7 +171,8 @@ def find_best_match(row, matches_scores, matching_columns, df_staging):
 def aggregate_additional_info(best_match_info, df_staging, selected_additional_columns):
     for additional_col in selected_additional_columns:
         if additional_col in df_staging.columns:
-            staging_value = df_staging.loc[df_staging['Address'] == best_match_info['Highest Matching URL'], additional_col].values
+            staging_value = df_staging.loc[
+                df_staging['Address'] == best_match_info['Highest Matching URL'], additional_col].values
             best_match_info[f'Staging {additional_col}'] = staging_value[0] if staging_value.size > 0 else None
     return best_match_info
 
@@ -181,7 +181,8 @@ def find_best_match_and_median(df_live, df_staging, matches_scores, matching_col
     def process_row(row):
         best_match_info, similarities = find_best_match(row, matches_scores, matching_columns, df_staging)
         best_match_info = aggregate_additional_info(best_match_info, df_staging, selected_additional_columns)
-        best_match_info['All Column Match Scores'] = [(col, round(score, 2)) for col, score in zip(matching_columns, similarities)]
+        best_match_info['All Column Match Scores'] = [(col, round(score, 2)) for col, score in
+                                                      zip(matching_columns, similarities)]
         return pd.Series(best_match_info)
 
     return df_live.apply(process_row, axis=1)
@@ -204,34 +205,45 @@ def prepare_final_dataframe(df_live, match_results, matching_columns):
 
 
 def display_download_link(df_final, filename):
-    df_for_score_data = df_final.drop(['Median Match Score Scaled', 'Score Bracket'], axis=1, inplace=False, errors='ignore')
+    df_for_score_data = df_final.drop(['Median Match Score Scaled', 'Score Bracket'], axis=1, inplace=False,
+                                      errors='ignore')
     score_data = prepare_score_distribution_data(df_for_score_data)
     get_table_download_link(df_final, 'migration_mapping_data.xlsx', score_data)
 
 
-def process_files(df_live, df_staging, matching_columns, progress_bar, message_placeholder, selected_additional_columns, selected_model):
+def process_matches_and_scores(model, df_live, df_staging, matching_columns):
+    return match_and_score_columns(model, df_live, df_staging, matching_columns)
+
+
+def finalize_processing(df_live, df_staging, matches_scores, matching_columns, selected_additional_columns):
+    match_results = find_best_match_and_median(df_live, df_staging, matches_scores, matching_columns,
+                                               selected_additional_columns)
+    df_final = prepare_final_dataframe(df_live, match_results, matching_columns)
+    return df_final
+
+
+def display_results(df_final, filename):
+    display_download_link(df_final, filename)
+    plot_median_score_brackets(df_final)
+    st.balloons()
+
+
+def process_files(df_live, df_staging, matching_columns, progress_bar, message_placeholder, selected_additional_columns,
+                  selected_model):
     df_live = lowercase_dataframe(df_live)
     df_staging = lowercase_dataframe(df_staging)
 
-    # Initialize the model here
     model = initialize_model(selected_model)
-
-    # Use the model in the match_and_score_columns function
-    matches_scores = match_and_score_columns(model, df_live, df_staging, matching_columns)
+    matches_scores = process_matches_and_scores(model, df_live, df_staging, matching_columns)
 
     for index, _ in enumerate(matching_columns):
         progress = (index + 1) / len(matching_columns)
         progress_bar.progress(progress)
 
     message_placeholder.info('Finalising the processing. Please Wait!')
-    match_results = find_best_match_and_median(df_live, df_staging, matches_scores, matching_columns, selected_additional_columns)
+    df_final = finalize_processing(df_live, df_staging, matches_scores, matching_columns, selected_additional_columns)
 
-    df_final = prepare_final_dataframe(df_live, match_results, matching_columns)
-    display_download_link(df_final, 'migration_mapping_data')
-    plot_median_score_brackets(df_final)
-    st.balloons()
-
-    # Update the message after all processing is complete
+    display_results(df_final, 'migration_mapping_data.xlsx')
     message_placeholder.success('Complete!')
 
     return df_final
@@ -359,28 +371,27 @@ def handle_file_processing(df_live, df_staging, address_column, selected_additio
 
     all_selected_columns = ['Address'] + selected_additional_columns
     progress_bar = st.progress(0)
-    df_final = process_files(df_live, df_staging, all_selected_columns, progress_bar, message_placeholder, selected_additional_columns, selected_model)
+    df_final = process_files(df_live, df_staging, all_selected_columns, progress_bar, message_placeholder,
+                             selected_additional_columns, selected_model)
     return df_final
 
 
+def scale_median_match_scores(df_final):
+    df_final['Median Match Score Scaled'] = df_final['Median Match Score'] * 100
+    return df_final
 
-def plot_median_score_brackets(df_final):
-    # Scale 'Median Match Score' values to 0-100
-    df_final['Median Match Score'] *= 100
 
-    # Define the bins and labels for the histogram
+def group_scores_into_brackets(df_final):
     bins = range(0, 110, 10)
     labels = [f'{i}-{i + 10}' for i in range(0, 100, 10)]
+    df_final['Score Bracket'] = pd.cut(df_final['Median Match Score Scaled'], bins=bins, labels=labels, include_lowest=True)
+    return df_final
 
-    # Group the scores into brackets
-    df_final['Score Bracket'] = pd.cut(df_final['Median Match Score'], bins=bins, labels=labels, include_lowest=True)
+
+def plot_histogram_in_column(df_final, col):
     bracket_counts = df_final['Score Bracket'].value_counts().sort_index()
 
-    # Create two columns for plots
-    col1, col2 = st.columns(2)
-
-    # First plot in the first column
-    with col1:
+    with col:
         plt.figure(figsize=(5, 3))
         ax = bracket_counts.plot(kind='bar', width=0.9)
         ax.set_title('Distribution of Median Match Scores', fontsize=10)
@@ -392,26 +403,26 @@ def plot_median_score_brackets(df_final):
         plt.tight_layout()
         st.pyplot(plt)
 
-    # Second plot (Plotly indicator) in the second column
-    with col2:
-        plot_indicator_chart(df_final)
+
+def plot_median_score_brackets(df_final):
+    df_scaled = scale_median_match_scores(df_final)
+    df_bracketed = group_scores_into_brackets(df_scaled)
+
+    col1, col2 = st.columns(2)
+    plot_histogram_in_column(df_bracketed, col1)
+    plot_indicator_chart_in_column(df_final, col2)
 
 
-def plot_indicator_chart(df_final):
-    # Calculate the median of the 'Highest Similarity Score'
+
+def plot_indicator_chart_in_column(df_final, col):
     median_similarity_score = df_final['Highest Similarity Score'].median()
 
-    # Check if there's a previous score stored in session state
     if 'previous_score' in st.session_state:
         reference_value = st.session_state['previous_score']
     else:
-        # If not, use the current score as reference (delta will be zero)
         reference_value = median_similarity_score
 
-    # Create the Plotly figure
     fig = go.Figure()
-
-    # Add the indicator trace using the median_similarity_score
     fig.add_trace(go.Indicator(
         mode="number+delta",
         value=median_similarity_score,
@@ -420,15 +431,15 @@ def plot_indicator_chart(df_final):
         title={'text': "Total Median Similarity Score for Selected Columns", 'font': {'color': 'black'}},
         domain={'row': 0, 'column': 0}))
 
-    # Update the layout of the figure
     fig.update_layout(
         grid={'rows': 1, 'columns': 1, 'pattern': "independent"}
     )
 
-    st.plotly_chart(fig)
+    with col:
+        st.plotly_chart(fig)
 
-    # Update the session state with the new score
     st.session_state['previous_score'] = median_similarity_score
+
 
 
 def main():
@@ -453,9 +464,8 @@ def main():
         if df_live is not None and df_staging is not None:
             address_column, selected_additional_columns = select_columns_for_matching(df_live, df_staging)
             if st.button("Process Files"):
-                df_final = handle_file_processing(df_live, df_staging, address_column, selected_additional_columns, selected_model)
-                score_data = prepare_score_distribution_data(df_final)
-                get_table_download_link(df_final, 'migration_mapping_data.xlsx', score_data)
+                df_final = handle_file_processing(df_live, df_staging, address_column, selected_additional_columns,
+                                                  selected_model)
 
     create_footer()
 

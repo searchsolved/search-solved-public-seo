@@ -37,16 +37,35 @@ def read_csv_with_encoding(file, dtype):
     return pd.read_csv(file, dtype=dtype, encoding=encoding, on_bad_lines='skip')
 
 
-def get_table_download_link(df, filename):
+def prepare_score_distribution_data(df_final):
+    # Assuming 'Median Match Score' is already calculated and needs to be scaled to a 0-100 scale.
+    df_final['Median Match Score Scaled'] = df_final['Median Match Score'] * 100
+    bins = range(0, 110, 10)
+    labels = [f'{i}-{i + 10}' for i in range(0, 100, 10)]
+    df_final['Score Bracket'] = pd.cut(df_final['Median Match Score Scaled'], bins=bins, labels=labels, include_lowest=True)
+    score_brackets = df_final['Score Bracket'].value_counts().sort_index().reindex(labels, fill_value=0)
+
+    score_data = pd.DataFrame({
+        'Score Bracket': score_brackets.index,
+        'URL Count': score_brackets.values
+    })
+    return score_data
+
+
+def get_table_download_link(df, filename, score_data):
     # Create a Pandas Excel writer using xlsxwriter as the engine.
     excel_writer = pd.ExcelWriter(filename, engine='xlsxwriter')
 
     # Write the dataframe data to a table with a sheet name 'Sheet1'.
     df.to_excel(excel_writer, sheet_name='Sheet1', index=False)
 
+    # Write the score distribution data to a new sheet
+    score_data.to_excel(excel_writer, sheet_name='Median Score Distribution', index=False)
+
     # Get the xlsxwriter workbook and worksheet objects.
     workbook = excel_writer.book
-    worksheet = excel_writer.sheets['Sheet1']
+    worksheet1 = excel_writer.sheets['Sheet1']
+    worksheet2 = excel_writer.sheets['Median Score Distribution']
 
     # Create a cell format for left alignment
     left_align_format = workbook.add_format({'align': 'left'})
@@ -54,45 +73,60 @@ def get_table_download_link(df, filename):
     # Create a format for percentage columns
     percentage_format = workbook.add_format({'num_format': '0.00%', 'align': 'left'})
 
-    # Create a table style and apply it to the worksheet.
+    # Add a table style and apply it to the worksheet.
     num_rows = len(df)
     num_cols = len(df.columns)
-    worksheet.add_table(0, 0, num_rows, num_cols - 1, {'columns': [{'header': col} for col in df.columns]})
+    worksheet1.add_table(0, 0, num_rows, num_cols - 1, {'columns': [{'header': col} for col in df.columns]})
 
     # Freeze the top row.
-    worksheet.freeze_panes(1, 0)
+    worksheet1.freeze_panes(1, 0)
 
     # Set the maximum column width and apply formats
     max_col_width = 80
     for i, col in enumerate(df.columns):
-        col_label_width = len(col)
-        max_content_width = df[col].astype(str).apply(len).max()
-        col_width = max(min(max_col_width, max(col_label_width, max_content_width) + 2), 8)  # Add 2 for padding and ensure a minimum width of 8
+        col_width = max(len(col), max(df[col].astype(str).apply(len).max(), 10)) + 2
+        col_width = min(col_width, max_col_width)
 
         # Apply specific formatting for columns 'E' and 'H'
-        if i == 4 or i == 7:  # Column indexes start from 0, so 4 is 'E' and 7 is 'H'
-            worksheet.set_column(i, i, col_width, percentage_format)
-
+        if i == 4 or i == 7:
+            worksheet1.set_column(i, i, col_width, percentage_format)
             # Apply 3-color scale formatting with specified colors
-            worksheet.conditional_format(1, i, num_rows, i, {
+            worksheet1.conditional_format(1, i, num_rows, i, {
                 'type': '3_color_scale',
                 'min_color': "#f8696b",  # Custom red for lowest values
                 'mid_color': "#ffeb84",  # Custom yellow for middle values
-                'max_color': "#63be7b"   # Custom green for highest values
+                'max_color': "#63be7b"  # Custom green for highest values
             })
         else:
-            # Apply left-aligned format for other columns
-            worksheet.set_column(i, i, col_width, left_align_format)
+            worksheet1.set_column(i, i, col_width, left_align_format)
 
-    # Close the Pandas Excel writer.
+    # Create a new chart object for the median score distribution
+    chart = workbook.add_chart({'type': 'column'})
+    max_row = len(score_data) + 1
+
+    # Configure the series using the correct data range
+    # Ensure that the data starts at row 2 (Excel row 1) and includes all rows with data
+    chart.add_series({
+        'name': '=Median Score Distribution!$B$1',  # Name of the series taken from the header of the URL Count column
+        'categories': f'=Median Score Distribution!$A$2:$A${max_row}',  # Category labels (the score brackets)
+        'values': f'=Median Score Distribution!$B$2:$B${max_row}',  # Values for each category (URL counts)
+    })
+
+    # Set chart title and axis labels
+    chart.set_title({'name': 'Distribution of Median Match Scores'})
+    chart.set_x_axis({'name': 'Median Match Score Brackets'})
+    chart.set_y_axis({'name': 'URL Count'})
+
+    # Insert the chart into the worksheet2 at the specified location
+    worksheet2.insert_chart('D2', chart)
+
+    # Close the Pandas Excel writer and save the Excel file.
     excel_writer.close()
 
     # Create a download link for the generated Excel file.
     with open(filename, 'rb') as file:
         b64 = base64.b64encode(file.read()).decode()
     download_link = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="{filename}">Click here to download {filename}</a>'
-
-    # Display the download link in your Streamlit app.
     st.markdown(download_link, unsafe_allow_html=True)
 
 
@@ -136,9 +170,7 @@ def find_best_match_and_median(df_live, df_staging, matches_scores, matching_col
                 if not match_row.empty:
                     similarity_score = match_row.iloc[0]['Similarity']
                     similarities.append(similarity_score)
-                    # Format the match score as a percentage
-                    formatted_score = '{:.2f}%'.format(similarity_score * 100)
-                    individual_match_scores.append((col, formatted_score))  # Add formatted match score
+                    individual_match_scores.append((col, round(similarity_score, 2)))  # Add individual match score
                     if similarity_score > best_match_info['Highest Similarity Score']:
                         best_match_info.update({
                             'Best Match on': col,
@@ -155,13 +187,10 @@ def find_best_match_and_median(df_live, df_staging, matches_scores, matching_col
                 best_match_info[f'Staging {additional_col}'] = staging_value[0] if staging_value.size > 0 else None
 
         best_match_info['Median Match Score'] = np.median(similarities) if similarities else None
-        # Store the formatted All Column Match Scores
-        best_match_info['All Column Match Scores'] = individual_match_scores
+        best_match_info['All Column Match Scores'] = individual_match_scores  # Store the All Column Match Scores
         return pd.Series(best_match_info)
 
-    # Apply the formatting and return the results
     return df_live.apply(find_best_overall_match_and_median, axis=1)
-
 
 
 
@@ -176,7 +205,8 @@ def prepare_final_dataframe(df_live, match_results, matching_columns):
 
 
 def display_download_link(df_final, filename):
-    get_table_download_link(df_final, filename + '.xlsx')  # Add the extension '.xlsx'
+    score_data = prepare_score_distribution_data(df_final)
+    get_table_download_link(df_final, 'migration_mapping_data.xlsx', score_data)
 
 
 def process_files(df_live, df_staging, matching_columns, progress_bar, message_placeholder,
@@ -423,6 +453,9 @@ def main():
             address_column, selected_additional_columns = select_columns_for_matching(df_live, df_staging)
             if st.button("Process Files"):
                 df_final = handle_file_processing(df_live, df_staging, address_column, selected_additional_columns)
+                score_data = prepare_score_distribution_data(df_final)
+                get_table_download_link(df_final, 'migration_mapping_data.xlsx', score_data)
+
     create_footer()
 
 

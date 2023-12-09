@@ -198,12 +198,16 @@ def select_columns_for_matching(df_live, df_staging):
     default_additional_columns = ['H1-1', 'Title 1']
     default_selection = [col for col in default_additional_columns if col in additional_columns]
 
-    st.write("Select additional columns to match (optional, max 2):")
-    max_additional_columns = min(2, len(additional_columns))
+    st.write("Select additional columns to match (optional, max 3):")
+    max_additional_columns = min(3, len(additional_columns))
+    # Ensure default selections do not exceed the maximum allowed
+    default_selection = default_selection[:max_additional_columns]
     selected_additional_columns = st.multiselect("Additional Columns", additional_columns,
-                                                 default=default_selection[:max_additional_columns],
+                                                 default=default_selection,
                                                  max_selections=max_additional_columns)
     return address_column, selected_additional_columns
+
+
 
 
 def handle_file_processing(df_live, df_staging, address_column, selected_additional_columns):

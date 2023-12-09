@@ -136,7 +136,9 @@ def find_best_match_and_median(df_live, df_staging, matches_scores, matching_col
                 if not match_row.empty:
                     similarity_score = match_row.iloc[0]['Similarity']
                     similarities.append(similarity_score)
-                    individual_match_scores.append((col, round(similarity_score, 2)))  # Add individual match score
+                    # Format the match score as a percentage
+                    formatted_score = '{:.2f}%'.format(similarity_score * 100)
+                    individual_match_scores.append((col, formatted_score))  # Add formatted match score
                     if similarity_score > best_match_info['Highest Similarity Score']:
                         best_match_info.update({
                             'Best Match on': col,
@@ -153,10 +155,13 @@ def find_best_match_and_median(df_live, df_staging, matches_scores, matching_col
                 best_match_info[f'Staging {additional_col}'] = staging_value[0] if staging_value.size > 0 else None
 
         best_match_info['Median Match Score'] = np.median(similarities) if similarities else None
-        best_match_info['All Column Match Scores'] = individual_match_scores  # Store the All Column Match Scores
+        # Store the formatted All Column Match Scores
+        best_match_info['All Column Match Scores'] = individual_match_scores
         return pd.Series(best_match_info)
 
+    # Apply the formatting and return the results
     return df_live.apply(find_best_overall_match_and_median, axis=1)
+
 
 
 

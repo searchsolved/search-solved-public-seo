@@ -8,6 +8,8 @@ import numpy as np
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 from polyfuzz.models import TFIDF, EditDistance
+import xlsxwriter
+
 
 
 # Function to dynamically import and create model
@@ -36,30 +38,55 @@ def read_csv_with_encoding(file, dtype):
 
 
 def get_table_download_link(df, filename):
-    towrite = BytesIO()
-    df.to_excel(towrite, index=False)  # Removed the encoding parameter
-    towrite.seek(0)
-    b64 = base64.b64encode(towrite.read()).decode()
+    # Create a Pandas Excel writer using xlsxwriter as the engine.
+    excel_writer = pd.ExcelWriter(filename, engine='xlsxwriter')
 
-    # Custom CSS to inject into the Streamlit app
-    custom_css = """
-    <style>
-        div.stDownloadButton > button {
-            color: green;       /* Text color */
-            border-color: green; /* Border color */
-            border-width: 2px;   /* Border width */
-        }
-    </style>
-    """
+    # Write the dataframe data as a table with a sheet name 'Sheet1'.
+    df.to_excel(excel_writer, sheet_name='Sheet1', index=False)
 
-    st.markdown(custom_css, unsafe_allow_html=True)
+    # Get the xlsxwriter workbook and worksheet objects.
+    workbook = excel_writer.book
+    worksheet = excel_writer.sheets['Sheet1']
 
-    st.download_button(
-        label="Download the Migration File",
-        data=towrite,
-        file_name=filename,
-        mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'  # Correct MIME type for Excel files
-    )
+    # Create a cell format for left alignment
+    left_align_format = workbook.add_format({'align': 'left'})
+
+    # Create a format for percentage columns
+    percentage_format = workbook.add_format({'num_format': '0.00%', 'align': 'left'})
+
+    # Create a table style and apply it to the worksheet.
+    num_rows = len(df)
+    num_cols = len(df.columns)
+    worksheet.add_table(0, 0, num_rows, num_cols - 1, {'columns': [{'header': col} for col in df.columns]})
+
+    # Freeze the top row.
+    worksheet.freeze_panes(1, 0)
+
+    # Set the maximum column width and apply formats
+    max_col_width = 80
+    for i, col in enumerate(df.columns):
+        col_label_width = len(col)
+        max_content_width = df[col].astype(str).apply(len).max()
+        col_width = max(min(max_col_width, max(col_label_width, max_content_width) + 2), 8)  # Add 2 for padding and ensure a minimum width of 8
+
+        # Apply specific formatting for columns 'E' and 'H'
+        if i == 4 or i == 7:  # Column indexes start from 0, so 4 is 'E' and 7 is 'H'
+            worksheet.set_column(i, i, col_width, percentage_format)
+        else:
+            # Apply left-aligned format for other columns
+            worksheet.set_column(i, i, col_width, left_align_format)
+
+    # Close the Pandas Excel writer.
+    excel_writer.close()
+
+    # Create a download link for the generated Excel file.
+    with open(filename, 'rb') as file:
+        b64 = base64.b64encode(file.read()).decode()
+    download_link = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="{filename}">Click here to download {filename}</a>'
+
+    # Display the download link in your Streamlit app.
+    st.markdown(download_link, unsafe_allow_html=True)
+
 
 
 def lowercase_dataframe(df):

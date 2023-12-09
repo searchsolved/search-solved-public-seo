@@ -205,7 +205,10 @@ def prepare_final_dataframe(df_live, match_results, matching_columns):
 
 
 def display_download_link(df_final, filename):
-    score_data = prepare_score_distribution_data(df_final)
+    # Prepare score data without the unwanted columns
+    # Assuming that 'Median Match Score' column is still required
+    df_for_score_data = df_final.drop(['Median Match Score Scaled', 'Score Bracket'], axis=1, inplace=False, errors='ignore')
+    score_data = prepare_score_distribution_data(df_for_score_data)
     get_table_download_link(df_final, 'migration_mapping_data.xlsx', score_data)
 
 

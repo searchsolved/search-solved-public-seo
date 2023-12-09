@@ -52,83 +52,70 @@ def prepare_score_distribution_data(df_final):
     return score_data
 
 
-def get_table_download_link(df, filename, score_data):
-    # Create a Pandas Excel writer using xlsxwriter as the engine.
+def create_and_write_excel(df, score_data, filename):
     excel_writer = pd.ExcelWriter(filename, engine='xlsxwriter')
-
-    # Write the dataframe data to a table with a sheet name 'Sheet1'.
     df.to_excel(excel_writer, sheet_name='Sheet1', index=False)
-
-    # Write the score distribution data to a new sheet
     score_data.to_excel(excel_writer, sheet_name='Median Score Distribution', index=False)
+    return excel_writer
 
-    # Get the xlsxwriter workbook and worksheet objects.
+
+def format_excel_sheets(excel_writer, df):
     workbook = excel_writer.book
     worksheet1 = excel_writer.sheets['Sheet1']
     worksheet2 = excel_writer.sheets['Median Score Distribution']
 
-    # Create a cell format for left alignment
     left_align_format = workbook.add_format({'align': 'left'})
-
-    # Create a format for percentage columns
     percentage_format = workbook.add_format({'num_format': '0.00%', 'align': 'left'})
 
-    # Add a table style and apply it to the worksheet.
     num_rows = len(df)
     num_cols = len(df.columns)
     worksheet1.add_table(0, 0, num_rows, num_cols - 1, {'columns': [{'header': col} for col in df.columns]})
-
-    # Freeze the top row.
     worksheet1.freeze_panes(1, 0)
 
-    # Set the maximum column width and apply formats
     max_col_width = 80
     for i, col in enumerate(df.columns):
         col_width = max(len(col), max(df[col].astype(str).apply(len).max(), 10)) + 2
         col_width = min(col_width, max_col_width)
-
-        # Apply specific formatting for columns 'E' and 'H'
         if i == 4 or i == 7:
             worksheet1.set_column(i, i, col_width, percentage_format)
-            # Apply 3-color scale formatting with specified colors
-            worksheet1.conditional_format(1, i, num_rows, i, {
-                'type': '3_color_scale',
-                'min_color': "#f8696b",  # Custom red for lowest values
-                'mid_color': "#ffeb84",  # Custom yellow for middle values
-                'max_color': "#63be7b"  # Custom green for highest values
-            })
+            worksheet1.conditional_format(1, i, num_rows, i, {'type': '3_color_scale'})
         else:
             worksheet1.set_column(i, i, col_width, left_align_format)
 
-    # Create a new chart object for the median score distribution
+
+def insert_chart_into_excel(excel_writer, score_data):
+    workbook = excel_writer.book
+    worksheet2 = excel_writer.sheets['Median Score Distribution']
     chart = workbook.add_chart({'type': 'column'})
     max_row = len(score_data) + 1
 
-    # Configure the series using the correct data range
-    # Ensure that the data starts at row 2 (Excel row 1) and includes all rows with data
     chart.add_series({
-        'name': '=Median Score Distribution!$B$1',  # Name of the series taken from the header of the URL Count column
-        'categories': f'=Median Score Distribution!$A$2:$A${max_row}',  # Category labels (the score brackets)
-        'values': f'=Median Score Distribution!$B$2:$B${max_row}',  # Values for each category (URL counts)
+        'name': '=Median Score Distribution!$B$1',
+        'categories': f'=Median Score Distribution!$A$2:$A${max_row}',
+        'values': f'=Median Score Distribution!$B$2:$B${max_row}',
     })
 
-    # Set chart title and axis labels
     chart.set_title({'name': 'Distribution of Median Match Scores'})
     chart.set_x_axis({'name': 'Median Match Score Brackets'})
     chart.set_y_axis({'name': 'URL Count'})
-
-    # Insert the chart into the worksheet2 at the specified location
     worksheet2.insert_chart('D2', chart)
 
-    # Close the Pandas Excel writer and save the Excel file.
-    excel_writer.close()
 
-    # Create a download link for the generated Excel file.
+def generate_download_link(filename):
     with open(filename, 'rb') as file:
         b64 = base64.b64encode(file.read()).decode()
-    download_link = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="{filename}">Click here to download {filename}</a>'
-    st.markdown(download_link, unsafe_allow_html=True)
+    return f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="{filename}">Click here to download {filename}</a>'
 
+
+
+def get_table_download_link(df, filename, score_data):
+    excel_writer = create_and_write_excel(df, score_data, filename)
+    format_excel_sheets(excel_writer, df)
+    insert_chart_into_excel(excel_writer, score_data)
+    excel_writer.close()
+
+    download_link = generate_download_link(filename)
+    st.markdown(download_link, unsafe_allow_html=True)
 
 
 def lowercase_dataframe(df):

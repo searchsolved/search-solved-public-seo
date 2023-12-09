@@ -91,6 +91,7 @@ def match_and_score_columns(selected_model, df_live, df_staging, matching_column
 def find_best_match_and_median(df_live, df_staging, matches_scores, matching_columns, selected_additional_columns):
     def find_best_overall_match_and_median(row):
         similarities = []
+        individual_match_scores = []  # Store individual match scores
         best_match_info = {'Best Match on': None, 'Highest Matching URL': None, 'Highest Similarity Score': 0,
                            'Best Match Content': None}
         for col in matching_columns:
@@ -100,6 +101,7 @@ def find_best_match_and_median(df_live, df_staging, matches_scores, matching_col
                 if not match_row.empty:
                     similarity_score = match_row.iloc[0]['Similarity']
                     similarities.append(similarity_score)
+                    individual_match_scores.append((col, round(similarity_score, 2)))  # Add individual match score
                     if similarity_score > best_match_info['Highest Similarity Score']:
                         best_match_info.update({
                             'Best Match on': col,
@@ -116,14 +118,21 @@ def find_best_match_and_median(df_live, df_staging, matches_scores, matching_col
                 best_match_info[f'Staging {additional_col}'] = staging_value[0] if staging_value.size > 0 else None
 
         best_match_info['Median Match Score'] = np.median(similarities) if similarities else None
+        best_match_info['Individual Match Scores'] = individual_match_scores  # Store the individual match scores
         return pd.Series(best_match_info)
 
     return df_live.apply(find_best_overall_match_and_median, axis=1)
 
 
+
 def prepare_final_dataframe(df_live, match_results, matching_columns):
     final_columns = ['Address'] + [col for col in matching_columns if col != 'Address']
-    return pd.concat([df_live[final_columns], match_results], axis=1)
+    final_df = pd.concat([df_live[final_columns], match_results], axis=1)
+
+    # Convert the list of tuples into a string representation
+    final_df['All Column Match Scores'] = final_df['Individual Match Scores'].apply(lambda x: str(x) if x is not None else None)
+
+    return final_df
 
 
 def display_download_link(df_final, filename):

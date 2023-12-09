@@ -41,7 +41,7 @@ def get_table_download_link(df, filename):
     # Create a Pandas Excel writer using xlsxwriter as the engine.
     excel_writer = pd.ExcelWriter(filename, engine='xlsxwriter')
 
-    # Write the dataframe data as a table with a sheet name 'Sheet1'.
+    # Write the dataframe data to a table with a sheet name 'Sheet1'.
     df.to_excel(excel_writer, sheet_name='Sheet1', index=False)
 
     # Get the xlsxwriter workbook and worksheet objects.
@@ -72,6 +72,14 @@ def get_table_download_link(df, filename):
         # Apply specific formatting for columns 'E' and 'H'
         if i == 4 or i == 7:  # Column indexes start from 0, so 4 is 'E' and 7 is 'H'
             worksheet.set_column(i, i, col_width, percentage_format)
+
+            # Apply 3-color scale formatting with specified colors
+            worksheet.conditional_format(1, i, num_rows, i, {
+                'type': '3_color_scale',
+                'min_color': "#f8696b",  # Custom red for lowest values
+                'mid_color': "#ffeb84",  # Custom yellow for middle values
+                'max_color': "#63be7b"   # Custom green for highest values
+            })
         else:
             # Apply left-aligned format for other columns
             worksheet.set_column(i, i, col_width, left_align_format)

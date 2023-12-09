@@ -8,11 +8,13 @@ import numpy as np
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 
+
 # Function Definitions
 def read_csv_with_encoding(file, dtype):
     result = chardet.detect(file.getvalue())
     encoding = result['encoding']
     return pd.read_csv(file, dtype=dtype, encoding=encoding, on_bad_lines='skip')
+
 
 def get_table_download_link(df, filename):
     towrite = BytesIO()
@@ -22,11 +24,14 @@ def get_table_download_link(df, filename):
     href = f'<a href="data:file/csv;base64,{b64}" download="{filename}">Download the Migration File</a>'
     return href
 
+
 def lowercase_dataframe(df):
     return df.apply(lambda col: col.str.lower() if col.dtype == 'object' else col)
 
+
 def create_polyfuzz_model():
     return PolyFuzz("TF-IDF")
+
 
 def match_and_score_columns(model, df_live, df_staging, matching_columns):
     matches_scores = {}
@@ -37,6 +42,7 @@ def match_and_score_columns(model, df_live, df_staging, matching_columns):
             model.match(live_list, staging_list)
             matches_scores[col] = model.get_matches()
     return matches_scores
+
 
 def find_best_match_and_median(df_live, df_staging, matches_scores, matching_columns, selected_additional_columns):
     def find_best_overall_match_and_median(row):
@@ -70,13 +76,16 @@ def find_best_match_and_median(df_live, df_staging, matches_scores, matching_col
 
     return df_live.apply(find_best_overall_match_and_median, axis=1)
 
+
 def prepare_final_dataframe(df_live, match_results, matching_columns):
     final_columns = ['Address'] + [col for col in matching_columns if col != 'Address']
     return pd.concat([df_live[final_columns], match_results], axis=1)
 
+
 def display_download_link(df_final, filename):
     download_link = get_table_download_link(df_final, filename)
     st.markdown(download_link, unsafe_allow_html=True)
+
 
 def process_files(df_live, df_staging, matching_columns, progress_bar, message_placeholder,
                   selected_additional_columns):
@@ -101,18 +110,23 @@ def process_files(df_live, df_staging, matching_columns, progress_bar, message_p
 
     return df_final
 
+
 def upload_file(column, file_type):
     return st.file_uploader(f"Upload {column} CSV", type=[file_type])
+
 
 def select_columns(title, options, default_value, max_selections):
     st.write(title)
     return st.multiselect(title, options, default=default_value, max_selections=max_selections)
 
+
 def display_warning(message):
     st.warning(message)
 
+
 def rename_column(df, old_name, new_name):
     df.rename(columns={old_name: new_name}, inplace=True)
+
 
 def display_instructions():
     with st.expander("How to Use This Tool"):
@@ -126,6 +140,7 @@ def display_instructions():
             - Once processed, a download link for the output file will be provided.
         """)
 
+
 def create_footer():
     st.markdown("""
         <hr style="height:2px;border-width:0;color:gray;background-color:gray">
@@ -133,17 +148,21 @@ def create_footer():
         <p style="font-style: italic;">Need an app? <a href="mailto:hello@leefoot.co.uk">Hire Me!</a></p>
         """, unsafe_allow_html=True)
 
+
 def initialize_interface():
     st.set_page_config(page_title="Automatic Website Migration Tool | LeeFoot.co.uk", layout="wide")
     st.title("Automatic Website Migration Tool")
     st.markdown("### Effortlessly migrate your website data")
     display_instructions()
 
+
 def validate_uploads(file1, file2):
     if not file1 or not file2 or file1.getvalue() == file2.getvalue():
-        display_warning("Warning: The same file has been uploaded for both live and staging. Please upload different files.")
+        display_warning(
+            "Warning: The same file has been uploaded for both live and staging. Please upload different files.")
         return False
     return True
+
 
 def upload_files():
     col1, col2 = st.columns(2)
@@ -152,6 +171,7 @@ def upload_files():
     with col2:
         file_staging = upload_file("Staging", 'csv')
     return file_live, file_staging
+
 
 def process_and_validate_uploads(file_live, file_staging):
     if validate_uploads(file_live, file_staging):
@@ -163,6 +183,7 @@ def process_and_validate_uploads(file_live, file_staging):
         else:
             return df_live, df_staging
     return None, None
+
 
 def select_columns_for_matching(df_live, df_staging):
     common_columns = list(set(df_live.columns) & set(df_staging.columns))
@@ -178,8 +199,11 @@ def select_columns_for_matching(df_live, df_staging):
 
     st.write("Select additional columns to match (optional, max 2):")
     max_additional_columns = min(2, len(additional_columns))
-    selected_additional_columns = st.multiselect("Additional Columns", additional_columns, default=default_selection[:max_additional_columns], max_selections=max_additional_columns)
+    selected_additional_columns = st.multiselect("Additional Columns", additional_columns,
+                                                 default=default_selection[:max_additional_columns],
+                                                 max_selections=max_additional_columns)
     return address_column, selected_additional_columns
+
 
 def handle_file_processing(df_live, df_staging, address_column, selected_additional_columns):
     message_placeholder = st.empty()
@@ -190,7 +214,8 @@ def handle_file_processing(df_live, df_staging, address_column, selected_additio
 
     all_selected_columns = ['Address'] + selected_additional_columns
     progress_bar = st.progress(0)
-    df_final = process_files(df_live, df_staging, all_selected_columns, progress_bar, message_placeholder, selected_additional_columns)
+    df_final = process_files(df_live, df_staging, all_selected_columns, progress_bar, message_placeholder,
+                             selected_additional_columns)
     return df_final
 
 
@@ -226,13 +251,14 @@ def plot_median_score_brackets(df_final):
     with col2:
         plot_indicator_chart(df_final)
 
+
 def plot_indicator_chart(df_final):
     # Calculate the median of the 'Highest Similarity Score'
-    median_similarity_score = df_final['Highest Similarity Score'].median() * 100
+    median_similarity_score = df_final['Highest Similarity Score'].median()
 
     # Check if there's a previous score stored in session state
     if 'previous_score' in st.session_state:
-        reference_value = st.session_state['previous_score'] * 100
+        reference_value = st.session_state['previous_score']
     else:
         # If not, use the current score as reference (delta will be zero)
         reference_value = median_similarity_score
@@ -244,24 +270,20 @@ def plot_indicator_chart(df_final):
     fig.add_trace(go.Indicator(
         mode="number+delta",
         value=median_similarity_score,
-        delta={'reference': reference_value},
+        delta={'reference': reference_value, 'relative': False, 'valueformat': '.2%'},
+        number={'valueformat': '.2%', 'font': {'color': 'black'}},
+        title={'text': "Median Similarity Score", 'font': {'color': 'black'}},
         domain={'row': 0, 'column': 0}))
 
     # Update the layout of the figure
     fig.update_layout(
-        grid={'rows': 1, 'columns': 1, 'pattern': "independent"},
-        template={'data': {'indicator': [{
-            'title': {'text': "Median Similarity Score"},
-            'mode': "number+delta+gauge",
-            'delta': {'reference': reference_value}}]  # Using the reference value
-        }})
+        grid={'rows': 1, 'columns': 1, 'pattern': "independent"}
+    )
 
     st.plotly_chart(fig)
 
     # Update the session state with the new score
     st.session_state['previous_score'] = median_similarity_score
-
-
 
 
 

@@ -177,7 +177,6 @@ def initialize_interface():
     # Add the creator information here
     st.markdown("""
         <p style="font-style: italic;">Created by <a href="https://twitter.com/LeeFootSEO" target="_blank">LeeFootSEO</a> | <a href="https://leefoot.co.uk" target="_blank">Website</a></p>
-        <hr style="height:2px;border-width:0;color:gray;background-color:gray">
         """, unsafe_allow_html=True)
 
     display_instructions()

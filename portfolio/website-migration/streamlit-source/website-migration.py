@@ -213,14 +213,14 @@ def process_and_validate_uploads(file_live, file_staging):
 
 def select_columns_for_matching(df_live, df_staging):
     common_columns = list(set(df_live.columns) & set(df_staging.columns))
-    address_defaults = ['Address', 'URL', 'url']
+    address_defaults = ['Address', 'URL', 'url', 'Adresse', 'Dirección', 'Indirizzo']
     default_address_column = next((col for col in address_defaults if col in common_columns), common_columns[0])
 
     st.write("Select the column to use as 'Address':")
     address_column = st.selectbox("Address Column", common_columns, index=common_columns.index(default_address_column))
 
     additional_columns = [col for col in common_columns if col != address_column]
-    default_additional_columns = ['H1-1', 'Title 1']
+    default_additional_columns = ['H1-1', 'Title 1', 'Titel 1', 'Título 1', 'Titolo 1']
     default_selection = [col for col in default_additional_columns if col in additional_columns]
 
     st.write("Select additional columns to match (optional, max 3):")

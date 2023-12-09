@@ -7,7 +7,7 @@ import base64
 import numpy as np
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt
-from polyfuzz.models import TFIDF, EditDistance
+from polyfuzz.models import TFIDF, EditDistance, RapidFuzz
 import xlsxwriter
 
 

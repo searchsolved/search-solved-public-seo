@@ -187,20 +187,23 @@ def find_best_match_and_median(df_live, df_staging, matches_scores, matching_col
     return df_live.apply(process_row, axis=1)
 
 
+def format_match_scores_column(df):
+    df['All Column Match Scores'] = df['All Column Match Scores'].apply(lambda x: str(x) if x is not None else None)
+    return df
+
+
+def concatenate_dataframes(df_live, match_results, matching_columns):
+    final_columns = ['Address'] + [col for col in matching_columns if col != 'Address']
+    return pd.concat([df_live[final_columns], match_results], axis=1)
+
 
 def prepare_final_dataframe(df_live, match_results, matching_columns):
-    final_columns = ['Address'] + [col for col in matching_columns if col != 'Address']
-    final_df = pd.concat([df_live[final_columns], match_results], axis=1)
-
-    # Convert the list of tuples into a string representation
-    final_df['All Column Match Scores'] = final_df['All Column Match Scores'].apply(lambda x: str(x) if x is not None else None)
-
+    final_df = concatenate_dataframes(df_live, match_results, matching_columns)
+    final_df = format_match_scores_column(final_df)
     return final_df
 
 
 def display_download_link(df_final, filename):
-    # Prepare score data without the unwanted columns
-    # Assuming that 'Median Match Score' column is still required
     df_for_score_data = df_final.drop(['Median Match Score Scaled', 'Score Bracket'], axis=1, inplace=False, errors='ignore')
     score_data = prepare_score_distribution_data(df_for_score_data)
     get_table_download_link(df_final, 'migration_mapping_data.xlsx', score_data)

@@ -1,13 +1,13 @@
+import base64
+import chardet
+import numpy as np
 import streamlit as st
 import pandas as pd
-import chardet
-from polyfuzz import PolyFuzz
-import base64
-import numpy as np
-import plotly.graph_objects as go
 import matplotlib.pyplot as plt
+
+from polyfuzz import PolyFuzz
 from polyfuzz.models import TFIDF, EditDistance, RapidFuzz
-import xlsxwriter
+import plotly.graph_objects as go
 
 
 # Streamlit Interface Setup and Utilities ------------------------------------------------------------------------------
@@ -21,10 +21,15 @@ def setup_streamlit_interface():
     st.title("Automatic Website Migration Tool")
     st.markdown("### Effortlessly migrate your website data")
 
-    # Add the creator information here
-    st.markdown("""
-        <p style="font-style: italic;">Created by <a href="https://twitter.com/LeeFootSEO" target="_blank">LeeFootSEO</a> | <a href="https://leefoot.co.uk" target="_blank">Website</a></p>
-        """, unsafe_allow_html=True)
+    st.markdown(
+        """
+        <p style="font-style: italic;">
+            Created by <a href="https://twitter.com/LeeFootSEO" target="_blank">LeeFootSEO</a> |
+            <a href="https://leefoot.co.uk" target="_blank">Website</a>
+        </p>
+        """,
+        unsafe_allow_html=True
+    )
 
     show_instructions_expander()
 
@@ -90,7 +95,6 @@ def show_instructions_expander():
     )
     with st.expander("How to Use This Tool"):
         st.write(instructions)
-
 
 
 def create_page_footer_with_contact_info():
@@ -398,6 +402,7 @@ def identify_best_matching_url_and_median(df_live, df_staging, matches_scores, m
     Returns:
     pd.DataFrame: DataFrame with best match URLs and median scores.
     """
+
     def process_row(row):
         best_match_info, similarities = identify_best_matching_url(row, matches_scores, matching_columns, df_staging)
         best_match_info = add_additional_info_to_match_results(best_match_info, df_staging, selected_additional_columns)
@@ -870,7 +875,7 @@ def main():
         df_live, df_staging = process_and_validate_uploaded_files(file_live, file_staging)
         if df_live is not None and df_staging is not None:
             address_column, selected_additional_columns = select_columns_for_matching(df_live,
-                                                                                                        df_staging)
+                                                                                      df_staging)
             if st.button("Process Files"):
                 df_final = handle_data_matching_and_processing(df_live, df_staging, address_column,
                                                                selected_additional_columns,

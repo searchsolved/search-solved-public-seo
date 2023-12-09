@@ -635,7 +635,7 @@ def display_median_similarity_indicator_chart(df_final, col):
         value=median_similarity_score,
         delta={'reference': reference_value, 'relative': False, 'valueformat': '.2%'},
         number={'valueformat': '.2%', 'font': {'color': 'black'}},
-        title={'text': "Total Median Similarity Score for Selected Columns", 'font': {'color': 'black'}},
+        title={'text': "Highest Matching Column Median Similarity Score", 'font': {'color': 'black'}},
         domain={'row': 0, 'column': 0}))
 
     fig.update_layout(

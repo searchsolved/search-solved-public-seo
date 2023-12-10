@@ -421,8 +421,10 @@ def identify_best_matching_url_and_median(df_live, df_staging, matches_scores, m
         best_match_info, similarities = identify_best_matching_url(row, matches_scores, matching_columns, df_staging)
         best_match_info = add_additional_info_to_match_results(best_match_info, df_staging, selected_additional_columns)
         # Convert scores to percentage format with '%' sign
-        best_match_info['All Column Match Scores'] = [(col, f"{round(score * 100)}%") for col, score in
-                                                      zip(matching_columns, similarities)]
+        best_match_info['All Column Match Scores'] = [
+            (col, f"{round(score * 100)}%" if not pd.isna(score) else "NaN%")
+            for col, score in zip(matching_columns, similarities)
+        ]
         return pd.Series(best_match_info)
 
     return df_live.apply(process_row, axis=1)

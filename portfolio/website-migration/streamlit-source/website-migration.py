@@ -9,6 +9,8 @@ from polyfuzz import PolyFuzz
 from polyfuzz.models import TFIDF, EditDistance, RapidFuzz
 import plotly.graph_objects as go
 
+# LeeFootSEO | https://leefoot.co.uk | 10th December 2013
+
 
 # Streamlit Interface Setup and Utilities ------------------------------------------------------------------------------
 
@@ -308,25 +310,36 @@ def setup_matching_model(selected_model):
 
 def match_columns_and_compute_scores(model, df_live, df_staging, matching_columns):
     """
-    Matches columns between two DataFrames and computes similarity scores.
+    Matches columns between two DataFrames (df_live and df_staging) and computes similarity scores.
 
     Args:
-    model (PolyFuzz model): The PolyFuzz model to use for matching.
-    df_live (pd.DataFrame): The DataFrame containing live data.
-    df_staging (pd.DataFrame): The DataFrame containing staging data.
-    matching_columns (list): List of column names to match between DataFrames.
+        model: The matching model to use for matching (e.g., PolyFuzz).
+        df_live (pd.DataFrame): The DataFrame containing live data.
+        df_staging (pd.DataFrame): The DataFrame containing staging data.
+        matching_columns (list): List of column names to match between DataFrames.
 
     Returns:
-    dict: Dictionary containing match scores for each column.
+        dict: A dictionary containing match scores for each column.
     """
     matches_scores = {}
     for col in matching_columns:
-        live_list = df_live[col].fillna('').tolist()
-        staging_list = df_staging[col].fillna('').tolist()
-        if live_list and staging_list:
-            model.match(live_list, staging_list)
-            matches = model.get_matches()
-            matches_scores[col] = matches
+        # Check if the column exists in both dataframes
+        if col in df_live.columns and col in df_staging.columns:
+            # Ensure the data type is appropriate (i.e., Pandas Series)
+            if isinstance(df_live[col], pd.Series) and isinstance(df_staging[col], pd.Series):
+                live_list = df_live[col].fillna('').tolist()
+                staging_list = df_staging[col].fillna('').tolist()
+
+                # Here's the matching logic:
+                model.match(live_list, staging_list)
+                matches = model.get_matches()
+                matches_scores[col] = matches
+
+            else:
+                st.warning(f"The column '{col}' in either the live or staging data is not a valid series.")
+        else:
+            st.warning(f"The column '{col}' does not exist in both the live and staging data.")
+
     return matches_scores
 
 

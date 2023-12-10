@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from polyfuzz import PolyFuzz
 from polyfuzz.models import TFIDF, EditDistance, RapidFuzz
 import plotly.graph_objects as go
+import xlsxwriter
 
 # LeeFootSEO | https://leefoot.co.uk | 10th December 2013
 

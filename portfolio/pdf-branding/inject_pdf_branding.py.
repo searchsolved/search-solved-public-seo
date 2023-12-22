@@ -1,5 +1,5 @@
 """Injects branding to existing PDF files, including website link and telephone number.
-https://www.leefoot.co.uk - 22/12/2023
+https://leefoot.co.uk - 22/12/2023
 """
 
 import os

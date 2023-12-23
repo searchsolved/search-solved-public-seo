@@ -1,12 +1,6 @@
-"""Injects branding to existing PDF files, including website link and telephone number.
-https://leefoot.co.uk - 22/12/2023
-"""
-
 import os
 from datetime import datetime
 from io import BytesIO
-import warnings
-import traceback
 
 from PyPDF2 import PdfReader, PdfWriter, PageObject
 from reportlab.lib.colors import HexColor
@@ -16,17 +10,19 @@ from reportlab.pdfgen import canvas
 from tqdm import tqdm
 
 # Configuration variables
-FONT_PATH = "/python_scripts/pdf_branding/custom_fonts/Roboto-Bold.ttf"  # Path to custom font file
-INPUT_DIR = "/python_scripts/pdf_branding/input"  # Directory for input PDF files
-OUTPUT_DIR = "/python_scripts/pdf_branding/output"  # Directory for output PDF files
-PHONE_NUMBER = "01234 567 890"  # Phone number to display in PDF header
-WEBSITE = "www.acme.com"  # Website URL to display in PDF header
-SUFFIX = "_acme_"  # Suffix to append to modified PDF filenames
-SPACE_HEIGHT = 30  # Height of header space in PDF
-TEXT_FONT = "Roboto-Bold"  # Font name for header text
-TEXT_FONT_SIZE = 14  # Font size for header text
-TEXT_COLOR = HexColor("#FFFFFF")  # Colour of the header text
-BACKGROUND_COLOR = HexColor("#D91800")  # Background colour of the header
+FONT_PATH = "/python_scripts/pdf_branding/custom_fonts/Roboto-Bold.ttf"
+INPUT_DIR = "/python_scripts/pdf_branding/input"
+OUTPUT_DIR = "/python_scripts/pdf_branding/output"
+PHONE_NUMBER = "01234 567 890"
+WEBSITE = "www.acme.com"
+SUFFIX = "_acme_"
+SPACE_HEIGHT = 30
+TEXT_FONT = "Roboto-Bold"
+TEXT_FONT_SIZE = 14
+TEXT_COLOR = HexColor("#FFFFFF")
+BACKGROUND_COLOR = HexColor("#D91800")
+APPEND_SUFFIX = False  # Set to True to append the suffix
+APPEND_DATE = False  # Set to True to append the current date
 
 
 # -----------------
@@ -157,10 +153,17 @@ def add_section_to_pdf(input_pdf_path, output_dir, phone_number, website, suffix
         text_color (HexColor): Color of the text in the header.
         background_color (HexColor): Background color of the header.
     """
-    date_str = datetime.now().strftime("%Y%m%d")
     filename = os.path.basename(input_pdf_path)
     base_name, ext = os.path.splitext(filename)
-    output_filename = f"{base_name}_{suffix}_{date_str}{ext}"
+
+    # Append suffix and date if enabled
+    if APPEND_SUFFIX:
+        base_name += suffix
+    if APPEND_DATE:
+        date_str = datetime.now().strftime("%Y%m%d")
+        base_name += f"_{date_str}"
+
+    output_filename = f"{base_name}{ext}"
     output_pdf_path = os.path.join(output_dir, output_filename)
 
     existing_pdf = PdfReader(input_pdf_path)

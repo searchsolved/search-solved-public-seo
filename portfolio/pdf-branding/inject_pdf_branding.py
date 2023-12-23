@@ -13,19 +13,45 @@ from reportlab.pdfgen import canvas
 from tqdm import tqdm
 
 # Configuration variables
+
+# Path to the custom font file (optional)
 FONT_PATH = "/python_scripts/pdf_branding/custom_fonts/Roboto-Bold.ttf"
+
+# Directory for input PDF files
 INPUT_DIR = "/python_scripts/pdf_branding/input"
+
+# Directory for output PDF files
 OUTPUT_DIR = "/python_scripts/pdf_branding/output"
+
+# Phone number to display in PDF header
 PHONE_NUMBER = "01234 567 890"
+
+# Website URL to display in PDF header
 WEBSITE = "www.acme.com"
+
+# Suffix to append to modified PDF filenames
 SUFFIX = "_acme_"
+
+# Height of header space in PDF
 SPACE_HEIGHT = 30
+
+# Font name for header text
 TEXT_FONT = "Roboto-Bold"
+
+# Font size for header text
 TEXT_FONT_SIZE = 14
+
+# Colour of the header text
 TEXT_COLOR = HexColor("#FFFFFF")
+
+# Background colour of the header
 BACKGROUND_COLOR = HexColor("#D91800")
-APPEND_SUFFIX = False  # Set to True to append the suffix
-APPEND_DATE = False  # Set to True to append the current date
+
+# Flag to control appending of suffix to filenames (set to True to enable)
+APPEND_SUFFIX = False
+
+# Flag to control appending of the current date to filenames (set to True to enable)
+APPEND_DATE = False
 
 
 # -----------------

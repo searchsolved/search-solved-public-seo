@@ -4,6 +4,8 @@
 import os
 from datetime import datetime
 from io import BytesIO
+import warnings
+import traceback
 
 from PyPDF2 import PdfReader, PdfWriter, PageObject
 from reportlab.lib.colors import HexColor

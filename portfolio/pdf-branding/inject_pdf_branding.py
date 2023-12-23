@@ -1,3 +1,6 @@
+# Inject branding into PDFs by Lee Foot 23-12-2023. 
+# More like this @ https://leefoot.co.uk
+
 import os
 from datetime import datetime
 from io import BytesIO

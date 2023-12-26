@@ -171,7 +171,7 @@ def select_column_for_clustering(df):
 # Clustering and Data Transformation Functions
 # -------------
 
-@st.cache_data()
+@st.cache_resource()
 def load_sentence_transformer_model(model_name):
     model = SentenceTransformer(model_name)
     return model

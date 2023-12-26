@@ -10,7 +10,7 @@ from polyfuzz.models import TFIDF, EditDistance, RapidFuzz
 import plotly.graph_objects as go
 import xlsxwriter
 
-# LeeFootSEO | https://leefoot.co.uk | 10th December 2013
+# LeeFootSEO | https://leefoot.co.uk | 10th December 2023
 
 
 # Streamlit Interface Setup and Utilities ------------------------------------------------------------------------------

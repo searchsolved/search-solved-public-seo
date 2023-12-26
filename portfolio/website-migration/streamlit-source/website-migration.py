@@ -28,7 +28,7 @@ def setup_streamlit_interface():
         """
         <p style="font-style: italic;">
             Created by <a href="https://twitter.com/LeeFootSEO" target="_blank">LeeFootSEO</a> |
-            <a href="https://leefoot.co.uk" target="_blank">Website</a>
+            <a href="https://leefoot.co.uk" target="_blank">More Apps & Scripts on my Website</a>
         </p>
         """,
         unsafe_allow_html=True

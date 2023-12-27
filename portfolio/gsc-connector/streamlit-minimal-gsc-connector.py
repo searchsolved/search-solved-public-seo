@@ -1,3 +1,6 @@
+# Lee Foot 27th December 2023
+# More like this at https://leefoot.co.uk
+
 # Standard library imports
 import datetime
 import base64

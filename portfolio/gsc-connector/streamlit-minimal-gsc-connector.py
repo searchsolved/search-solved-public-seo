@@ -1,8 +1,3 @@
-# Lee Foot 27th December 2023
-# More like this at https://leefoot.co.uk
-
-"""Modular GSC streamlit app which can be used as a foundation to build more complex streamlit apps using Search Console as the data source."""
-
 # Standard library imports
 import datetime
 import base64
@@ -15,8 +10,8 @@ import pandas as pd
 import searchconsole
 
 # Configuration: Set to True if running locally, False if running on Streamlit Cloud
-# IS_LOCAL = True
-IS_LOCAL = False
+IS_LOCAL = True
+# IS_LOCAL = False
 
 # Constants
 SEARCH_TYPES = ["web", "image", "video", "news", "discover", "googleNews"]
@@ -197,7 +192,8 @@ def download_csv_link(report):
 # -------------
 
 def show_google_sign_in(auth_url):
-    st.markdown(f'<a href="{auth_url}" target="_self" class="btn btn-primary">👉 Sign Into Your GSC Account to Get Started</a>',
+    # needs to open in a new windows, otherwise google will refuse to connect.
+    st.markdown(f'<a href="{auth_url}" target="_blank" class="btn btn-primary">👉 Sign Into Your GSC Account to Get Started</a>',
                 unsafe_allow_html=True)
 
 

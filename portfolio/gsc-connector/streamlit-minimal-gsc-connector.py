@@ -193,18 +193,12 @@ def download_csv_link(report):
 # -------------
 
 def show_google_sign_in(auth_url):
-    with st.sidebar.form(key="google_sign_in_form"):
-        with Elements() as elements:
-            # Create the Google sign-in button within the Elements context
-            elements.m.button(
-                "Sign in with Google",
-                href=auth_url,
-                target="_blank",
-                size="large",
-                variant="contained",
-                start_icon=elements.m.icons.exit_to_app,
-                style={"color": "#FFFFFF", "background": "#4285F4"}
-            )
+    with st.sidebar:
+        if st.button("Sign in with Google"):
+            # Open the authentication URL
+            st.write('Please click the link below to sign in:')
+            st.markdown(f'[Google Sign-In]({auth_url})', unsafe_allow_html=True)
+
 
 
 

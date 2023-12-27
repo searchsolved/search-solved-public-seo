@@ -23,6 +23,20 @@ def configure_streamlit():
     st.title('Google Search Console Data App')
 
 
+def initialize_session_state():
+    # Initialize or set default values for necessary session state variables
+    if 'selected_property' not in st.session_state:
+        st.session_state.selected_property = None
+
+    if 'selected_search_type' not in st.session_state:
+        st.session_state.selected_search_type = 'web'
+
+    if 'selected_date_range' not in st.session_state:
+        st.session_state.selected_date_range = 'Last 7 Days'
+
+    if 'selected_dimensions' not in st.session_state:
+        st.session_state.selected_dimensions = ['page', 'country']
+
 # -------------
 # Google Authentication Functions
 # -------------
@@ -76,8 +90,11 @@ def list_search_console_properties(credentials):
 
 def fetch_search_console_data(webproperty, search_type, start_date, end_date, dimensions, device_type=None):
     query = webproperty.query.range(start_date, end_date).search_type(search_type).dimension(*dimensions)
+
+    # Correctly apply device filter
     if 'device' in dimensions and device_type and device_type != 'All Devices':
-        query = query.filter('device', 'equals', device_type)
+        query = query.filter('device', 'equals', device_type.lower())
+
     try:
         return query.limit(MAX_ROWS).get().to_dataframe()
     except Exception as e:
@@ -181,22 +198,9 @@ def display_dimensions_selector(search_type):
     )
 
 
-def display_device_selector(selected_dimensions):
-    if 'device' in selected_dimensions:
-        return st.selectbox(
-            "Select Device Type:",
-            DEVICE_OPTIONS,
-            index=DEVICE_OPTIONS.index(st.session_state.selected_device),
-            key='device_selector'
-        )
-    else:
-        return None
-
-
-def display_fetch_data_button(webproperty, search_type, start_date, end_date, selected_dimensions, selected_device):
+def display_fetch_data_button(webproperty, search_type, start_date, end_date, selected_dimensions):
     if st.button("Fetch Data"):
-        report = fetch_data_with_loading(webproperty, search_type, start_date, end_date, selected_dimensions,
-                                         selected_device)
+        report = fetch_data_with_loading(webproperty, search_type, start_date, end_date, selected_dimensions)
         if report is not None:
             st.dataframe(report)
 
@@ -205,6 +209,7 @@ def display_fetch_data_button(webproperty, search_type, start_date, end_date, se
 # Main Streamlit App Function
 # -------------
 
+# Main Streamlit App Function
 def main():
     configure_streamlit()
     client_config = load_client_config()
@@ -220,19 +225,17 @@ def main():
     if not st.session_state.get('credentials'):
         display_google_sign_in(st.session_state.auth_url)
     else:
-        initialise_session_state()
+        initialize_session_state()
         account = authenticate_searchconsole(client_config, st.session_state.credentials)
         properties = list_search_console_properties(st.session_state.credentials)
+
         if properties:
             webproperty = display_property_selector(properties, account)
             search_type = display_search_type_selector()
             date_range_selection = display_date_range_selector()
             start_date, end_date = calculate_date_range(date_range_selection)
             selected_dimensions = display_dimensions_selector(search_type)
-            selected_device = display_device_selector(selected_dimensions)
-            display_fetch_data_button(webproperty, search_type, start_date, end_date, selected_dimensions,
-                                      selected_device)
-
+            display_fetch_data_button(webproperty, search_type, start_date, end_date, selected_dimensions)
 
 if __name__ == "__main__":
     main()

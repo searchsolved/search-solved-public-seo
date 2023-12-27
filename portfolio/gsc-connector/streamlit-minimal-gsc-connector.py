@@ -62,8 +62,8 @@ st.title('Google Search Console Data App')
 
 client_config = load_client_config()
 
-if 'auth_flow' not in st.session_state:
-    st.session_state.auth_flow, _ = authenticate_google(client_config)
+if 'auth_flow' not in st.session_state or 'auth_url' not in st.session_state:
+    st.session_state.auth_flow, st.session_state.auth_url = authenticate_google(client_config)
 
 query_params = st.experimental_get_query_params()
 auth_code = query_params.get("code", [None])[0]
@@ -72,9 +72,9 @@ if auth_code and not st.session_state.get('credentials'):
     st.session_state.auth_flow.fetch_token(code=auth_code)
     st.session_state.credentials = st.session_state.auth_flow.credentials
 
-if st.button('Sign in with Google'):
-    st.session_state.auth_flow, auth_url = authenticate_google(client_config)
-    st.markdown(f"[Authenticate with Google]({auth_url})", unsafe_allow_html=True)
+if not st.session_state.get('credentials'):
+    # Hyperlink styled as a button
+    st.markdown(f'<a href="{st.session_state.auth_url}" target="_self" class="btn btn-primary">Sign in with Google</a>', unsafe_allow_html=True)
 
 if st.session_state.get('credentials'):
     account = authenticate_searchconsole(client_config, st.session_state.credentials)

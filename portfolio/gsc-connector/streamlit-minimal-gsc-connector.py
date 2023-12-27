@@ -13,6 +13,7 @@ DATE_RANGE_OPTIONS = ['Last 7 Days', 'Last 30 Days', 'Last 3 Months', 'Last 6 Mo
 DEVICE_OPTIONS = ['All Devices', 'desktop', 'mobile', 'tablet']
 BASE_DIMENSIONS = ['page', 'query', 'country', 'date']
 MAX_ROWS = 10_000
+DF_PREVIEW_ROWS = 100
 
 
 # -------------
@@ -22,6 +23,7 @@ MAX_ROWS = 10_000
 def configure_streamlit():
     st.set_page_config(page_title="Google Search Console Data", layout="wide")
     st.title('Google Search Console Data App')
+
 
 def configure_streamlit():
     st.set_page_config(page_title="✨ Simple Google Search Console Data | LeeFoot.co.uk", layout="wide")
@@ -37,6 +39,8 @@ def configure_streamlit():
         """,
         unsafe_allow_html=True
     )
+    st.divider()
+
 
 def initialise_session_state():
     # initialise or set default values for necessary session state variables
@@ -170,8 +174,8 @@ def on_property_change():
 # -------------
 
 def display_dataframe(report):
-    # Display only the first 100 rows
-    st.dataframe(report.head(100))
+    with st.expander("Preview the First 100 Rows"):
+        st.dataframe(report.head(DF_PREVIEW_ROWS))
 
 
 def download_link_csv(report):

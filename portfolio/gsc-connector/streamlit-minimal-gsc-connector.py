@@ -193,15 +193,14 @@ def download_csv_link(report):
 # -------------
 
 def show_google_sign_in(auth_url):
-    with Elements():
-        m = Elements()
-        m.button("Sign in with Google",
-                 href=auth_url,
-                 target="_blank",
-                 size="large",
-                 variant="contained",
-                 start_icon=m.icons.exit_to_app,
-                 style={"color": "#FFFFFF", "background": "#4285F4"})
+    m = Elements()
+    m.button("Sign in with Google",
+             href=auth_url,
+             target="_blank",
+             size="large",
+             variant="contained",
+             start_icon=m.icons.exit_to_app,
+             style={"color": "#FFFFFF", "background": "#4285F4"})
 
 
 def show_property_selector(properties, account):

@@ -59,16 +59,41 @@ def list_search_console_properties(credentials):
     return [site['siteUrl'] for site in site_list.get('siteEntry', [])] or ["No properties found"]
 
 
-def fetch_search_console_data(webproperty, search_type, start_date, end_date, dimensions):
+def get_device_options():
+    """ Return device options for selection including 'All Devices' """
+    return ['All Devices', 'desktop', 'mobile', 'tablet']
+
+
+def update_dimensions_options(selected_search_type):
+    """ Update available dimensions based on selected search type """
+    base_dimensions = ['page', 'query', 'country', 'date']
+    if selected_search_type in ['web', 'image', 'video', 'news', 'discover', 'googleNews']:
+        return base_dimensions + ['device', 'searchAppearance']
+    else:
+        return base_dimensions
+
+
+def fetch_search_console_data(webproperty, search_type, start_date, end_date, dimensions, device_type=None):
     query = webproperty.query.range(start_date, end_date).search_type(search_type)
     for dimension in dimensions:
         query = query.dimension(dimension)
+
+    # Apply device type filter if 'device' is in dimensions and device_type is specified and not 'All Devices'
+    if 'device' in dimensions and device_type and device_type != 'All Devices':
+        device_filter = {
+            'dimension': 'device',
+            'operator': 'equals',
+            'expression': device_type
+        }
+        query = query.filter(**device_filter)
+
     return query.get().to_dataframe()
 
-def fetch_data_with_loading(webproperty, search_type, start_date, end_date, dimensions):
+
+def fetch_data_with_loading(webproperty, search_type, start_date, end_date, dimensions, device_type=None):
     with st.spinner('Fetching data...'):
         try:
-            return fetch_search_console_data(webproperty, search_type, start_date, end_date, dimensions)
+            return fetch_search_console_data(webproperty, search_type, start_date, end_date, dimensions, device_type)
         except Exception as e:
             handle_error(e)
             return None
@@ -110,16 +135,24 @@ if st.session_state.get('credentials'):
         selected_property = st.selectbox("Select a Search Console Property:", properties)
         webproperty = account[selected_property]
 
-        search_type = st.selectbox("Select Search Type:", ['web', 'image', 'video', 'news', 'discover', 'googleNews'], index=0)
+        search_type = st.selectbox("Select Search Type:", ['web', 'image', 'video', 'news', 'discover', 'googleNews'],
+                                   index=0)
         start_date = st.date_input("Start Date")
         end_date = st.date_input("End Date")
 
-        # Allow user to select dimensions
-        selected_dimensions = st.multiselect("Select Dimensions:",
-                                             ['page', 'query', 'country', 'device', 'date', 'searchAppearance'],
-                                             default=['page', 'country', 'device'])
+        # Dynamic dimension selection
+        available_dimensions = update_dimensions_options(search_type)
+        selected_dimensions = st.multiselect("Select Dimensions:", available_dimensions, default=['page', 'country'])
+
+        # Sub-options for device selection
+        if 'device' in selected_dimensions:
+            device_options = get_device_options()
+            selected_device = st.selectbox("Select Device Type:", device_options, index=0)  # 'All Devices' as default
+        else:
+            selected_device = None
 
         if st.button("Fetch Data"):
-            report = fetch_data_with_loading(webproperty, search_type, start_date, end_date, selected_dimensions)
+            report = fetch_data_with_loading(webproperty, search_type, start_date, end_date, selected_dimensions,
+                                             selected_device)
             if report is not None:
                 st.dataframe(report)

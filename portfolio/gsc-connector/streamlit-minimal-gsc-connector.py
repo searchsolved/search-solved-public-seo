@@ -2,6 +2,7 @@ import streamlit as st
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 import searchconsole
+
 import pandas as pd
 
 # Streamlit page configuration
@@ -58,24 +59,25 @@ def list_search_console_properties(credentials):
     return [site['siteUrl'] for site in site_list.get('siteEntry', [])] or ["No properties found"]
 
 
-def fetch_search_console_data(webproperty, search_type, start_date, end_date):
-    return webproperty.query.range(start_date, end_date).search_type(search_type).dimension('page').get().to_dataframe()
+def fetch_search_console_data(webproperty, search_type, start_date, end_date, dimensions):
+    query = webproperty.query.range(start_date, end_date).search_type(search_type)
+    for dimension in dimensions:
+        query = query.dimension(dimension)
+    return query.get().to_dataframe()
+
+def fetch_data_with_loading(webproperty, search_type, start_date, end_date, dimensions):
+    with st.spinner('Fetching data...'):
+        try:
+            return fetch_search_console_data(webproperty, search_type, start_date, end_date, dimensions)
+        except Exception as e:
+            handle_error(e)
+            return None
 
 
 # Error Handling and Loading Functions
 def handle_error(e):
     """ Log and display errors """
     st.error(f"An error occurred: {e}")
-
-
-@st.cache(suppress_st_warning=True)
-def fetch_data_with_loading(webproperty, search_type, start_date, end_date):
-    with st.spinner('Fetching data...'):
-        try:
-            return fetch_search_console_data(webproperty, search_type, start_date, end_date)
-        except Exception as e:
-            handle_error(e)
-            return None
 
 
 # ---------------------
@@ -108,12 +110,16 @@ if st.session_state.get('credentials'):
         selected_property = st.selectbox("Select a Search Console Property:", properties)
         webproperty = account[selected_property]
 
-        search_type = st.selectbox("Select Search Type:", ['web', 'image', 'video', 'news', 'discover', 'googleNews'],
-                                   index=0)
+        search_type = st.selectbox("Select Search Type:", ['web', 'image', 'video', 'news', 'discover', 'googleNews'], index=0)
         start_date = st.date_input("Start Date")
         end_date = st.date_input("End Date")
 
+        # Allow user to select dimensions
+        selected_dimensions = st.multiselect("Select Dimensions:",
+                                             ['page', 'query', 'country', 'device', 'date', 'searchAppearance'],
+                                             default=['page', 'country', 'device'])
+
         if st.button("Fetch Data"):
-            report = fetch_data_with_loading(webproperty, search_type, start_date, end_date)
+            report = fetch_data_with_loading(webproperty, search_type, start_date, end_date, selected_dimensions)
             if report is not None:
                 st.dataframe(report)

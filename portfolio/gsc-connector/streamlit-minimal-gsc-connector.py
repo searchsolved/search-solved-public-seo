@@ -11,8 +11,8 @@ import pandas as pd
 import searchconsole
 
 # Configuration: Set to True if running locally, False if running on Streamlit Cloud
-IS_LOCAL = True
-# IS_LOCAL = False
+# IS_LOCAL = True
+IS_LOCAL = False
 
 # Constants
 SEARCH_TYPES = ["web", "image", "video", "news", "discover", "googleNews"]
@@ -198,8 +198,6 @@ def show_google_sign_in(auth_url):
             # Open the authentication URL
             st.write('Please click the link below to sign in:')
             st.markdown(f'[Google Sign-In]({auth_url})', unsafe_allow_html=True)
-
-
 
 
 def show_property_selector(properties, account):

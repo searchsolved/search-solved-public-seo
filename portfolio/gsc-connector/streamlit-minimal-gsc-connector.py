@@ -23,8 +23,8 @@ def configure_streamlit():
     st.title('Google Search Console Data App')
 
 
-def initialize_session_state():
-    # Initialize or set default values for necessary session state variables
+def initialise_session_state():
+    # initialise or set default values for necessary session state variables
     if 'selected_property' not in st.session_state:
         st.session_state.selected_property = None
 
@@ -225,7 +225,7 @@ def main():
     if not st.session_state.get('credentials'):
         display_google_sign_in(st.session_state.auth_url)
     else:
-        initialize_session_state()
+        initialise_session_state()
         account = authenticate_searchconsole(client_config, st.session_state.credentials)
         properties = list_search_console_properties(st.session_state.credentials)
 

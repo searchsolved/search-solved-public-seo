@@ -1,6 +1,8 @@
 # Lee Foot 27th December 2023
 # More like this at https://leefoot.co.uk
 
+"""Modular GSC streamlit app which can be used as a foundation to build more complex streamlit apps using Search Console as the data source."""
+
 # Standard library imports
 import datetime
 import base64

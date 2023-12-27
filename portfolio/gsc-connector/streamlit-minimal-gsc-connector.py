@@ -12,7 +12,7 @@ DATE_RANGE_OPTIONS = ['Last 7 Days', 'Last 30 Days', 'Last 3 Months', 'Last 6 Mo
                       'Last 16 Months']
 DEVICE_OPTIONS = ['All Devices', 'desktop', 'mobile', 'tablet']
 BASE_DIMENSIONS = ['page', 'query', 'country', 'date']
-MAX_ROWS = 10_000
+MAX_ROWS = 25_000
 DF_PREVIEW_ROWS = 100
 
 
@@ -23,7 +23,7 @@ DF_PREVIEW_ROWS = 100
 def configure_streamlit():
     st.set_page_config(page_title="✨ Simple Google Search Console Data | LeeFoot.co.uk", layout="wide")
     st.title("✨ Simple Google Search Console Data | Dec 23")
-    st.markdown("### Bare Bones GSC Data Extractor. (Max 10,000 Rows)")
+    st.markdown(f"### Lightweight GSC Data Extractor. (Max {MAX_ROWS} Rows)")
 
     st.markdown(
         """

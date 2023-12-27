@@ -4,6 +4,7 @@ from googleapiclient.discovery import build
 import searchconsole
 import datetime
 import pandas as pd
+import base64
 
 # Constants
 SEARCH_TYPES = ['web', 'image', 'video', 'news', 'discover', 'googleNews']
@@ -22,6 +23,20 @@ def configure_streamlit():
     st.set_page_config(page_title="Google Search Console Data", layout="wide")
     st.title('Google Search Console Data App')
 
+def configure_streamlit():
+    st.set_page_config(page_title="✨ Simple Google Search Console Data | LeeFoot.co.uk", layout="wide")
+    st.title("✨ Simple Google Search Console Data | Dec 23")
+    st.markdown("### Bare Bones GSC Data Extractor. (Max 10,000 Rows)")
+
+    st.markdown(
+        """
+        <p>
+            Created by <a href="https://twitter.com/LeeFootSEO" target="_blank">LeeFootSEO</a> |
+            <a href="https://leefoot.co.uk" target="_blank">More Apps & Scripts on my Website</a>
+        </p>
+        """,
+        unsafe_allow_html=True
+    )
 
 def initialise_session_state():
     # initialise or set default values for necessary session state variables
@@ -35,7 +50,8 @@ def initialise_session_state():
         st.session_state.selected_date_range = 'Last 7 Days'
 
     if 'selected_dimensions' not in st.session_state:
-        st.session_state.selected_dimensions = ['page', 'country']
+        st.session_state.selected_dimensions = ['page', 'query']
+
 
 # -------------
 # Google Authentication Functions
@@ -140,13 +156,32 @@ def initialise_session_state():
     if 'selected_date_range' not in st.session_state:
         st.session_state.selected_date_range = 'Last 7 Days'
     if 'selected_dimensions' not in st.session_state:
-        st.session_state.selected_dimensions = ['page', 'country']
+        st.session_state.selected_dimensions = ['page', 'query']
     if 'selected_device' not in st.session_state:
         st.session_state.selected_device = 'All Devices'
 
 
 def on_property_change():
     st.session_state.selected_property = st.session_state['selected_property_selector']
+
+
+# -------------
+# File & Download Operations
+# -------------
+
+def display_dataframe(report):
+    # Display only the first 100 rows
+    st.dataframe(report.head(100))
+
+
+def download_link_csv(report):
+    def to_csv(df):
+        return df.to_csv(index=False, encoding='utf-8-sig')
+
+    csv = to_csv(report)
+    b64_csv = base64.b64encode(csv.encode()).decode()
+    href = f'<a href="data:file/csv;base64,{b64_csv}" download="search_console_data.csv">Download CSV File</a>'
+    st.markdown(href, unsafe_allow_html=True)
 
 
 # -------------
@@ -201,8 +236,10 @@ def display_dimensions_selector(search_type):
 def display_fetch_data_button(webproperty, search_type, start_date, end_date, selected_dimensions):
     if st.button("Fetch Data"):
         report = fetch_data_with_loading(webproperty, search_type, start_date, end_date, selected_dimensions)
+
         if report is not None:
-            st.dataframe(report)
+            display_dataframe(report)
+            download_link_csv(report)
 
 
 # -------------
@@ -236,6 +273,7 @@ def main():
             start_date, end_date = calculate_date_range(date_range_selection)
             selected_dimensions = display_dimensions_selector(search_type)
             display_fetch_data_button(webproperty, search_type, start_date, end_date, selected_dimensions)
+
 
 if __name__ == "__main__":
     main()

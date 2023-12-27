@@ -4,6 +4,7 @@ import base64
 
 # Related third-party imports
 import streamlit as st
+from streamlit_elements import Elements
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 import pandas as pd
@@ -192,9 +193,15 @@ def download_csv_link(report):
 # -------------
 
 def show_google_sign_in(auth_url):
-    # needs to open in a new windows, otherwise google will refuse to connect.
-    st.markdown(f'<a href="{auth_url}" target="_blank" class="btn btn-primary">👉 Sign Into Your GSC Account to Get Started</a>',
-                unsafe_allow_html=True)
+    with Elements():
+        m = Elements()
+        m.button("Sign in with Google",
+                 href=auth_url,
+                 target="_blank",
+                 size="large",
+                 variant="contained",
+                 start_icon=m.icons.exit_to_app,
+                 style={"color": "#FFFFFF", "background": "#4285F4"})
 
 
 def show_property_selector(properties, account):

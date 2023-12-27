@@ -5,17 +5,27 @@ import searchconsole
 import datetime
 import pandas as pd
 
-# Streamlit page configuration
-st.set_page_config(page_title="Google Search Console Data", layout="wide")
-
 # Constants
 SEARCH_TYPES = ['web', 'image', 'video', 'news', 'discover', 'googleNews']
-DATE_RANGE_OPTIONS = ['Last 7 Days', 'Last 30 Days', 'Last 3 Months', 'Last 6 Months', 'Last 12 Months', 'Last 16 Months']
+DATE_RANGE_OPTIONS = ['Last 7 Days', 'Last 30 Days', 'Last 3 Months', 'Last 6 Months', 'Last 12 Months',
+                      'Last 16 Months']
 DEVICE_OPTIONS = ['All Devices', 'desktop', 'mobile', 'tablet']
 BASE_DIMENSIONS = ['page', 'query', 'country', 'date']
 MAX_ROWS = 10_000
 
-# Function Definitions
+
+# -------------
+# Streamlit App Configuration
+# -------------
+
+def configure_streamlit():
+    st.set_page_config(page_title="Google Search Console Data", layout="wide")
+    st.title('Google Search Console Data App')
+
+
+# -------------
+# Google Authentication Functions
+# -------------
 
 def load_client_config():
     return {
@@ -28,15 +38,18 @@ def load_client_config():
         }
     }
 
-def initialize_oauth_flow(client_config):
+
+def initialise_oauth_flow(client_config):
     scopes = ['https://www.googleapis.com/auth/webmasters']
     return Flow.from_client_config(client_config, scopes=scopes,
                                    redirect_uri=client_config["installed"]["redirect_uris"][0])
 
+
 def authenticate_google(client_config):
-    flow = initialize_oauth_flow(client_config)
+    flow = initialise_oauth_flow(client_config)
     auth_url, _ = flow.authorization_url(prompt='consent')
     return flow, auth_url
+
 
 def authenticate_searchconsole(client_config, credentials):
     token = {
@@ -50,13 +63,16 @@ def authenticate_searchconsole(client_config, credentials):
     }
     return searchconsole.authenticate(client_config=client_config, credentials=token)
 
+
+# -------------
+# Data Fetching Functions
+# -------------
+
 def list_search_console_properties(credentials):
     service = build('webmasters', 'v3', credentials=credentials)
     site_list = service.sites().list().execute()
     return [site['siteUrl'] for site in site_list.get('siteEntry', [])] or ["No properties found"]
 
-def update_dimensions_options(selected_search_type):
-    return BASE_DIMENSIONS + ['device', 'searchAppearance'] if selected_search_type in SEARCH_TYPES else BASE_DIMENSIONS
 
 def fetch_search_console_data(webproperty, search_type, start_date, end_date, dimensions, device_type=None):
     query = webproperty.query.range(start_date, end_date).search_type(search_type).dimension(*dimensions)
@@ -68,9 +84,19 @@ def fetch_search_console_data(webproperty, search_type, start_date, end_date, di
         handle_error(e)
         return pd.DataFrame()
 
+
 def fetch_data_with_loading(webproperty, search_type, start_date, end_date, dimensions, device_type=None):
     with st.spinner('Fetching data...'):
         return fetch_search_console_data(webproperty, search_type, start_date, end_date, dimensions, device_type)
+
+
+# -------------
+# Utility Functions
+# -------------
+
+def update_dimensions_options(selected_search_type):
+    return BASE_DIMENSIONS + ['device', 'searchAppearance'] if selected_search_type in SEARCH_TYPES else BASE_DIMENSIONS
+
 
 def calculate_date_range(selection):
     range_map = {
@@ -84,10 +110,12 @@ def calculate_date_range(selection):
     today = datetime.date.today()
     return today - datetime.timedelta(days=range_map.get(selection, 0)), today
 
+
 def handle_error(e):
     st.error(f"An error occurred: {e}")
 
-def initialize_session_state():
+
+def initialise_session_state():
     if 'selected_property' not in st.session_state:
         st.session_state.selected_property = None
     if 'selected_search_type' not in st.session_state:
@@ -99,81 +127,112 @@ def initialize_session_state():
     if 'selected_device' not in st.session_state:
         st.session_state.selected_device = 'All Devices'
 
+
 def on_property_change():
     st.session_state.selected_property = st.session_state['selected_property_selector']
 
-# Streamlit App Layout
 
-st.title('Google Search Console Data App')
+# -------------
+# Streamlit UI Components
+# -------------
 
-client_config = load_client_config()
-
-if 'auth_flow' not in st.session_state or 'auth_url' not in st.session_state:
-    st.session_state.auth_flow, st.session_state.auth_url = authenticate_google(client_config)
-
-query_params = st.experimental_get_query_params()
-auth_code = query_params.get("code", [None])[0]
-
-if auth_code and not st.session_state.get('credentials'):
-    st.session_state.auth_flow.fetch_token(code=auth_code)
-    st.session_state.credentials = st.session_state.auth_flow.credentials
-
-if not st.session_state.get('credentials'):
-    st.markdown(f'<a href="{st.session_state.auth_url}" target="_self" class="btn btn-primary">Sign in with Google</a>',
+def display_google_sign_in(auth_url):
+    st.markdown(f'<a href="{auth_url}" target="_self" class="btn btn-primary">Sign in with Google</a>',
                 unsafe_allow_html=True)
 
-initialize_session_state()
 
-if st.session_state.get('credentials'):
-    account = authenticate_searchconsole(client_config, st.session_state.credentials)
-    properties = list_search_console_properties(st.session_state.credentials)
+def display_property_selector(properties, account):
+    selected_property = st.selectbox(
+        "Select a Search Console Property:",
+        properties,
+        index=properties.index(
+            st.session_state.selected_property) if st.session_state.selected_property in properties else 0,
+        key='selected_property_selector',
+        on_change=on_property_change
+    )
+    return account[selected_property]
 
-    if properties:
-        selected_property = st.selectbox(
-            "Select a Search Console Property:",
-            properties,
-            index=properties.index(st.session_state.selected_property) if st.session_state.selected_property in properties else 0,
-            key='selected_property_selector',
-            on_change=on_property_change
+
+def display_search_type_selector():
+    return st.selectbox(
+        "Select Search Type:",
+        SEARCH_TYPES,
+        index=SEARCH_TYPES.index(st.session_state.selected_search_type),
+        key='search_type_selector'
+    )
+
+
+def display_date_range_selector():
+    return st.selectbox(
+        "Select Date Range:",
+        DATE_RANGE_OPTIONS,
+        index=DATE_RANGE_OPTIONS.index(st.session_state.selected_date_range),
+        key='date_range_selector'
+    )
+
+
+def display_dimensions_selector(search_type):
+    available_dimensions = update_dimensions_options(search_type)
+    return st.multiselect(
+        "Select Dimensions:",
+        available_dimensions,
+        default=st.session_state.selected_dimensions,
+        key='dimensions_selector'
+    )
+
+
+def display_device_selector(selected_dimensions):
+    if 'device' in selected_dimensions:
+        return st.selectbox(
+            "Select Device Type:",
+            DEVICE_OPTIONS,
+            index=DEVICE_OPTIONS.index(st.session_state.selected_device),
+            key='device_selector'
         )
+    else:
+        return None
 
-        webproperty = account[selected_property]
 
-        search_type = st.selectbox(
-            "Select Search Type:",
-            SEARCH_TYPES,
-            index=SEARCH_TYPES.index(st.session_state.selected_search_type),
-            key='search_type_selector'
-        )
+def display_fetch_data_button(webproperty, search_type, start_date, end_date, selected_dimensions, selected_device):
+    if st.button("Fetch Data"):
+        report = fetch_data_with_loading(webproperty, search_type, start_date, end_date, selected_dimensions,
+                                         selected_device)
+        if report is not None:
+            st.dataframe(report)
 
-        date_range_selection = st.selectbox(
-            "Select Date Range:",
-            DATE_RANGE_OPTIONS,
-            index=DATE_RANGE_OPTIONS.index(st.session_state.selected_date_range),
-            key='date_range_selector'
-        )
 
-        start_date, end_date = calculate_date_range(date_range_selection)
+# -------------
+# Main Streamlit App Function
+# -------------
 
-        available_dimensions = update_dimensions_options(search_type)
-        selected_dimensions = st.multiselect(
-            "Select Dimensions:",
-            available_dimensions,
-            default=st.session_state.selected_dimensions,
-            key='dimensions_selector'
-        )
+def main():
+    configure_streamlit()
+    client_config = load_client_config()
+    st.session_state.auth_flow, st.session_state.auth_url = authenticate_google(client_config)
 
-        if 'device' in selected_dimensions:
-            selected_device = st.selectbox(
-                "Select Device Type:",
-                DEVICE_OPTIONS,
-                index=DEVICE_OPTIONS.index(st.session_state.selected_device),
-                key='device_selector'
-            )
-        else:
-            selected_device = None
+    query_params = st.experimental_get_query_params()
+    auth_code = query_params.get("code", [None])[0]
 
-        if st.button("Fetch Data"):
-            report = fetch_data_with_loading(webproperty, search_type, start_date, end_date, selected_dimensions, selected_device)
-            if report is not None:
-                st.dataframe(report)
+    if auth_code and not st.session_state.get('credentials'):
+        st.session_state.auth_flow.fetch_token(code=auth_code)
+        st.session_state.credentials = st.session_state.auth_flow.credentials
+
+    if not st.session_state.get('credentials'):
+        display_google_sign_in(st.session_state.auth_url)
+    else:
+        initialise_session_state()
+        account = authenticate_searchconsole(client_config, st.session_state.credentials)
+        properties = list_search_console_properties(st.session_state.credentials)
+        if properties:
+            webproperty = display_property_selector(properties, account)
+            search_type = display_search_type_selector()
+            date_range_selection = display_date_range_selector()
+            start_date, end_date = calculate_date_range(date_range_selection)
+            selected_dimensions = display_dimensions_selector(search_type)
+            selected_device = display_device_selector(selected_dimensions)
+            display_fetch_data_button(webproperty, search_type, start_date, end_date, selected_dimensions,
+                                      selected_device)
+
+
+if __name__ == "__main__":
+    main()

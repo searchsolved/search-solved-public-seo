@@ -8,6 +8,11 @@ import pandas as pd
 st.set_page_config(page_title="Google Search Console Data", layout="wide")
 
 
+# ---------------------
+# Function Definitions
+# ---------------------
+
+# Configuration and Authentication Functions
 def load_client_config():
     return {
         "installed": {
@@ -33,13 +38,6 @@ def authenticate_google(client_config):
     return flow, auth_url
 
 
-def list_search_console_properties(credentials):
-    service = build('webmasters', 'v3', credentials=credentials)
-    site_list = service.sites().list().execute()
-
-    return [site['siteUrl'] for site in site_list.get('siteEntry', [])] or ["No properties found"]
-
-
 def authenticate_searchconsole(client_config, credentials):
     token = {
         'token': credentials.token,
@@ -53,11 +51,37 @@ def authenticate_searchconsole(client_config, credentials):
     return searchconsole.authenticate(client_config=client_config, credentials=token)
 
 
+# Data Fetching and Processing Functions
+def list_search_console_properties(credentials):
+    service = build('webmasters', 'v3', credentials=credentials)
+    site_list = service.sites().list().execute()
+    return [site['siteUrl'] for site in site_list.get('siteEntry', [])] or ["No properties found"]
+
+
 def fetch_search_console_data(webproperty, search_type, start_date, end_date):
     return webproperty.query.range(start_date, end_date).search_type(search_type).dimension('page').get().to_dataframe()
 
 
-# Streamlit app layout
+# Error Handling and Loading Functions
+def handle_error(e):
+    """ Log and display errors """
+    st.error(f"An error occurred: {e}")
+
+
+@st.cache(suppress_st_warning=True)
+def fetch_data_with_loading(webproperty, search_type, start_date, end_date):
+    with st.spinner('Fetching data...'):
+        try:
+            return fetch_search_console_data(webproperty, search_type, start_date, end_date)
+        except Exception as e:
+            handle_error(e)
+            return None
+
+
+# ---------------------
+# Streamlit App Layout
+# ---------------------
+
 st.title('Google Search Console Data App')
 
 client_config = load_client_config()
@@ -73,8 +97,8 @@ if auth_code and not st.session_state.get('credentials'):
     st.session_state.credentials = st.session_state.auth_flow.credentials
 
 if not st.session_state.get('credentials'):
-    # Hyperlink styled as a button
-    st.markdown(f'<a href="{st.session_state.auth_url}" target="_self" class="btn btn-primary">Sign in with Google</a>', unsafe_allow_html=True)
+    st.markdown(f'<a href="{st.session_state.auth_url}" target="_self" class="btn btn-primary">Sign in with Google</a>',
+                unsafe_allow_html=True)
 
 if st.session_state.get('credentials'):
     account = authenticate_searchconsole(client_config, st.session_state.credentials)
@@ -90,5 +114,6 @@ if st.session_state.get('credentials'):
         end_date = st.date_input("End Date")
 
         if st.button("Fetch Data"):
-            report = fetch_search_console_data(webproperty, search_type, start_date, end_date)
-            st.dataframe(report)
+            report = fetch_data_with_loading(webproperty, search_type, start_date, end_date)
+            if report is not None:
+                st.dataframe(report)

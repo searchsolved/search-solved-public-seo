@@ -21,11 +21,6 @@ DF_PREVIEW_ROWS = 100
 # -------------
 
 def configure_streamlit():
-    st.set_page_config(page_title="Google Search Console Data", layout="wide")
-    st.title('Google Search Console Data App')
-
-
-def configure_streamlit():
     st.set_page_config(page_title="✨ Simple Google Search Console Data | LeeFoot.co.uk", layout="wide")
     st.title("✨ Simple Google Search Console Data | Dec 23")
     st.markdown("### Bare Bones GSC Data Extractor. (Max 10,000 Rows)")

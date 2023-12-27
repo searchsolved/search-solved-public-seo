@@ -1,0 +1,4 @@
+google_auth_oauthlib==1.2.0
+google-api-python-client==2.111.0
+searchconsole==0.0.4
+pandas==2.1.4

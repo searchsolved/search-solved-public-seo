@@ -1,3 +1,6 @@
+# Simple GSC Connector for Streamlit by Lee Foot 28th December 2023
+# More scripts and apps like this at https://leefoot.co.uk
+
 # Standard library imports
 import datetime
 import base64

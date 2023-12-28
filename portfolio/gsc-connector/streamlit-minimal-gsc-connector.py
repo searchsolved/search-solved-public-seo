@@ -38,6 +38,10 @@ DF_PREVIEW_ROWS = 100
 # -------------
 
 def setup_streamlit():
+    """
+    Configures Streamlit's page settings and displays the app title and markdown information.
+    Sets the page layout, title, and markdown content with links and app description.
+    """
     st.set_page_config(page_title="✨ Simple Google Search Console Data | LeeFoot.co.uk", layout="wide")
     st.title("✨ Simple Google Search Console Data | Dec 23")
     st.markdown(f"### Lightweight GSC Data Extractor. (Max {MAX_ROWS:,} Rows)")
@@ -54,6 +58,10 @@ def setup_streamlit():
 
 
 def init_session_state():
+    """
+    Initialises or updates the Streamlit session state variables for property selection,
+    search type, date range, dimensions, and device type.
+    """
     if 'selected_property' not in st.session_state:
         st.session_state.selected_property = None
     if 'selected_search_type' not in st.session_state:
@@ -71,6 +79,10 @@ def init_session_state():
 # -------------
 
 def load_config():
+    """
+    Loads the Google API client configuration from Streamlit secrets.
+    Returns a dictionary with the client configuration for OAuth.
+    """
     client_config = {
         "installed": {
             "client_id": str(st.secrets["installed"]["client_id"]),
@@ -88,6 +100,10 @@ def load_config():
 
 
 def init_oauth_flow(client_config):
+    """
+    Initialises the OAuth flow for Google API authentication using the client configuration.
+    Sets the necessary scopes and returns the configured Flow object.
+    """
     scopes = ["https://www.googleapis.com/auth/webmasters"]
     return Flow.from_client_config(
         client_config,
@@ -97,12 +113,20 @@ def init_oauth_flow(client_config):
 
 
 def google_auth(client_config):
+    """
+    Starts the Google authentication process using OAuth.
+    Generates and returns the OAuth flow and the authentication URL.
+    """
     flow = init_oauth_flow(client_config)
     auth_url, _ = flow.authorization_url(prompt="consent")
     return flow, auth_url
 
 
 def auth_search_console(client_config, credentials):
+    """
+    Authenticates the user with the Google Search Console API using provided credentials.
+    Returns an authenticated searchconsole client.
+    """
     token = {
         "token": credentials.token,
         "refresh_token": credentials.refresh_token,
@@ -120,12 +144,20 @@ def auth_search_console(client_config, credentials):
 # -------------
 
 def list_gsc_properties(credentials):
+    """
+    Lists all Google Search Console properties accessible with the given credentials.
+    Returns a list of property URLs or a message if no properties are found.
+    """
     service = build('webmasters', 'v3', credentials=credentials)
     site_list = service.sites().list().execute()
     return [site['siteUrl'] for site in site_list.get('siteEntry', [])] or ["No properties found"]
 
 
 def fetch_gsc_data(webproperty, search_type, start_date, end_date, dimensions, device_type=None):
+    """
+    Fetches Google Search Console data for a specified property, date range, dimensions, and device type.
+    Handles errors and returns the data as a DataFrame.
+    """
     query = webproperty.query.range(start_date, end_date).search_type(search_type).dimension(*dimensions)
 
     if 'device' in dimensions and device_type and device_type != 'All Devices':
@@ -139,6 +171,10 @@ def fetch_gsc_data(webproperty, search_type, start_date, end_date, dimensions, d
 
 
 def fetch_data_loading(webproperty, search_type, start_date, end_date, dimensions, device_type=None):
+    """
+    Fetches Google Search Console data with a loading indicator. Utilises 'fetch_gsc_data' for data retrieval.
+    Returns the fetched data as a DataFrame.
+    """
     with st.spinner('Fetching data...'):
         return fetch_gsc_data(webproperty, search_type, start_date, end_date, dimensions, device_type)
 
@@ -148,10 +184,18 @@ def fetch_data_loading(webproperty, search_type, start_date, end_date, dimension
 # -------------
 
 def update_dimensions(selected_search_type):
-    return BASE_DIMENSIONS + ['device', 'searchAppearance'] if selected_search_type in SEARCH_TYPES else BASE_DIMENSIONS
+    """
+    Updates and returns the list of dimensions based on the selected search type.
+    Adds 'device' to dimensions if the search type requires it.
+    """
+    return BASE_DIMENSIONS + ['device'] if selected_search_type in SEARCH_TYPES else BASE_DIMENSIONS
 
 
 def calc_date_range(selection):
+    """
+    Calculates the date range based on the selected range option.
+    Returns the start and end dates for the specified range.
+    """
     range_map = {
         'Last 7 Days': 7,
         'Last 30 Days': 30,
@@ -165,10 +209,18 @@ def calc_date_range(selection):
 
 
 def show_error(e):
+    """
+    Displays an error message in the Streamlit app.
+    Formats and shows the provided error 'e'.
+    """
     st.error(f"An error occurred: {e}")
 
 
 def property_change():
+    """
+    Updates the 'selected_property' in the Streamlit session state.
+    Triggered on change of the property selection.
+    """
     st.session_state.selected_property = st.session_state['selected_property_selector']
 
 
@@ -177,11 +229,17 @@ def property_change():
 # -------------
 
 def show_dataframe(report):
+    """
+    Shows a preview of the first 100 rows of the report DataFrame in an expandable section.
+    """
     with st.expander("Preview the First 100 Rows"):
         st.dataframe(report.head(DF_PREVIEW_ROWS))
 
 
 def download_csv_link(report):
+    """
+    Generates and displays a download link for the report DataFrame in CSV format.
+    """
     def to_csv(df):
         return df.to_csv(index=False, encoding='utf-8-sig')
 
@@ -196,6 +254,9 @@ def download_csv_link(report):
 # -------------
 
 def show_google_sign_in(auth_url):
+    """
+    Displays the Google sign-in button and authentication URL in the Streamlit sidebar.
+    """
     with st.sidebar:
         if st.button("Sign in with Google"):
             # Open the authentication URL
@@ -204,6 +265,10 @@ def show_google_sign_in(auth_url):
 
 
 def show_property_selector(properties, account):
+    """
+    Displays a dropdown selector for Google Search Console properties.
+    Returns the selected property's webproperty object.
+    """
     selected_property = st.selectbox(
         "Select a Search Console Property:",
         properties,
@@ -216,6 +281,10 @@ def show_property_selector(properties, account):
 
 
 def show_search_type_selector():
+    """
+    Displays a dropdown selector for choosing the search type.
+    Returns the selected search type.
+    """
     return st.selectbox(
         "Select Search Type:",
         SEARCH_TYPES,
@@ -225,6 +294,10 @@ def show_search_type_selector():
 
 
 def show_date_range_selector():
+    """
+    Displays a dropdown selector for choosing the date range.
+    Returns the selected date range option.
+    """
     return st.selectbox(
         "Select Date Range:",
         DATE_RANGE_OPTIONS,
@@ -234,6 +307,10 @@ def show_date_range_selector():
 
 
 def show_dimensions_selector(search_type):
+    """
+    Displays a multi-select box for choosing dimensions based on the selected search type.
+    Returns the selected dimensions.
+    """
     available_dimensions = update_dimensions(search_type)
     return st.multiselect(
         "Select Dimensions:",
@@ -244,6 +321,10 @@ def show_dimensions_selector(search_type):
 
 
 def show_fetch_data_button(webproperty, search_type, start_date, end_date, selected_dimensions):
+    """
+    Displays a button to fetch data based on selected parameters.
+    Shows the report DataFrame and download link upon successful data fetching.
+    """
     if st.button("Fetch Data"):
         report = fetch_data_loading(webproperty, search_type, start_date, end_date, selected_dimensions)
 
@@ -258,6 +339,10 @@ def show_fetch_data_button(webproperty, search_type, start_date, end_date, selec
 
 # Main Streamlit App Function
 def main():
+    """
+    The main function for the Streamlit application.
+    Handles the app setup, authentication, UI components, and data fetching logic.
+    """
     setup_streamlit()
     client_config = load_config()
     st.session_state.auth_flow, st.session_state.auth_url = google_auth(client_config)

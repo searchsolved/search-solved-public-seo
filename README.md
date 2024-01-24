@@ -3,8 +3,6 @@ Developed and maintained by [LeeFootSEO](https://leefoot.co.uk).
 
 Follow me: [@LeeFootSEO](https://twitter.com/LeeFootSEO)
 
-[hire me](https://leefoot.co.uk/hire-me/)
-
 A treasure trove of SEO scripts and applications designed to supercharge your digital marketing strategies. This collection is a culmination of practical, scripts developed whilst automating my day job as an [eCommerce SEO Consultant](https://leefoot.co.uk). Dive into a range of tools, from automating mundane tasks to extracting valuable insights from your data.
 
 ## Featured Scripts and Apps

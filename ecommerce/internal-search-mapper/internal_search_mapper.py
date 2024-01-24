@@ -1,4 +1,9 @@
-""" Script by @LeeFootSEO - Early access to scripts and to request features Join the Patreon: https://www.patreon.com/leefootseo
+####################################################################################
+# Website  : https://leefoot.co.uk/                                                #
+# Contact  : https://leefoot.co.uk/hire-me/                                        #
+# LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
+# Twitter  : https://twitter.com/LeeFootSEO                                        #
+####################################################################################
 
 Internal Search Report Mapper V2 by Lee Foot 11/01/2021 @LeeFootSEO
 Takes the Google Analytics search terms report and merges with a Screaming Frog crawl file to find opportunities to map

@@ -1,6 +1,6 @@
 """ Automatic Website Migration Tool V5, By @LeeFootSEO | https://LeeFoot.co.uk | 06/12/2023 
 
-Uses a grid search to find the highest scoring match between columns specified in the matching_columns varaible.
+Uses a grid search to find the highest scoring match between columns specified in the matching_columns variable.
 """
 
 import os

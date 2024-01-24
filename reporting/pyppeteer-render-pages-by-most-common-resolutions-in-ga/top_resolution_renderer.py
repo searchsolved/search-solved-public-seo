@@ -1,7 +1,9 @@
-"""
-Script by @LeeFootSEO
-For early access to scripts / request features: https://www.patreon.com/leefootseo
-"""
+####################################################################################
+# Website  : https://leefoot.co.uk/                                                #
+# Contact  : https://leefoot.co.uk/hire-me/                                        #
+# LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
+# Twitter  : https://twitter.com/LeeFootSEO                                        #
+####################################################################################
 
 import pandas as pd
 import asyncio

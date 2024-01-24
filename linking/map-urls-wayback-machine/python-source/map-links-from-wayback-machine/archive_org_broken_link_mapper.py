@@ -1,4 +1,9 @@
-"""Script by @LeeFootSEO - Early access to scripts and to request features Join the Patreon: https://www.patreon.com/leefootseo"""
+####################################################################################
+# Website  : https://leefoot.co.uk/                                                #
+# Contact  : https://leefoot.co.uk/hire-me/                                        #
+# LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
+# Twitter  : https://twitter.com/LeeFootSEO                                        #
+####################################################################################
 
 import concurrent.futures
 import logging

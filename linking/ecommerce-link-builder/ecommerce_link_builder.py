@@ -1,8 +1,10 @@
-"""Script by @LeeFootSEO -
-For early access to scripts / request features
-Join the Patreon: https://www.patreon.com/leefootseo"""
+####################################################################################
+# Website  : https://leefoot.co.uk/                                                #
+# Contact  : https://leefoot.co.uk/hire-me/                                        #
+# LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
+# Twitter  : https://twitter.com/LeeFootSEO                                        #
+####################################################################################
 
-# import the libraries
 import time
 import json
 import pandas as pd

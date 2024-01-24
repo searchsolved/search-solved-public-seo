@@ -1,3 +1,10 @@
+####################################################################################
+# Website  : https://leefoot.co.uk/                                                #
+# Contact  : https://leefoot.co.uk/hire-me/                                        #
+# LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
+# Twitter  : https://twitter.com/LeeFootSEO                                        #
+####################################################################################
+
 import streamlit as st
 
 st.set_page_config(page_title="Google Trends & NueralProphet - Explainable Trends at Scale", page_icon="🔎",

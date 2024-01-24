@@ -1,5 +1,4 @@
-
-# LeeFootSEO's GitHub Repository: SEO Scripts and Apps
+# Lee Foot GitHub Repository: SEO Scripts and Apps
 Developed and maintained by [LeeFootSEO](https://leefoot.co.uk).
 Follow me: [@LeeFootSEO](https://twitter.com/LeeFootSEO)
 [hire me](https://leefoot.co.uk/hire-me/)

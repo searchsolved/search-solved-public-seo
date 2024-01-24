@@ -26,14 +26,14 @@ Replace mycsv.csv with the path to your CSV file.
 
 ## Options
 
-* **file_path:** The path to your CSV file.
-* **column_name:** The name of the column in your CSV to be processed.
-* **output_path:** The path where the output CSV will be saved.
-* **chart_type:** The type of chart to generate. Choose between "sunburst" and "treemap".
+* **file-path:** The path to your CSV file.
+* **column-name:** The name of the column in your CSV to be processed.
+* **output-path:** The path where the output CSV will be saved.
+* **chart-type:** The type of chart to generate. Choose between "sunburst" and "treemap".
 * **device:** The device to be used by SentenceTransformer. Choose between "cpu" and "cuda".
-* **model_name:** The name of the SentenceTransformer model to use. For available models, refer to the SentenceTransformers documentation.
-* **min_similarity:** The minimum similarity for clustering. It's a value between 0 and 1, where 1 means exact match and 0 means no match at all.
-* **remove_dupes:** Whether to remove duplicates from the dataset.
+* **model-name:** The name of the SentenceTransformer model to use. For available models, refer to the SentenceTransformers documentation.
+* **min-similarity:** The minimum similarity for clustering. It's a value between 0 and 1, where 1 means exact match and 0 means no match at all.
+* **remove-dupes:** Whether to remove duplicates from the dataset.
 * **volume:** The name of the column containing numerical values. If --volume is used, the keyword with the largest volume will be used as the name of the cluster. If not, the shortest word will be used.
 * **stem:** Whether to perform stemming on the 'hub' column.
 

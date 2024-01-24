@@ -14,7 +14,6 @@ Here’s a snapshot of what you’ll find in this repository:
 - `bert_interlinker`: Leverages BERT to intelligently interlink your site content.
 - `best_selling_products_to_xml_sitemap`: Generates XML sitemaps for your top-selling products.
 - `bulk_keyword_tagger`: Aids in the mass tagging of keywords for your content.
-- `category_splitter_brighton_seo`: Efficiently splits categories for Brighton SEO.
 - `compare_live_metas_to_serps_cse_api`: Compares live meta descriptions and titles to those in SERPs.
 - `create_bcg_matrix_from_ga_landing_page_report`: Creates a BCG matrix from GA landing page reports.
 - `ebay_related_searches`: Fetches and displays related searches from eBay.

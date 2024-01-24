@@ -1,6 +1,0 @@
-git+https://github.com/searchsolved/sentence-transformers-master
-pandas==1.3.5
-chardet
-stqdm
-detect_delimiter
-#anytree

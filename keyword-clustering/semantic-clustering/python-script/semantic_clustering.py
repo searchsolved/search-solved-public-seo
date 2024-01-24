@@ -90,7 +90,7 @@ df.insert(0, col.name, col)
 
 df.sort_values(["Cluster Name", "Keyword"], ascending=[True, True], inplace=True)
 
-newpath = rpath + 'output' 
+newpath = path + 'output' 
 if not os.path.exists(newpath):
     os.makedirs(newpath)
 

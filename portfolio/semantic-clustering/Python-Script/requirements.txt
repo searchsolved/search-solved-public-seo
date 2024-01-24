@@ -1,7 +1,0 @@
-pandas==1.5.3
-sentence-transformers==2.2.2
-polyfuzz==0.4.0
-plotly==5.14.1
-chardet==5.1.0
-nltk==3.8.1
-rich==13.3.5

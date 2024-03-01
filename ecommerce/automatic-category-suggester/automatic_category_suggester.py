@@ -1,3 +1,8 @@
+# Automatic Category Suggester by LeeFoot
+# Twitter: @leefootseo
+# Web: https://LeeFoot.co.uk
+# Contact me if you'd like this run as a managed service.
+
 # Standard Library Imports
 import re
 import string

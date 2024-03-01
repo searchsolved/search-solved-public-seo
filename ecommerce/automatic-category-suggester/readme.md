@@ -2,8 +2,7 @@
 ### Twitter: @LeeFootSEO
 ### Web: https://leefoot.co.uk
 
-This script processes data exported from Screaming Frog to identify product and category pages, generate n-grams for products, calculate exact and partial matches for n-grams and product titles, and perform fuzzy matching to improve match accuracy.
-
+This script merges two crawl files from Screaming Frog to suggest new landing pages to align invetory to search demand.
 ## Preparatory Steps
 
 Before running this script, please follow these steps to prepare your data:

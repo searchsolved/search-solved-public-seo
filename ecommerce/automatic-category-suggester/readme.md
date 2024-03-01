@@ -1,6 +1,7 @@
 # Automatic Category Suggester Script - Updated 01/03/2024
 ### Twitter: @LeeFootSEO
 ### Web: https://leefoot.co.uk
+### Don't want to mess around with Python? Contact me about my managed service and let me take cause of it! https://leefoot.co.uk/services/managed-service/
 
 This script merges two crawl files from Screaming Frog to suggest new landing pages to align invetory to search demand.
 ## Preparatory Steps

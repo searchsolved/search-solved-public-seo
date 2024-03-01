@@ -1,5 +1,6 @@
 # Automatic Category Suggester Script - Updated 01/03/2024
-## by LeeFootSEO | https://leefoot.co.uk
+### Twitter: @LeeFootSEO
+### Web: https://leefoot.co.uk
 
 This script processes data exported from Screaming Frog to identify product and category pages, generate n-grams for products, calculate exact and partial matches for n-grams and product titles, and perform fuzzy matching to improve match accuracy.
 

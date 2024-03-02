@@ -188,4 +188,5 @@ df_ngrams_with_semantic_similarity = calculate_semantic_similarity(df_ngrams, pr
 category_with_semantic_match_keywords = merge_keywords_into_category(df_ngrams_with_semantic_similarity, category)
 
 # Save the result
-category_with_semantic_match_keywords.to_csv("/python_scripts/category_with_semantic_match_keywords.csv")
+category_with_semantic_match_keywords.to_csv("/python_scripts/category_with_semantic_match_keywords.csv", index=False, encoding='utf-8-sig')
+

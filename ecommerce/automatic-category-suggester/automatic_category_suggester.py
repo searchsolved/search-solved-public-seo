@@ -81,6 +81,22 @@ def generate_ngrams(text, min_length=2, max_length=7):
     return ngrams_freq.most_common(100)
 
 
+def filter_df_before_matching(df):
+    # Drop rows where 'Keyword' and 'H1-1' are exactly the same
+    df_filtered = df[df['Keyword'].str.lower() != df['H1-1'].str.lower()]
+
+    # Define prefixes and suffixes to filter out
+    filters = ["and", "with", "for", "mm", "cm", "of"]
+
+    # Combine prefix and suffix filtering in a single step
+    for fltr in filters:
+        prefix, suffix = fltr + " ", " " + fltr
+        df_filtered = df_filtered[~df_filtered['Keyword'].str.lower().str.startswith(prefix)]
+        df_filtered = df_filtered[~df_filtered['Keyword'].str.lower().str.endswith(suffix)]
+
+    return df_filtered
+
+
 # ---------------
 # Match Calculation
 # ---------------
@@ -201,8 +217,11 @@ def main():
     # Generate n-grams for products
     df_ngrams = generate_ngrams_for_products(product)
 
-    # Calculate matches
-    df_ngrams_with_matches = calculate_matches(df_ngrams, product)
+    # NEW: Filter the DataFrame before matching
+    df_ngrams_filtered = filter_df_before_matching(df_ngrams)
+
+    # Calculate matches using the filtered DataFrame
+    df_ngrams_with_matches = calculate_matches(df_ngrams_filtered, product)
 
     # Merge keywords with category data
     category_with_matched_keywords = merge_keywords_with_categories(df_ngrams_with_matches, category)

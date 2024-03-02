@@ -12,13 +12,16 @@ import collections
 import pandas as pd
 from nltk.util import ngrams
 from tqdm import tqdm
-from fuzzywuzzy import fuzz
+from rapidfuzz import fuzz, process
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor
+
 
 # Constants
 # MODEL_TYPE = "paraphrase-MiniLM-L3-v2"  # fastest cosine
 MODEL_TYPE = "multi-qa-mpnet-base-cos-v1"  # best semantic cosine
-
-MIN_MATCHING_PRODUCTS_EXACT = 0
+NUM_WORKERS = 8  # number of workers to use for multi-threading
+MIN_MATCHING_PRODUCTS_EXACT = 0  # filter to a minimum numer of matching products in an exact match
 
 
 # ---------------
@@ -82,38 +85,24 @@ def generate_ngrams(text, min_length=2, max_length=7):
 # Match Calculation
 # ---------------
 
+def exact_match_worker(keyword, product_titles):
+    return sum(keyword == title for title in product_titles)
+
+def partial_match_worker(keyword, product_titles):
+    keyword_words = set(keyword.split())
+    return sum(bool(keyword_words.intersection(set(title.split()))) for title in product_titles)
+
+
 def calculate_exact_matches(df_ngrams, column_name, product_titles):
-    """Calculate exact matches between keywords in a DataFrame and a list of product titles."""
-    # Initialize lists to store the results of match calculations
-    exact_matches_list = []
-
-    # Iterate over each keyword in the DataFrame with progress tracking
-    for keyword in tqdm(df_ngrams[column_name], desc="Checking for Product Matches in Order"):
-        # Exact match calculation
-        exact_matches = sum(keyword == title for title in product_titles)
-        exact_matches_list.append(exact_matches)
-
-    # Assign the calculated matches back to the DataFrame
-    df_ngrams['matching_products_exact'] = exact_matches_list
-
+    with ProcessPoolExecutor() as executor:
+        # Map each keyword to the worker function in parallel and directly assign the results back to the DataFrame
+        df_ngrams['matching_products_exact'] = list(tqdm(executor.map(exact_match_worker, df_ngrams[column_name], [product_titles]*len(df_ngrams)), total=len(df_ngrams), desc="Calculating Exact Matches"))
     return df_ngrams
 
-
 def calculate_partial_matches(df_ngrams, column_name, product_titles):
-    """Calculate partial matches between keywords in a DataFrame and a list of product titles."""
-    # Initialize lists to store the results of match calculations
-    partial_matches_list = []
-
-    # Iterate over each keyword in the DataFrame with progress tracking
-    for keyword in tqdm(df_ngrams[column_name], desc="Checking for Product Matches Out of Order"):
-        # Partial match calculation
-        keyword_words = set(keyword.split())
-        partial_matches = sum(bool(keyword_words.intersection(set(title.split()))) for title in product_titles)
-        partial_matches_list.append(partial_matches)
-
-    # Assign the calculated matches back to the DataFrame
-    df_ngrams['matching_products_partial'] = partial_matches_list
-
+    with ProcessPoolExecutor() as executor:
+        # Map each keyword to the worker function in parallel and directly assign the results back to the DataFrame
+        df_ngrams['matching_products_partial'] = list(tqdm(executor.map(partial_match_worker, df_ngrams[column_name], [product_titles]*len(df_ngrams)), total=len(df_ngrams), desc="Calculating Partial Matches"))
     return df_ngrams
 
 
@@ -125,33 +114,26 @@ def prepare_data_for_fuzzy_matching(df):
     return df
 
 
-def encode_text_with_model(text_list, model, device, text_column_description, batch_size=256):
-    """Encode a list of text with the given model in batches, providing progress updates."""
-    total = len(text_list)
-    num_batches = (total // batch_size) + (1 if total % batch_size != 0 else 0)
-
-    with tqdm(total=num_batches, desc=f"Encoding {text_column_description}", unit="batch") as pbar:
-        embeddings = []
-        for i in range(0, total, batch_size):
-            batch_texts = text_list[i:i + batch_size]
-            batch_embeddings = model.encode(batch_texts, convert_to_tensor=True, show_progress_bar=False).to(device)
-            embeddings.extend(batch_embeddings)
-            pbar.update(1)
-
-    if isinstance(embeddings[0], torch.Tensor):
-        embeddings = torch.stack(embeddings)
-    return embeddings
+def fuzzy_match_single_row(row):
+    # Using RapidFuzz's partial_ratio to calculate the similarity
+    partial_ratio = fuzz.partial_ratio(row['Keyword'].lower(), row['H1-1'].lower())
+    return partial_ratio
 
 
 def fuzzy_match_keyword(df):
     df = prepare_data_for_fuzzy_matching(df)
-    # Loop through each row in the DataFrame
-    for index, row in df.iterrows():
-        # Calculate Token Set Ratio
-        token_set_ratio = fuzz.token_set_ratio(row['Keyword'].lower(), row['H1-1'].lower())
-        df.at[index, 'Similarity'] = token_set_ratio
-    return df
 
+    with tqdm(total=len(df), desc="Calculating Fuzzy Matches") as pbar:
+        with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:  # Adjust `max_workers` as needed
+            futures = {executor.submit(fuzzy_match_single_row, row): index for index, row in df.iterrows()}
+
+            for future in as_completed(futures):
+                result = future.result()
+                row_index = futures[future]
+                df.at[row_index, 'Similarity'] = result
+                pbar.update(1)  # Update progress after each task is completed
+
+    return df
 
 # ---------------
 # Main Processing Flow
@@ -203,9 +185,9 @@ def save_results_to_csv(df, path):
 
 
 def main():
-    df = load_csv('/python_scripts/cat_splitter/internal_html.csv',
+    df = load_csv('/python_scripts/cat_splitter/old_files/internal_html.csv',
                   usecols=["Address", "H1-1", "Title 1", "Page Type"], dtype="str")
-    inlinks = load_csv('/python_scripts/cat_splitter/inlinks.csv', dtype="str")
+    inlinks = load_csv('/python_scripts/cat_splitter//old_files/inlinks.csv', dtype="str")
 
     # clean the source dataframes
     df = filter_status_code(df)
@@ -226,7 +208,7 @@ def main():
     category_with_matched_keywords = merge_keywords_with_categories(df_ngrams_with_matches, category)
 
     # Optional: Apply additional filtering (e.g., fuzzy matching)
-    category_with_matched_keywords_filtered = fuzzy_match_keyword(category_with_matched_keywords, MODEL_TYPE)
+    category_with_matched_keywords_filtered = fuzzy_match_keyword(category_with_matched_keywords)
 
     # Save results
     save_results_to_csv(category_with_matched_keywords_filtered,
@@ -235,4 +217,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

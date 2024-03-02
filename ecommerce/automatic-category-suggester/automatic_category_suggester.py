@@ -8,53 +8,31 @@
 # Web: https://LeeFoot.co.uk
 # Contact me if you'd like this run as a managed service.
 
-# Standard Library Imports
+import pandas as pd
 import re
 import string
-import collections
-
-# Third-Party Library Imports
-import pandas as pd
 from nltk.util import ngrams
-from tqdm import tqdm
-from rapidfuzz import fuzz, process
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from concurrent.futures import ProcessPoolExecutor
+import collections
+from tqdm import tqdm  # Import tqdm for progress tracking
+from sentence_transformers import SentenceTransformer, util
+import torch
+
+MIN_MATCHING_PRODUCTS = 1  # the number of minimum products to match to. (kws found exactly in sequence in products).
+TRANSFORMER_MODEL = "paraphrase-MiniLM-L3-v2"
+
+# Assuming your CSV paths are correct
+inlinks = pd.read_csv('/python_scripts/cat_splitter/old_files/inlinks.csv', dtype="str")
+internal_html = pd.read_csv('/python_scripts/cat_splitter/old_files/internal_html.csv',
+                            usecols=["Address", "H1-1", "Title 1", "Page Type"], dtype="str")
 
 
-# Constants
-# MODEL_TYPE = "paraphrase-MiniLM-L3-v2"  # fastest cosine
-MODEL_TYPE = "multi-qa-mpnet-base-cos-v1"  # best semantic cosine
-NUM_WORKERS = 8  # number of workers to use for multi-threading
-MIN_MATCHING_PRODUCTS_EXACT = 0  # filter to a minimum numer of matching products in an exact match
-
-
-# ---------------
-# Data Loading and Cleaning
-# ---------------
-
-def load_csv(path, usecols=None, dtype="str"):
-    """Load a CSV file."""
-    return pd.read_csv(path, usecols=usecols, dtype=dtype)
-
-
-def filter_status_code(df):
-    """Filter DataFrame rows based on 'Status Code'."""
-    return df[df["Status Code"].isin(["200"])] if "Status Code" in df.columns else df
-
-
-def filter_type_hyperlink(df):
-    """Filter DataFrame rows based on 'Type' being 'Hyperlink'."""
-    return df[df["Type"].isin(["Hyperlink"])] if "Type" in df.columns else df
-
-
-def filter_non_indexable(df):
-    """Filter out 'Non-Indexable' rows from 'Indexability'."""
-    return df[~df["Indexability"].isin(["Non-Indexable"])] if "Indexability" in df.columns else df
-
-
-def process_headers_and_duplicates(df):
-    """Process header fields and remove duplicates."""
+def clean_df(df):
+    if "Status Code" in df.columns:
+        df = df[df["Status Code"].isin(["200"])]
+    if "Type" in df.columns:
+        df = df[df["Type"].isin(["Hyperlink"])]
+    if "Indexability" in df.columns:
+        df = df[~df["Indexability"].isin(["Non-Indexable"])]
     if "H1-1" in df.columns:
         df = df.assign(**{'H1-1': df['H1-1'].str.lower()})
         df = df.drop_duplicates(subset="H1-1")
@@ -66,159 +44,148 @@ def process_headers_and_duplicates(df):
     return df
 
 
-def clean_and_prepare_text(text):
-    """Clean and prepare text for n-gram generation."""
-    text = re.sub("<.*?>", "", text)  # Remove HTML tags
-    text = "".join(c for c in text if c not in string.punctuation and not c.isdigit())
-    text = text.lower()
+# clean source dfs
+inlinks = clean_df(inlinks)
+internal_html = clean_df(internal_html)
+
+# create separate product and category dataframes
+product = internal_html[internal_html['Page Type'].str.contains("Product Page", na=False)]
+category = internal_html[internal_html['Page Type'].str.contains("Category Page", na=False)]
+
+# merge and rename product and inlinks dataframes
+inlinks = inlinks[["From", "To"]]
+product = pd.merge(product, inlinks, left_on="Address", right_on="To", how='left')
+product.rename(columns={"From": "Parent URL", "To": "Product URL"}, inplace=True)
+
+# only keep parent pages that are category pages
+product_pages = internal_html[internal_html['Page Type'] == 'Product Page']['Address']
+product = product[~product['Parent URL'].isin(product_pages)]
+
+
+def filter_df_for_parent_url(product_df, parent_url):
+    return product_df[product_df["Parent URL"] == parent_url]
+
+
+def clean_and_prepare_text(df_parent):
+    text = " ".join(df_parent["H1-1"].dropna().astype(str).tolist()).lower()
+    text = "".join(c for c in text if not c.isdigit())
+    text = re.sub("<.*?>", "", text)
+    punctuation_no_full_stop = "[" + re.sub("\.", "", string.punctuation) + "]"
+    text = re.sub(punctuation_no_full_stop, "", text)
     return text
 
 
-# ---------------
-# N-gram Generation
-# ---------------
-
-def generate_ngrams(text, min_length=2, max_length=7):
-    """Generate and count n-grams for a given text."""
+def generate_ngrams_and_frequencies(text):
     tokenized = text.split()
-    all_ngrams = sum([list(ngrams(tokenized, i)) for i in range(min_length, max_length)], [])
-    ngrams_freq = collections.Counter(all_ngrams)
-    return ngrams_freq.most_common(100)
+    all_ngrams = [ngrams(tokenized, i) for i in range(2, 8)]
+    all_ngrams_freq = [collections.Counter(ngram) for ngram in all_ngrams]
+    ngrams_freq_tuples = sum([list(freq.items()) for freq in all_ngrams_freq], [])
+    ngrams_combined_list = [(' '.join(gram), freq) for gram, freq in ngrams_freq_tuples]
+    ngrams_combined_list.sort(key=lambda x: x[1], reverse=True)
+    return ngrams_combined_list[:100]
 
 
-# ---------------
-# Match Calculation
-# ---------------
-
-def exact_match_worker(keyword, product_titles):
-    return sum(keyword == title for title in product_titles)
-
-def partial_match_worker(keyword, product_titles):
-    keyword_words = set(keyword.split())
-    return sum(bool(keyword_words.intersection(set(title.split()))) for title in product_titles)
-
-
-def calculate_exact_matches(df_ngrams, column_name, product_titles):
-    with ProcessPoolExecutor() as executor:
-        # Map each keyword to the worker function in parallel and directly assign the results back to the DataFrame
-        df_ngrams['matching_products_exact'] = list(tqdm(executor.map(exact_match_worker, df_ngrams[column_name], [product_titles]*len(df_ngrams)), total=len(df_ngrams), desc="Calculating Exact Matches"))
-    return df_ngrams
-
-def calculate_partial_matches(df_ngrams, column_name, product_titles):
-    with ProcessPoolExecutor() as executor:
-        # Map each keyword to the worker function in parallel and directly assign the results back to the DataFrame
-        df_ngrams['matching_products_partial'] = list(tqdm(executor.map(partial_match_worker, df_ngrams[column_name], [product_titles]*len(df_ngrams)), total=len(df_ngrams), desc="Calculating Partial Matches"))
+def create_ngram_dataframe(ngrams_list, parent_url):
+    df_ngrams = pd.DataFrame(ngrams_list, columns=["Keyword", "Frequency"])
+    df_ngrams["Parent URL"] = parent_url
     return df_ngrams
 
 
-def prepare_data_for_fuzzy_matching(df):
-    """Prepare data by dropping NaN values and ensuring non-empty strings for 'Keyword' and 'H1-1'."""
-    df = df.dropna(subset=['Keyword', 'H1-1'])  # Drop rows where either 'Keyword' or 'H1-1' is NaN.
-    # Ensure both 'Keyword' and 'H1-1' are non-empty strings.
-    df = df[(df['Keyword'].astype(str).str.strip() != '') & (df['H1-1'].astype(str).str.strip() != '')]
-    return df
-
-
-def fuzzy_match_single_row(row):
-    # Using RapidFuzz's partial_ratio to calculate the similarity
-    partial_ratio = fuzz.partial_ratio(row['Keyword'].lower(), row['H1-1'].lower())
-    return partial_ratio
-
-
-def fuzzy_match_keyword(df):
-    df = prepare_data_for_fuzzy_matching(df)
-
-    with tqdm(total=len(df), desc="Calculating Fuzzy Matches") as pbar:
-        with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:  # Adjust `max_workers` as needed
-            futures = {executor.submit(fuzzy_match_single_row, row): index for index, row in df.iterrows()}
-
-            for future in as_completed(futures):
-                result = future.result()
-                row_index = futures[future]
-                df.at[row_index, 'Similarity'] = result
-                pbar.update(1)  # Update progress after each task is completed
-
-    return df
-
-# ---------------
-# Main Processing Flow
-# ---------------
-
-def process_product_and_category_data(internal_html, inlinks):
-    """Separate product and category pages and merge with inlinks."""
-    product = internal_html[internal_html['Page Type'].str.contains("Product Page", na=False)]
-    category = internal_html[internal_html['Page Type'].str.contains("Category Page", na=False)]
-    inlinks_renamed = inlinks.rename(columns={"From": "Parent URL", "To": "Product URL"})
-    product = pd.merge(product, inlinks_renamed, left_on="Address", right_on="Product URL", how='left')
-    product_pages = internal_html[internal_html['Page Type'] == 'Product Page']['Address']
-    product = product[~product['Parent URL'].isin(product_pages)]
-    return product, category
-
-
-def generate_ngrams_for_products(product_df):
-    """Generate n-grams for product titles."""
-    ngrams_list = []
-    for parent_url in tqdm(product_df['Parent URL'].unique(), desc="Processing Parent URLs"):
+def process_ngrams_for_products(product_df):
+    appended_data = []
+    for parent_url in tqdm(product_df['Parent URL'].unique(), desc="Generating Ngrams"):
         if pd.isna(parent_url):
             continue
-        df_parent = product_df[product_df["Parent URL"] == parent_url]
-        text = " ".join(df_parent["H1-1"].dropna().astype(str).tolist()).lower()
-        text = clean_and_prepare_text(text)
-        ngrams_freq = generate_ngrams(text)
-        for ngram, freq in ngrams_freq:
-            ngrams_list.append({'Parent URL': parent_url, 'Keyword': ' '.join(ngram), 'Frequency': freq})
-    return pd.DataFrame(ngrams_list)
+        df_parent = filter_df_for_parent_url(product_df, parent_url)
+        text = clean_and_prepare_text(df_parent)
+        ngrams_list = generate_ngrams_and_frequencies(text)
+        df_ngrams = create_ngram_dataframe(ngrams_list, parent_url)
+        appended_data.append(df_ngrams)
+    return pd.concat(appended_data).reset_index(drop=True)
 
 
-def calculate_matches(df_ngrams, product_df):
-    """Calculate exact and partial matches for n-grams and product titles."""
-    product_titles = product_df['H1-1'].dropna().str.lower().unique().tolist()
-    df_ngrams_exact = calculate_exact_matches(df_ngrams.copy(), 'Keyword', product_titles)
-    df_ngrams_partial = calculate_partial_matches(df_ngrams_exact, 'Keyword', product_titles)
-    return df_ngrams_partial[df_ngrams_partial['matching_products_exact'] >= MIN_MATCHING_PRODUCTS_EXACT]
+df_ngrams = process_ngrams_for_products(product)
 
 
-def merge_keywords_with_categories(df_ngrams, category_df):
-    """Merge keywords with category data."""
-    merged_df = pd.merge(category_df, df_ngrams, left_on='Address', right_on='Parent URL', how='left')
-    return merged_df.drop(columns=['Parent URL'])
+def calculate_exact_match(df_ngrams, product_df, min_products=MIN_MATCHING_PRODUCTS):
+    product_h1_set = set(product_df['H1-1'].dropna().str.lower().unique())
+
+    def count_exact_matches(keyword):
+        return sum(keyword in title for title in product_h1_set)
+
+    tqdm.pandas(desc="Calculating Exact Matches")
+    df_ngrams['matching_products_exact'] = df_ngrams['Keyword'].progress_apply(count_exact_matches)
+    df_filtered_ngrams = df_ngrams[df_ngrams['matching_products_exact'] >= min_products]
+
+    return df_filtered_ngrams
 
 
-def save_results_to_csv(df, path):
-    """Save DataFrame to CSV file."""
-    df.to_csv(path, index=False)
+df_ngrams_with_exact_match = calculate_exact_match(df_ngrams, product)
 
 
-def main():
-    df = load_csv('/python_scripts/cat_splitter/old_files/internal_html.csv',
-                  usecols=["Address", "H1-1", "Title 1", "Page Type"], dtype="str")
-    inlinks = load_csv('/python_scripts/cat_splitter//old_files/inlinks.csv', dtype="str")
-
-    # clean the source dataframes
-    df = filter_status_code(df)
-    df = filter_type_hyperlink(df)
-    df = filter_non_indexable(df)
-    df = process_headers_and_duplicates(df)
-
-    # Process product and category data
-    product, category = process_product_and_category_data(df, inlinks)
-
-    # Generate n-grams for products
-    df_ngrams = generate_ngrams_for_products(product)
-
-    # Calculate matches
-    df_ngrams_with_matches = calculate_matches(df_ngrams, product)
-
-    # Merge keywords with category data
-    category_with_matched_keywords = merge_keywords_with_categories(df_ngrams_with_matches, category)
-
-    # Optional: Apply additional filtering (e.g., fuzzy matching)
-    category_with_matched_keywords_filtered = fuzzy_match_keyword(category_with_matched_keywords)
-
-    # Save results
-    save_results_to_csv(category_with_matched_keywords_filtered,
-                        "/python_scripts/cat_splitter/final_results.csv")
+def merge_keywords_into_category(df_ngrams, category_df):
+    merged_df = pd.merge(category_df, df_ngrams[['Parent URL', 'Keyword', 'matching_products_exact']],
+                         left_on='Address', right_on='Parent URL', how='left')
+    # Filter out rows with less than the minimum required matches
+    merged_df = merged_df[merged_df['matching_products_exact'] >= MIN_MATCHING_PRODUCTS]
+    merged_df.drop(columns=['Parent URL'], inplace=True)
+    return merged_df
 
 
-if __name__ == "__main__":
-    main()
+category_with_exact_match_keywords = merge_keywords_into_category(df_ngrams_with_exact_match, category)
+
+
+def encode_texts_with_model(texts, model, batch_size=32, desc="Encoding texts"):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+    embeddings = []
+
+    # Process texts in batches
+    for batch_start in tqdm(range(0, len(texts), batch_size), desc=desc):
+        batch_texts = texts[batch_start:batch_start + batch_size]
+        with torch.no_grad():
+            batch_embeddings = model.encode(batch_texts, convert_to_tensor=True, device=device)
+        embeddings.append(batch_embeddings)
+
+    embeddings = torch.cat(embeddings, dim=0)
+    return embeddings
+
+
+def calculate_semantic_similarity(df_ngrams, product_df, model_name=TRANSFORMER_MODEL, similarity_threshold=0.5,
+                                  batch_size=32):
+    # Load the model
+    model = SentenceTransformer(model_name)
+
+    # Prepare the texts
+    keywords = df_ngrams['Keyword'].unique().tolist()
+    product_titles = product_df['H1-1'].dropna().unique().tolist()
+
+    # Encode the texts to get their embeddings with specific progress descriptions
+    keyword_embeddings = encode_texts_with_model(keywords, model, batch_size, desc="Encoding Keywords")
+    product_embeddings = encode_texts_with_model(product_titles, model, batch_size, desc="Encoding Product Titles")
+
+    print("Product titles encoding complete. Proceeding with similarity calculations...")
+
+    # Calculate cosine similarity
+    cosine_similarities = util.pytorch_cos_sim(keyword_embeddings, product_embeddings)
+
+    # Process the results to filter matches based on the similarity threshold
+    for i, keyword in enumerate(keywords):
+        similarities = cosine_similarities[i].cpu().numpy()
+        matched_indices = [j for j, similarity in enumerate(similarities) if similarity >= similarity_threshold]
+        matched_products_count = len(matched_indices)
+        df_ngrams.loc[df_ngrams['Keyword'] == keyword, 'matching_products_semantic'] = matched_products_count
+
+    df_filtered_ngrams = df_ngrams[df_ngrams['matching_products_semantic'] >= MIN_MATCHING_PRODUCTS]
+
+    return df_filtered_ngrams
+
+
+# Apply the semantic similarity calculation
+df_ngrams_with_semantic_similarity = calculate_semantic_similarity(df_ngrams, product)
+
+# Merge keywords into category
+category_with_semantic_match_keywords = merge_keywords_into_category(df_ngrams_with_semantic_similarity, category)
+
+# Save the result
+category_with_semantic_match_keywords.to_csv("/python_scripts/category_with_semantic_match_keywords.csv")

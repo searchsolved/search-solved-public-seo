@@ -12,14 +12,14 @@ import collections
 import pandas as pd
 from nltk.util import ngrams
 from tqdm import tqdm
-import torch
-from sentence_transformers import SentenceTransformer, util
+from fuzzywuzzy import fuzz
 
 # Constants
 # MODEL_TYPE = "paraphrase-MiniLM-L3-v2"  # fastest cosine
 MODEL_TYPE = "multi-qa-mpnet-base-cos-v1"  # best semantic cosine
 
 MIN_MATCHING_PRODUCTS_EXACT = 0
+
 
 # ---------------
 # Data Loading and Cleaning
@@ -133,7 +133,7 @@ def encode_text_with_model(text_list, model, device, text_column_description, ba
     with tqdm(total=num_batches, desc=f"Encoding {text_column_description}", unit="batch") as pbar:
         embeddings = []
         for i in range(0, total, batch_size):
-            batch_texts = text_list[i:i+batch_size]
+            batch_texts = text_list[i:i + batch_size]
             batch_embeddings = model.encode(batch_texts, convert_to_tensor=True, show_progress_bar=False).to(device)
             embeddings.extend(batch_embeddings)
             pbar.update(1)
@@ -143,30 +143,15 @@ def encode_text_with_model(text_list, model, device, text_column_description, ba
     return embeddings
 
 
-def fuzzy_match_keyword(df, model_type=MODEL_TYPE):
+def fuzzy_match_keyword(df):
     df = prepare_data_for_fuzzy_matching(df)
-    model = SentenceTransformer(model_type)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    keywords = df['Keyword'].tolist()
-    h1s = df['H1-1'].tolist()
-
-    # Encode keywords and H1s
-    keyword_embeddings = encode_text_with_model(keywords, model, device, "Keyword Column", len(keywords))
-    h1_embeddings = encode_text_with_model(h1s, model, device, "H1 Column", len(h1s))
-
-    # Calculate similarities
-    similarities = util.pytorch_cos_sim(keyword_embeddings, h1_embeddings)
-    if device == "cuda":
-        similarities = similarities.cpu()
-
-    # Extract diagonal for self-similarity scores
-    sim_scores = similarities.diagonal().numpy()
-
-    # Add similarity scores to DataFrame
-    df['Similarity'] = sim_scores
-
+    # Loop through each row in the DataFrame
+    for index, row in df.iterrows():
+        # Calculate Token Set Ratio
+        token_set_ratio = fuzz.token_set_ratio(row['Keyword'].lower(), row['H1-1'].lower())
+        df.at[index, 'Similarity'] = token_set_ratio
     return df
+
 
 # ---------------
 # Main Processing Flow
@@ -218,9 +203,9 @@ def save_results_to_csv(df, path):
 
 
 def main():
-    df = load_csv('/python_scripts/cat_splitter/old_files/internal_html.csv',
+    df = load_csv('/python_scripts/cat_splitter/internal_html.csv',
                   usecols=["Address", "H1-1", "Title 1", "Page Type"], dtype="str")
-    inlinks = load_csv('/python_scripts/cat_splitter/old_files/inlinks.csv', dtype="str")
+    inlinks = load_csv('/python_scripts/cat_splitter/inlinks.csv', dtype="str")
 
     # clean the source dataframes
     df = filter_status_code(df)
@@ -245,7 +230,9 @@ def main():
 
     # Save results
     save_results_to_csv(category_with_matched_keywords_filtered,
-                        "/python_scripts/cat_splitter/old_files/final_results.csv")
+                        "/python_scripts/cat_splitter/final_results.csv")
+
 
 if __name__ == "__main__":
     main()
+

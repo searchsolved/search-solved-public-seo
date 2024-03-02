@@ -21,8 +21,8 @@ MIN_MATCHING_PRODUCTS = 1  # the number of minimum products to match to. (kws fo
 TRANSFORMER_MODEL = "paraphrase-MiniLM-L3-v2"
 
 # Assuming your CSV paths are correct
-inlinks = pd.read_csv('/python_scripts/cat_splitter/old_files/inlinks.csv', dtype="str")
-internal_html = pd.read_csv('/python_scripts/cat_splitter/old_files/internal_html.csv',
+inlinks = pd.read_csv('/python_scripts/cat_splitter/inlinks.csv', dtype="str")
+internal_html = pd.read_csv('/python_scripts/cat_splitter/internal_html.csv',
                             usecols=["Address", "H1-1", "Title 1", "Page Type"], dtype="str")
 
 
@@ -189,4 +189,5 @@ category_with_semantic_match_keywords = merge_keywords_into_category(df_ngrams_w
 
 # Save the result
 category_with_semantic_match_keywords.to_csv("/python_scripts/category_with_semantic_match_keywords.csv", index=False, encoding='utf-8-sig')
+
 

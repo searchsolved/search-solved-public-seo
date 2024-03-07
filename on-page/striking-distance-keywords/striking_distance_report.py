@@ -114,20 +114,13 @@ keyword_presence = check_keywords_in_columns(crawl_df, search_console_data, top_
 
 # new code
 
-# Create the wide format DataFrame
 def create_wide_format_data(df, max_keywords):
     # Find the maximum number of keywords per page in the DataFrame
     max_num_keywords = min(df.groupby('Page').size().max(), max_keywords)
 
-    # Create a new DataFrame with the correct number of columns for keywords
-    columns = ['Page', 'Total Clicks', 'Total Keywords'] + \
-              [f'KW{i} Clicks' for i in range(1, max_num_keywords + 1)] + \
-              [f'KW{i} in Title' for i in range(1, max_num_keywords + 1)] + \
-              [f'KW{i} in H1' for i in range(1, max_num_keywords + 1)] + \
-              [f'KW{i} in Description' for i in range(1, max_num_keywords + 1)]
-    wide_df = pd.DataFrame(columns=columns)
+    # Initialize a list to collect page data dictionaries
+    page_data_list = []
 
-    # Populate the DataFrame
     for page, group in df.groupby('Page'):
         page_data = {
             'Page': page,
@@ -135,7 +128,7 @@ def create_wide_format_data(df, max_keywords):
             'Total Keywords': group.shape[0]
         }
         # For each keyword
-        for i, (idx, row) in enumerate(group.iterrows(), start=1):
+        for i, (_, row) in enumerate(group.iterrows(), start=1):
             if i > max_num_keywords:
                 break
             page_data[f'KW{i} Clicks'] = row['Total Clicks'] if pd.notnull(row['Total Clicks']) else 0
@@ -143,36 +136,45 @@ def create_wide_format_data(df, max_keywords):
             page_data[f'KW{i} in H1'] = row['H1-1'] if pd.notnull(row['H1-1']) else False
             page_data[f'KW{i} in Description'] = row['product_desc 1'] if pd.notnull(row['product_desc 1']) else False
 
-        wide_df = wide_df.append(page_data, ignore_index=True)
+        # Append the dictionary to the list
+        page_data_list.append(page_data)
 
-    # Fill in missing values for pages with less than the maximum number of keywords
-    fill_values = {f'KW{i} Clicks': 0 for i in range(1, max_num_keywords + 1)}
-    fill_values.update({f'KW{i} in Title': False for i in range(1, max_num_keywords + 1)})
-    fill_values.update({f'KW{i} in H1': False for i in range(1, max_num_keywords + 1)})
-    fill_values.update({f'KW{i} in Description': False for i in range(1, max_num_keywords + 1)})
-    wide_df.fillna(fill_values, inplace=True)
+    # Create a DataFrame from the list of dictionaries
+    wide_df = pd.DataFrame(page_data_list)
+
+    # Dynamically create columns list for missing column initialization
+    columns = ['Page', 'Total Clicks', 'Total Keywords'] + \
+              [f'KW{i} Clicks' for i in range(1, max_num_keywords + 1)] + \
+              [f'KW{i} in Title' for i in range(1, max_num_keywords + 1)] + \
+              [f'KW{i} in H1' for i in range(1, max_num_keywords + 1)] + \
+              [f'KW{i} in Description' for i in range(1, max_num_keywords + 1)]
+
+    # Reindex the DataFrame to include all required columns and fill missing with specified values
+    wide_df = wide_df.reindex(columns=columns, fill_value=0)
+    for col in [col for col in columns if 'in Title' in col or 'in H1' in col or 'in Description' in col]:
+        wide_df[col].fillna(False, inplace=True)
 
     return wide_df
 
 
-# Check if the keywords are present in the columns and prepare the final wide format data
-keyword_presence = check_keywords_in_columns(crawl_df, search_console_data, top_keywords,
-                                             ['Address', 'Title 1', 'H1-1', 'product_desc 1'])
+# Assume the rest of your script prepares 'keyword_presence' DataFrame and sets 'MAX_KEYWORDS_PER_PAGE'
 
 print("Creating wide format data...")
 wide_format_data = create_wide_format_data(keyword_presence, MAX_KEYWORDS_PER_PAGE)
 
-# Dynamically reorder the columns based on MAX_KEYWORDS_PER_PAGE
+
 def reorder_columns(wide_format_df, max_keywords):
     column_order = ['Page', 'Total Clicks', 'Total Keywords'] + \
-                   [f'KW{i} {info}' for i in range(1, max_keywords + 1) for info in ['Clicks', 'in Title', 'in H1', 'in Description']]
+                   [f'KW{i} {info}' for i in range(1, max_keywords + 1) for info in
+                    ['Clicks', 'in Title', 'in H1', 'in Description']]
     return wide_format_df[column_order]
+
 
 print("Reordering columns to match the desired output...")
 wide_format_data = reorder_columns(wide_format_data, MAX_KEYWORDS_PER_PAGE)
 
 # Save the wide format data to a CSV file
-output_path_wide = '/python_scripts/wide_format_data.csv'
+output_path_wide = 'wide_format_data.csv'  # Adjust the path as needed
 wide_format_data.to_csv(output_path_wide, index=False)
 
 print('Wide format data saved.')

@@ -7,7 +7,7 @@ client_secrets_path = '/python_scripts/client_secrets.json'
 credentials_path = '/python_scripts/credentials.json'
 
 # URL of your site (you will have to provide this)
-site_url = 'https://www.example.com/'
+site_url = 'https://www.example/'
 
 print("Reading crawl data...")
 # Read your crawl data
@@ -17,7 +17,7 @@ crawl_df = pd.read_csv('/python_scripts/internal_html.csv', dtype="str")
 columns_to_check = ['Address', 'Title 1', 'H1-1', 'product_desc 1']
 
 sort_metric = 'clicks'  # This can be 'clicks' or 'impressions'
-
+MAX_KEYWORDS_PER_PAGE = 6  # Set this to the number of keywords you want to include per page
 COUNTRY_FILTER = 'gbr'
 POSITION_MIN = 3
 POSITION_MAX = 20
@@ -61,7 +61,7 @@ def get_top_keywords_by_page(df, sort_metric):
     # Group by the 'page' column and get the top keywords based on sort_metric
     top_keywords_by_page = (
         df.groupby('page')
-        .apply(lambda x: x.nlargest(5, sort_metric)[['query', sort_metric]])
+        .apply(lambda x: x.nlargest(MAX_KEYWORDS_PER_PAGE, sort_metric)[['query', sort_metric]])
         .reset_index(level=0)
         .reset_index(drop=True)
     )
@@ -71,7 +71,6 @@ def get_top_keywords_by_page(df, sort_metric):
 print("Sorting and filtering top keywords...")
 top_keywords = get_top_keywords_by_page(search_console_data, sort_metric)
 
-# Function to check if the keywords are in the specified columns and to include total clicks or impressions
 # Function to check if the keywords are in the specified columns and to include total clicks or impressions
 def check_keywords_in_columns(crawl_df, search_console_data, top_keywords, columns_to_check):
     print("Checking for keyword presence and aggregating data...")
@@ -115,53 +114,62 @@ keyword_presence = check_keywords_in_columns(crawl_df, search_console_data, top_
 
 # new code
 
-# Create a new DataFrame to hold wide format data
-wide_format_data = pd.DataFrame()
+# Create the wide format DataFrame
+def create_wide_format_data(df, max_keywords):
+    # Find the maximum number of keywords per page in the DataFrame
+    max_num_keywords = min(df.groupby('Page').size().max(), max_keywords)
 
-# Extract unique pages
-unique_pages = keyword_presence['Page'].unique()
+    # Create a new DataFrame with the correct number of columns for keywords
+    columns = ['Page', 'Total Clicks', 'Total Keywords'] + \
+              [f'KW{i} Clicks' for i in range(1, max_num_keywords + 1)] + \
+              [f'KW{i} in Title' for i in range(1, max_num_keywords + 1)] + \
+              [f'KW{i} in H1' for i in range(1, max_num_keywords + 1)] + \
+              [f'KW{i} in Description' for i in range(1, max_num_keywords + 1)]
+    wide_df = pd.DataFrame(columns=columns)
 
-# Create an empty list to store dictionaries
-page_dicts = []
+    # Populate the DataFrame
+    for page, group in df.groupby('Page'):
+        page_data = {
+            'Page': page,
+            'Total Clicks': group['Total Clicks'].sum(),
+            'Total Keywords': group.shape[0]
+        }
+        # For each keyword
+        for i, (idx, row) in enumerate(group.iterrows(), start=1):
+            if i > max_num_keywords:
+                break
+            page_data[f'KW{i} Clicks'] = row['Total Clicks'] if pd.notnull(row['Total Clicks']) else 0
+            page_data[f'KW{i} in Title'] = row['Title 1'] if pd.notnull(row['Title 1']) else False
+            page_data[f'KW{i} in H1'] = row['H1-1'] if pd.notnull(row['H1-1']) else False
+            page_data[f'KW{i} in Description'] = row['product_desc 1'] if pd.notnull(row['product_desc 1']) else False
 
-# Iterate through each unique page
-for page in unique_pages:
-    page_data = keyword_presence[keyword_presence['Page'] == page]
-    page_dict = {
-        'Page': page,
-        'Total Clicks': page_data['Total Clicks'].sum(),  # Assuming you want the sum of clicks
-        'Total Keywords': page_data['Total Keywords'].iloc[0]  # Assuming this is the same for all rows of the same page
-    }
+        wide_df = wide_df.append(page_data, ignore_index=True)
 
-    # For each of the top 5 keywords
-    for i in range(1, 6):
-        if i <= len(page_data):
-            keyword_data = page_data.iloc[i - 1]  # Get data for the ith keyword
-            page_dict[f'KW{i} Clicks'] = keyword_data['Total Clicks']
-            page_dict[f'KW{i} in Title'] = keyword_data['Title 1']
-            page_dict[f'KW{i} in H1'] = keyword_data['H1-1']
-            page_dict[f'KW{i} in Description'] = keyword_data['product_desc 1']
-        else:
-            # If there are less than 5 keywords, fill in with zeros or appropriate values
-            page_dict[f'KW{i} Clicks'] = 0
-            page_dict[f'KW{i} in Title'] = False
-            page_dict[f'KW{i} in H1'] = False
-            page_dict[f'KW{i} in Description'] = False
+    # Fill in missing values for pages with less than the maximum number of keywords
+    fill_values = {f'KW{i} Clicks': 0 for i in range(1, max_num_keywords + 1)}
+    fill_values.update({f'KW{i} in Title': False for i in range(1, max_num_keywords + 1)})
+    fill_values.update({f'KW{i} in H1': False for i in range(1, max_num_keywords + 1)})
+    fill_values.update({f'KW{i} in Description': False for i in range(1, max_num_keywords + 1)})
+    wide_df.fillna(fill_values, inplace=True)
 
-    # Add the page's data to the list
-    page_dicts.append(page_dict)
+    return wide_df
 
-# Convert the list of dictionaries to a DataFrame
-wide_format_data = pd.DataFrame(page_dicts)
 
-# Reordering the columns to match the desired output (you may need to adjust column names)
-column_order = ['Page', 'Total Clicks', 'Total Keywords'] + \
-               [f'KW{i} {info}' for i in range(1, 6) for info in ['Clicks', 'in Title', 'in H1', 'in Description']]
-wide_format_data = wide_format_data[column_order]
+# Check if the keywords are present in the columns and prepare the final wide format data
+keyword_presence = check_keywords_in_columns(crawl_df, search_console_data, top_keywords,
+                                             ['Address', 'Title 1', 'H1-1', 'product_desc 1'])
+
+print("Creating wide format data...")
+wide_format_data = create_wide_format_data(keyword_presence, MAX_KEYWORDS_PER_PAGE)
+
+# Dynamically reorder the columns based on MAX_KEYWORDS_PER_PAGE
+def reorder_columns(wide_format_df, max_keywords):
+    column_order = ['Page', 'Total Clicks', 'Total Keywords'] + \
+                   [f'KW{i} {info}' for i in range(1, max_keywords + 1) for info in ['Clicks', 'in Title', 'in H1', 'in Description']]
+    return wide_format_df[column_order]
 
 # Save the wide format data to a CSV file
-output_path_wide = '/python_scripts/striking_distance_report.csv'
+output_path_wide = '/python_scripts/wide_format_data.csv'
 wide_format_data.to_csv(output_path_wide, index=False)
 
 print('Wide format data saved.')
-

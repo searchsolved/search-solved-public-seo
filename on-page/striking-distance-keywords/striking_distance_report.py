@@ -7,7 +7,7 @@ client_secrets_path = '/python_scripts/client_secrets.json'
 credentials_path = '/python_scripts/credentials.json'
 
 # URL of your site (you will have to provide this)
-site_url = 'https://www.example/'
+site_url = 'https://www.example.com/'
 
 print("Reading crawl data...")
 # Read your crawl data
@@ -167,6 +167,9 @@ def reorder_columns(wide_format_df, max_keywords):
     column_order = ['Page', 'Total Clicks', 'Total Keywords'] + \
                    [f'KW{i} {info}' for i in range(1, max_keywords + 1) for info in ['Clicks', 'in Title', 'in H1', 'in Description']]
     return wide_format_df[column_order]
+
+print("Reordering columns to match the desired output...")
+wide_format_data = reorder_columns(wide_format_data, MAX_KEYWORDS_PER_PAGE)
 
 # Save the wide format data to a CSV file
 output_path_wide = '/python_scripts/wide_format_data.csv'

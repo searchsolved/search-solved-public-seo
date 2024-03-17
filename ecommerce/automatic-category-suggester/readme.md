@@ -17,7 +17,7 @@ Before running this script, please follow these steps to prepare your data:
 5. Manually tag each category page with 'Category Page' in the "Page Type" column.
 
 ### Exporting and Preparing Inlinks Data
-6. Select all URLs from the crawl in Screaming Frog (use Control + A to select all).
+6. Select all product URLs in the crawl.
 7. Right-click on the selection and choose 'Export Inlinks'.
 8. Save the exported "Inlinks" file.
 

@@ -5,17 +5,21 @@ More like this at: https://leefoot.co.uk
 Contact: hello@leefoot.co.uk
 """
 
+# Standard library imports
+import re
+from io import BytesIO
+
+# Related third-party imports
+import requests
+from bs4 import BeautifulSoup
 import streamlit as st
+
+# Local application/library specific imports
 from docx import Document
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.enum.dml import MSO_THEME_COLOR_INDEX
-import requests
-from bs4 import BeautifulSoup
-import re
-from io import BytesIO
-
 
 def setup_streamlit():
     """

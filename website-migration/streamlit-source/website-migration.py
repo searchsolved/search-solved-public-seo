@@ -3,7 +3,7 @@ import chardet
 import numpy as np
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 from polyfuzz import PolyFuzz
 from polyfuzz.models import TFIDF, EditDistance, RapidFuzz

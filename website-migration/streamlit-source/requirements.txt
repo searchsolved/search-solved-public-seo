@@ -1,4 +1,4 @@
 chardet==5.2.0
-polyfuzz==0.4.2
+polyfuzz[fast]==0.4.2
 plotly==5.18.0
 xlsxwriter==3.1.9

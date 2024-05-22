@@ -5,10 +5,18 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from polyfuzz import PolyFuzz
-from polyfuzz.models import TFIDF, EditDistance, RapidFuzz
-import plotly.graph_objects as go
-import xlsxwriter
+try:
+    from matplotlib import cm
+    get_cmap = cm.get_cmap
+
+    from polyfuzz import PolyFuzz
+    from polyfuzz.models import TFIDF, EditDistance, RapidFuzz
+    import plotly.graph_objects as go
+    import xlsxwriter
+
+    # Rest of your Streamlit app code follows...
+except ImportError as e:
+    st.error(f"ImportError: {e}. Please check the version compatibility of your libraries.")
 
 # LeeFootSEO | https://leefoot.co.uk | 10th December 2023
 

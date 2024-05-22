@@ -10,10 +10,6 @@ from polyfuzz.models import TFIDF, EditDistance, RapidFuzz
 import plotly.graph_objects as go
 import xlsxwriter
 
-# Ensure matplotlib compatibility
-from matplotlib import cm
-get_cmap = cm.get_cmap
-
 # LeeFootSEO | https://leefoot.co.uk | 10th December 2023
 
 # Streamlit Interface Setup and Utilities ------------------------------------------------------------------------------

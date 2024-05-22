@@ -3,3 +3,4 @@ chardet==5.2.0
 plotly==5.18.0
 xlsxwriter==3.1.9
 streamlit==1.29.0
+matplotlib==3.9.0

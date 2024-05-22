@@ -7,7 +7,11 @@ import matplotlib.pyplot as plt
 
 try:
     from matplotlib import cm
-    get_cmap = cm.get_cmap
+    if hasattr(cm, 'get_cmap'):
+        get_cmap = cm.get_cmap
+    else:
+        get_cmap = None
+        st.warning("get_cmap is not available in matplotlib.cm. Some functionality may be limited.")
 
     from polyfuzz import PolyFuzz
     from polyfuzz.models import TFIDF, EditDistance, RapidFuzz

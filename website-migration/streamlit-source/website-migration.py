@@ -4,23 +4,10 @@ import numpy as np
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-
-try:
-    from matplotlib import cm
-    if hasattr(cm, 'get_cmap'):
-        get_cmap = cm.get_cmap
-    else:
-        get_cmap = None
-        st.warning("get_cmap is not available in matplotlib.cm. Some functionality may be limited.")
-
-    from polyfuzz import PolyFuzz
-    from polyfuzz.models import TFIDF, EditDistance, RapidFuzz
-    import plotly.graph_objects as go
-    import xlsxwriter
-
-    # Rest of your Streamlit app code follows...
-except ImportError as e:
-    st.error(f"ImportError: {e}. Please check the version compatibility of your libraries.")
+from polyfuzz import PolyFuzz
+from polyfuzz.models import TFIDF, EditDistance, RapidFuzz
+import plotly.graph_objects as go
+import xlsxwriter
 
 # LeeFootSEO | https://leefoot.co.uk | 10th December 2023
 

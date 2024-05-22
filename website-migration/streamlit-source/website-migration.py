@@ -26,7 +26,7 @@ except ImportError as e:
 
 # Streamlit Interface Setup and Utilities ------------------------------------------------------------------------------
 
-ef setup_streamlit_interface():
+def setup_streamlit_interface():
     """
     Sets up the Streamlit interface for the Automatic Website Migration Tool.
     Configures the page layout, title, and adds creator information and instructions.

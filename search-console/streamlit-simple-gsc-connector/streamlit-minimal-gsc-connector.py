@@ -1,5 +1,5 @@
 ####################################################################################
-# Simple GSC Connector for Streamlit by Lee Foot 28th December 2023                #
+# Simple GSC Connector for Streamlit by Lee Foot 12th June 2024                    #
 # Website  : https://leefoot.co.uk/                                                #
 # Contact  : https://leefoot.co.uk/hire-me/                                        #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
@@ -31,6 +31,7 @@ DATE_RANGE_OPTIONS = [
     "Last 6 Months",
     "Last 12 Months",
     "Last 16 Months",
+    "Custom Range"
 ]
 DEVICE_OPTIONS = ["All Devices", "desktop", "mobile", "tablet"]
 BASE_DIMENSIONS = ["page", "query", "country", "date"]
@@ -48,8 +49,8 @@ def setup_streamlit():
     Sets the page layout, title, and markdown content with links and app description.
     """
     st.set_page_config(page_title="✨ Simple Google Search Console Data | LeeFoot.co.uk", layout="wide")
-    st.title("✨ Simple Google Search Console Data | Dec 23")
-    st.markdown(f"### Lightweight GSC Data Extractor. (Max {MAX_ROWS:,} Rows)")
+    st.title("✨ Simple Google Search Console Data | June 2024")
+    st.markdown("### Lightweight GSC Data Extractor. (Max {MAX_ROWS:,} Rows)")
 
     st.markdown(
         """
@@ -73,10 +74,18 @@ def init_session_state():
         st.session_state.selected_search_type = 'web'
     if 'selected_date_range' not in st.session_state:
         st.session_state.selected_date_range = 'Last 7 Days'
+    if 'start_date' not in st.session_state:
+        st.session_state.start_date = datetime.date.today() - datetime.timedelta(days=7)
+    if 'end_date' not in st.session_state:
+        st.session_state.end_date = datetime.date.today()
     if 'selected_dimensions' not in st.session_state:
         st.session_state.selected_dimensions = ['page', 'query']
     if 'selected_device' not in st.session_state:
         st.session_state.selected_device = 'All Devices'
+    if 'custom_start_date' not in st.session_state:
+        st.session_state.custom_start_date = datetime.date.today() - datetime.timedelta(days=7)
+    if 'custom_end_date' not in st.session_state:
+        st.session_state.custom_end_date = datetime.date.today()
 
 
 # -------------
@@ -196,7 +205,7 @@ def update_dimensions(selected_search_type):
     return BASE_DIMENSIONS + ['device'] if selected_search_type in SEARCH_TYPES else BASE_DIMENSIONS
 
 
-def calc_date_range(selection):
+def calc_date_range(selection, custom_start=None, custom_end=None):
     """
     Calculates the date range based on the selected range option.
     Returns the start and end dates for the specified range.
@@ -210,6 +219,11 @@ def calc_date_range(selection):
         'Last 16 Months': 480
     }
     today = datetime.date.today()
+    if selection == 'Custom Range':
+        if custom_start and custom_end:
+            return custom_start, custom_end
+        else:
+            return today - datetime.timedelta(days=7), today
     return today - datetime.timedelta(days=range_map.get(selection, 0)), today
 
 
@@ -245,6 +259,7 @@ def download_csv_link(report):
     """
     Generates and displays a download link for the report DataFrame in CSV format.
     """
+
     def to_csv(df):
         return df.to_csv(index=False, encoding='utf-8-sig')
 
@@ -311,6 +326,15 @@ def show_date_range_selector():
     )
 
 
+def show_custom_date_inputs():
+    """
+    Displays date input fields for custom date range selection.
+    Updates session state with the selected dates.
+    """
+    st.session_state.custom_start_date = st.date_input("Start Date", st.session_state.custom_start_date)
+    st.session_state.custom_end_date = st.date_input("End Date", st.session_state.custom_end_date)
+
+
 def show_dimensions_selector(search_type):
     """
     Displays a multi-select box for choosing dimensions based on the selected search type.
@@ -370,7 +394,13 @@ def main():
             webproperty = show_property_selector(properties, account)
             search_type = show_search_type_selector()
             date_range_selection = show_date_range_selector()
-            start_date, end_date = calc_date_range(date_range_selection)
+
+            if date_range_selection == 'Custom Range':
+                show_custom_date_inputs()
+                start_date, end_date = st.session_state.custom_start_date, st.session_state.custom_end_date
+            else:
+                start_date, end_date = calc_date_range(date_range_selection)
+
             selected_dimensions = show_dimensions_selector(search_type)
             show_fetch_data_button(webproperty, search_type, start_date, end_date, selected_dimensions)
 

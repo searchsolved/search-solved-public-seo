@@ -50,7 +50,7 @@ def setup_streamlit():
     """
     st.set_page_config(page_title="✨ Simple Google Search Console Data | LeeFoot.co.uk", layout="wide")
     st.title("✨ Simple Google Search Console Data | June 2024")
-    st.markdown("### Lightweight GSC Data Extractor. (Max {MAX_ROWS:,} Rows)")
+    st.markdown(f"### Lightweight GSC Data Extractor. (Max {MAX_ROWS:,} Rows)")
 
     st.markdown(
         """

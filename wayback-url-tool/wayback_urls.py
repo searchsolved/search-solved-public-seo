@@ -101,70 +101,7 @@ def get_top_folder(url):
     return f"/{top_folder}/"
 
 
-def visualize_folder_types_over_time(urls, chart_type):
-    if not urls:
-        st.error("No URL data available. Please fetch URLs first.")
-        return None
-
-    df = pd.DataFrame(urls, columns=['url', 'timestamp', 'statuscode', 'digest'])
-    df['timestamp'] = pd.to_datetime(df['timestamp'], format='%Y%m%d%H%M%S')
-    df['year'] = df['timestamp'].dt.year.astype(str)
-    df['folder'] = df['url'].apply(get_top_folder)
-
-    if 'year' not in df.columns or 'folder' not in df.columns:
-        st.error("Required columns 'year' and 'folder' not found in the data.")
-        return None
-
-    try:
-        # Debug information
-        st.write("DataFrame info:")
-        st.write(df.info())
-        st.write("Unique years:", df['year'].unique())
-        st.write("Unique folders:", df['folder'].unique())
-
-        # Modify the groupby and unstack operations
-        df_grouped = df.groupby(['year', 'folder']).size().reset_index(name='count')
-        df_pivot = df_grouped.pivot(index='year', columns='folder', values='count').fillna(0)
-
-        folder_totals = df_pivot.sum().sort_values(ascending=False)
-        df_pivot = df_pivot[folder_totals.index]
-
-        top_folders = folder_totals.nlargest(st.session_state.top_folders_count).index
-        df_pivot['Other'] = df_pivot.loc[:, ~df_pivot.columns.isin(top_folders)].sum(axis=1)
-        df_pivot = df_pivot[list(top_folders) + ['Other']]
-
-        if chart_type == "Stacked Bar Chart":
-            fig = px.bar(df_pivot, x=df_pivot.index, y=df_pivot.columns,
-                         title="Evolution of Website Structure Over Time",
-                         labels={'value': 'Number of URLs', 'year': 'Year'},
-                         category_orders={"year": sorted(df_pivot.index)},
-                         )
-            fig.update_layout(legend_title_text='Folders', barmode='stack')
-        else:  # Stacked Line Chart
-            fig = go.Figure()
-            for folder in df_pivot.columns:
-                fig.add_trace(go.Scatter(
-                    x=df_pivot.index,
-                    y=df_pivot[folder],
-                    mode='lines',
-                    stackgroup='one',
-                    name=folder
-                ))
-            fig.update_layout(
-                title="Evolution of Website Structure Over Time",
-                xaxis_title="Year",
-                yaxis_title="Number of URLs",
-                legend_title_text='Folders'
-            )
-
-        fig.update_xaxes(title_text="Year", type='category')
-        fig.update_yaxes(title_text="Number of URLs")
-        return fig
-    except Exception as e:
-        st.error(f"Error in data processing: {str(e)}")
-        st.write("DataFrame head:")
-        st.write(df.head())
-        return None
+visualize_folder_types_
 
 
 def group_status_code(code):

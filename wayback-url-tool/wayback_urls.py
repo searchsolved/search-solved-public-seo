@@ -112,7 +112,12 @@ def visualize_folder_types_over_time(urls, chart_type):
         st.write("DataFrame info:")
         st.write(df.info())
 
-        df_grouped = df.groupby(['year', 'folder']).size().unstack(fill_value=0)
+        # Change this line
+        df_grouped = df.groupby(['year', 'folder']).size().unstack()
+
+        # Fill NaN values with 0 after unstacking
+        df_grouped = df_grouped.fillna(0)
+
         df_grouped = df_grouped.sort_index()
         folder_totals = df_grouped.sum().sort_values(ascending=False)
         df_grouped = df_grouped[folder_totals.index]

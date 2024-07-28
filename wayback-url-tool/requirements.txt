@@ -1,5 +1,5 @@
 streamlit==1.37.0
 #requests==2.31.0
-diff-match-patch==20230430
-pandas==2.1.4
+#diff-match-patch==20230430
+pandas==1.5.3
 plotly==5.23.0

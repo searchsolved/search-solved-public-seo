@@ -103,18 +103,25 @@ def get_top_folder(url):
 
 def visualize_folder_types_over_time(urls, chart_type):
     try:
+        st.write("Starting visualization function")
+        st.write(f"Pandas version: {pd.__version__}")
+        st.write(f"Plotly version: {px.__version__}")
+
         df = pd.DataFrame(urls, columns=['url', 'timestamp', 'statuscode', 'digest'])
+        st.write("DataFrame created")
+
         df['timestamp'] = pd.to_datetime(df['timestamp'], format='%Y%m%d%H%M%S')
         df['year'] = df['timestamp'].dt.year.astype(str)
         df['folder'] = df['url'].apply(get_top_folder)
+        st.write("DataFrame processed")
 
         st.write("DataFrame head:", df.head())
         st.write("DataFrame info:")
         st.write(df.info())
 
-        # Manual grouping and reshaping
-        grouped = df.groupby(['year', 'folder']).size().reset_index(name='count')
-        df_grouped = grouped.pivot(index='year', columns='folder', values='count').fillna(0)
+        st.write("Starting groupby operation")
+        df_grouped = df.groupby(['year', 'folder']).size().unstack(fill_value=0)
+        st.write("Groupby operation completed")
 
         df_grouped = df_grouped.sort_index()
         folder_totals = df_grouped.sum().sort_values(ascending=False)
@@ -127,7 +134,7 @@ def visualize_folder_types_over_time(urls, chart_type):
         st.write("Grouped DataFrame head:", df_grouped.head())
 
         if chart_type == "Stacked Bar Chart":
-            fig = px.bar(df_grouped.reset_index(), x='year', y=df_grouped.columns,
+            fig = px.bar(df_grouped, x=df_grouped.index, y=df_grouped.columns,
                          title="Evolution of Website Structure Over Time",
                          labels={'value': 'Number of URLs', 'year': 'Year'},
                          category_orders={"year": sorted(df_grouped.index)},
@@ -152,10 +159,12 @@ def visualize_folder_types_over_time(urls, chart_type):
 
         fig.update_xaxes(title_text="Year", type='category')
         fig.update_yaxes(title_text="Number of URLs")
+        st.write("Chart created successfully")
         return fig
 
     except Exception as e:
         st.error(f"Error in visualize_folder_types_over_time: {str(e)}")
+        st.write("Error occurred at line:", e.__traceback__.tb_lineno)
         st.write("DataFrame head:", df.head() if 'df' in locals() else "DataFrame not created")
         st.write("DataFrame info:")
         if 'df' in locals():

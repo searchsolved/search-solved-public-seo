@@ -445,13 +445,23 @@ st.markdown(
 
 st.write("Fetch and filter URLs from the Wayback Machine for any domain.")
 
-# Input form
-st.session_state.domain = st.text_input("Enter a domain (e.g., example.com):",
-                                        help="You can enter the domain with or without 'http://' or 'https://'",
-                                        value=st.session_state.domain)
+def handle_submit():
+    if st.session_state.domain:
+        fetch_urls()
+    else:
+        st.warning("Please enter a domain.")
 
-if st.button('Fetch URLs'):
-    fetch_urls()
+# Input form
+with st.form(key='url_form'):
+    st.session_state.domain = st.text_input(
+        "Enter a domain (e.g., example.com):",
+        help="You can enter the domain with or without 'http://' or 'https://'",
+        value=st.session_state.domain
+    )
+    submit_button = st.form_submit_button(label='Fetch URLs')
+
+if submit_button:
+    handle_submit()
 
 def fetch_robots_txt_content(domain, timestamp):
     url = f"https://web.archive.org/web/{timestamp}id_/{domain}/robots.txt"

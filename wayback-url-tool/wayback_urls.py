@@ -112,11 +112,8 @@ def visualize_folder_types_over_time(urls, chart_type):
         st.write("DataFrame info:")
         st.write(df.info())
 
-        # Change this line
-        df_grouped = df.groupby(['year', 'folder']).size().unstack()
-
-        # Fill NaN values with 0 after unstacking
-        df_grouped = df_grouped.fillna(0)
+        # Use pivot_table instead of groupby and unstack
+        df_grouped = pd.pivot_table(df, values='url', index='year', columns='folder', aggfunc='count', fill_value=0)
 
         df_grouped = df_grouped.sort_index()
         folder_totals = df_grouped.sum().sort_values(ascending=False)
@@ -129,7 +126,7 @@ def visualize_folder_types_over_time(urls, chart_type):
         st.write("Grouped DataFrame head:", df_grouped.head())
 
         if chart_type == "Stacked Bar Chart":
-            fig = px.bar(df_grouped, x=df_grouped.index, y=df_grouped.columns,
+            fig = px.bar(df_grouped.reset_index(), x='year', y=df_grouped.columns,
                          title="Evolution of Website Structure Over Time",
                          labels={'value': 'Number of URLs', 'year': 'Year'},
                          category_orders={"year": sorted(df_grouped.index)},

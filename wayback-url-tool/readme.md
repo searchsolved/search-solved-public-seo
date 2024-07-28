@@ -1,8 +1,6 @@
-# 🕸️ Internet Archive Data Analyser
+# 🕸️ Internet Archive Data Analyser Streamlit App
 
-[![Website](https://img.shields.io/website?url=https%3A%2F%2Fleefoot.co.uk&up_message=online&down_message=offline&style=for-the-badge)](https://leefoot.co.uk)
-
-![Internet Archive Data Analyser](https://web.archive.org/web/20240728000000/https://example.com/path/to/your/image.png)
+![Internet Archive Data Analyser](https://upload.wikimedia.org/wikipedia/commons/thumb/0/01/Wayback_Machine_logo_2010.svg/1200px-Wayback_Machine_logo_2010.svg.png)
 
 ## Overview
 
@@ -16,9 +14,7 @@ The Internet Archive Data Analyser is a powerful Streamlit-based web application
 - **Frequently Changed Pages**: Identifies and lists the most frequently modified pages, offering insights into content updates.
 - **robots.txt Evolution**: Tracks and visualizes changes to the site's robots.txt file, highlighting shifts in crawling policies.
 
-## Installation
+## Online App
+- https://wayback.streamlit.app/ 
 
-```bash
-git clone https://github.com/yourusername/internet-archive-data-analyser.git
-cd internet-archive-data-analyser
-pip install -r requirements.txt
+[![Website](https://img.shields.io/website?url=https%3A%2F%2Fleefoot.co.uk&up_message=online&down_message=offline&style=for-the-badge)](https://leefoot.co.uk)

@@ -116,28 +116,36 @@ def visualize_folder_types_over_time(urls, chart_type):
         return None
 
     try:
-        df_grouped = df.groupby(['year', 'folder']).size().unstack(fill_value=0)
-        df_grouped = df_grouped.sort_index()
-        folder_totals = df_grouped.sum().sort_values(ascending=False)
-        df_grouped = df_grouped[folder_totals.index]
+        # Debug information
+        st.write("DataFrame info:")
+        st.write(df.info())
+        st.write("Unique years:", df['year'].unique())
+        st.write("Unique folders:", df['folder'].unique())
+
+        # Modify the groupby and unstack operations
+        df_grouped = df.groupby(['year', 'folder']).size().reset_index(name='count')
+        df_pivot = df_grouped.pivot(index='year', columns='folder', values='count').fillna(0)
+
+        folder_totals = df_pivot.sum().sort_values(ascending=False)
+        df_pivot = df_pivot[folder_totals.index]
 
         top_folders = folder_totals.nlargest(st.session_state.top_folders_count).index
-        df_grouped['Other'] = df_grouped.loc[:, ~df_grouped.columns.isin(top_folders)].sum(axis=1)
-        df_grouped = df_grouped[list(top_folders) + ['Other']]
+        df_pivot['Other'] = df_pivot.loc[:, ~df_pivot.columns.isin(top_folders)].sum(axis=1)
+        df_pivot = df_pivot[list(top_folders) + ['Other']]
 
         if chart_type == "Stacked Bar Chart":
-            fig = px.bar(df_grouped, x=df_grouped.index, y=df_grouped.columns,
+            fig = px.bar(df_pivot, x=df_pivot.index, y=df_pivot.columns,
                          title="Evolution of Website Structure Over Time",
                          labels={'value': 'Number of URLs', 'year': 'Year'},
-                         category_orders={"year": sorted(df_grouped.index)},
+                         category_orders={"year": sorted(df_pivot.index)},
                          )
             fig.update_layout(legend_title_text='Folders', barmode='stack')
         else:  # Stacked Line Chart
             fig = go.Figure()
-            for folder in df_grouped.columns:
+            for folder in df_pivot.columns:
                 fig.add_trace(go.Scatter(
-                    x=df_grouped.index,
-                    y=df_grouped[folder],
+                    x=df_pivot.index,
+                    y=df_pivot[folder],
                     mode='lines',
                     stackgroup='one',
                     name=folder
@@ -154,6 +162,8 @@ def visualize_folder_types_over_time(urls, chart_type):
         return fig
     except Exception as e:
         st.error(f"Error in data processing: {str(e)}")
+        st.write("DataFrame head:")
+        st.write(df.head())
         return None
 
 

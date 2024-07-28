@@ -112,8 +112,9 @@ def visualize_folder_types_over_time(urls, chart_type):
         st.write("DataFrame info:")
         st.write(df.info())
 
-        # Use pivot_table instead of groupby and unstack
-        df_grouped = pd.pivot_table(df, values='url', index='year', columns='folder', aggfunc='count', fill_value=0)
+        # Manual grouping and reshaping
+        grouped = df.groupby(['year', 'folder']).size().reset_index(name='count')
+        df_grouped = grouped.pivot(index='year', columns='folder', values='count').fillna(0)
 
         df_grouped = df_grouped.sort_index()
         folder_totals = df_grouped.sum().sort_values(ascending=False)

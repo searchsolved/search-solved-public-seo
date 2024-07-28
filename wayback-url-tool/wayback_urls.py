@@ -1,5 +1,5 @@
 """Recover and Analyse URLs from Wayback Machine.
-V1.0 - 28th July 2028
+V1.1 - 28th July 2028
 https://leefoot.co.uk
 """
 
@@ -102,47 +102,59 @@ def get_top_folder(url):
 
 
 def visualize_folder_types_over_time(urls, chart_type):
+    if not urls:
+        st.error("No URL data available. Please fetch URLs first.")
+        return None
+
     df = pd.DataFrame(urls, columns=['url', 'timestamp', 'statuscode', 'digest'])
     df['timestamp'] = pd.to_datetime(df['timestamp'], format='%Y%m%d%H%M%S')
     df['year'] = df['timestamp'].dt.year.astype(str)
     df['folder'] = df['url'].apply(get_top_folder)
 
-    df_grouped = df.groupby(['year', 'folder']).size().unstack(fill_value=0)
-    df_grouped = df_grouped.sort_index()
-    folder_totals = df_grouped.sum().sort_values(ascending=False)
-    df_grouped = df_grouped[folder_totals.index]
+    if 'year' not in df.columns or 'folder' not in df.columns:
+        st.error("Required columns 'year' and 'folder' not found in the data.")
+        return None
 
-    top_folders = folder_totals.nlargest(st.session_state.top_folders_count).index
-    df_grouped['Other'] = df_grouped.loc[:, ~df_grouped.columns.isin(top_folders)].sum(axis=1)
-    df_grouped = df_grouped[list(top_folders) + ['Other']]
+    try:
+        df_grouped = df.groupby(['year', 'folder']).size().unstack(fill_value=0)
+        df_grouped = df_grouped.sort_index()
+        folder_totals = df_grouped.sum().sort_values(ascending=False)
+        df_grouped = df_grouped[folder_totals.index]
 
-    if chart_type == "Stacked Bar Chart":
-        fig = px.bar(df_grouped, x=df_grouped.index, y=df_grouped.columns,
-                     title="Evolution of Website Structure Over Time",
-                     labels={'value': 'Number of URLs', 'year': 'Year'},
-                     category_orders={"year": sorted(df_grouped.index)},
-                     )
-        fig.update_layout(legend_title_text='Folders', barmode='stack')
-    else:  # Stacked Line Chart
-        fig = go.Figure()
-        for folder in df_grouped.columns:
-            fig.add_trace(go.Scatter(
-                x=df_grouped.index,
-                y=df_grouped[folder],
-                mode='lines',
-                stackgroup='one',
-                name=folder
-            ))
-        fig.update_layout(
-            title="Evolution of Website Structure Over Time",
-            xaxis_title="Year",
-            yaxis_title="Number of URLs",
-            legend_title_text='Folders'
-        )
+        top_folders = folder_totals.nlargest(st.session_state.top_folders_count).index
+        df_grouped['Other'] = df_grouped.loc[:, ~df_grouped.columns.isin(top_folders)].sum(axis=1)
+        df_grouped = df_grouped[list(top_folders) + ['Other']]
 
-    fig.update_xaxes(title_text="Year", type='category')
-    fig.update_yaxes(title_text="Number of URLs")
-    return fig
+        if chart_type == "Stacked Bar Chart":
+            fig = px.bar(df_grouped, x=df_grouped.index, y=df_grouped.columns,
+                         title="Evolution of Website Structure Over Time",
+                         labels={'value': 'Number of URLs', 'year': 'Year'},
+                         category_orders={"year": sorted(df_grouped.index)},
+                         )
+            fig.update_layout(legend_title_text='Folders', barmode='stack')
+        else:  # Stacked Line Chart
+            fig = go.Figure()
+            for folder in df_grouped.columns:
+                fig.add_trace(go.Scatter(
+                    x=df_grouped.index,
+                    y=df_grouped[folder],
+                    mode='lines',
+                    stackgroup='one',
+                    name=folder
+                ))
+            fig.update_layout(
+                title="Evolution of Website Structure Over Time",
+                xaxis_title="Year",
+                yaxis_title="Number of URLs",
+                legend_title_text='Folders'
+            )
+
+        fig.update_xaxes(title_text="Year", type='category')
+        fig.update_yaxes(title_text="Number of URLs")
+        return fig
+    except Exception as e:
+        st.error(f"Error in data processing: {str(e)}")
+        return None
 
 
 def group_status_code(code):
@@ -451,11 +463,15 @@ st.markdown(
 st.write("Fetch and filter URLs from the Wayback Machine for any domain.")
 
 # Input form
-st.session_state.domain = st.text_input("Enter a domain (e.g., example.com):",
-                                        help="You can enter the domain with or without 'http://' or 'https://'",
-                                        value=st.session_state.domain)
+with st.form(key='url_form'):
+    st.session_state.domain = st.text_input(
+        "Enter a domain (e.g., example.com):",
+        help="You can enter the domain with or without 'http://' or 'https://'",
+        value=st.session_state.domain
+    )
+    submit_button = st.form_submit_button(label='Fetch URLs')
 
-if st.button('Fetch URLs'):
+if submit_button:
     fetch_urls()
 
 def fetch_robots_txt_content(domain, timestamp):
@@ -484,8 +500,11 @@ if st.session_state.show_results:
     # Display content based on the selected tab
     if st.session_state.active_tab == "Folder Visualization":
         st.header("Folder Visualization")
-        st.plotly_chart(visualize_folder_types_over_time(st.session_state.unique_urls, st.session_state.vis_type),
-                        use_container_width=True)
+        fig = visualize_folder_types_over_time(st.session_state.unique_urls, st.session_state.vis_type)
+        if fig is not None:
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("Unable to generate the visualization. Please check your data and try again.")
 
     elif st.session_state.active_tab == "Status Code Visualization":
         st.header("Status Code Visualization")

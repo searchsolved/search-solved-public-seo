@@ -6,6 +6,7 @@ from urllib.parse import urlparse, urlunparse
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objs as go
+import plotly
 import time
 
 st.subheader("Package Versions")

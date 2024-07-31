@@ -3,3 +3,4 @@ requests==2.31.0
 diff-match-patch==20230430
 pandas==1.5.3
 plotly==5.23.0
+numpy==1.20.0

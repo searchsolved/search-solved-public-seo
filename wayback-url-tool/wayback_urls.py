@@ -11,6 +11,8 @@ import time
 from urllib import robotparser
 import urllib.parse
 
+import random
+
 # Initialize session state variables
 if 'vis_type' not in st.session_state:
     st.session_state.vis_type = "Stacked Line Chart"
@@ -704,24 +706,27 @@ if st.session_state.show_results:
             # Display sample of URLs and their robots.txt status
             st.subheader("Sample of URLs and their robots.txt status:")
             sample_size = min(20, len(final_urls))
-            sample_urls = random.sample(final_urls, sample_size)
-            for url_data in sample_urls:
-                if unique_only:
-                    url, statuscode, allowed = url_data
-                else:
-                    url, timestamp, statuscode, digest, allowed = url_data
-                
-                full_url = f"https://{st.session_state.domain}{url}"
-                robots_status = "Allowed" if rp.can_fetch("*", full_url) else "Blocked"
-                
-                st.write(f"URL: {full_url}")
-                st.write(f"Status: {statuscode}, Robots.txt: {robots_status}")
-                
-                # Show which rule matched
-                for entry in rp.entries:
-                    if entry.applies_to("*"):
-                        for rule in entry.rulelines:
-                            if rule.applies_to(full_url):
-                                st.write(f"Matched rule: {rule}")
-                                break
-                st.write("---")
+            if final_urls:  # Check if final_urls is not empty
+                sample_urls = random.sample(final_urls, sample_size)
+                for url_data in sample_urls:
+                    if unique_only:
+                        url, statuscode, allowed = url_data
+                    else:
+                        url, timestamp, statuscode, digest, allowed = url_data
+                    
+                    full_url = f"https://{st.session_state.domain}{url}"
+                    robots_status = "Allowed" if rp.can_fetch("*", full_url) else "Blocked"
+                    
+                    st.write(f"URL: {full_url}")
+                    st.write(f"Status: {statuscode}, Robots.txt: {robots_status}")
+                    
+                    # Show which rule matched
+                    for entry in rp.entries:
+                        if entry.applies_to("*"):
+                            for rule in entry.rulelines:
+                                if rule.applies_to(full_url):
+                                    st.write(f"Matched rule: {rule}")
+                                    break
+                    st.write("---")
+            else:
+                st.write("No URLs to display in the sample.")

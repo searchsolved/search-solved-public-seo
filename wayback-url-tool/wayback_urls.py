@@ -8,8 +8,19 @@ import plotly.express as px
 import plotly.graph_objs as go
 import time
 
-st.cache_data.clear()
-st.cache_resource.clear()
+st.subheader("Package Versions")
+
+# Create a dictionary of packages and their version attributes
+packages = {
+    "requests": requests.__version__,
+    "diff-match-patch": diff_match_patch().VERSION,
+    "pandas": pd.__version__,
+    "plotly": plotly.__version__
+}
+
+# Display the versions in a table
+version_df = pd.DataFrame(list(packages.items()), columns=["Package", "Version"])
+st.table(version_df)
 
 # Initialize session state variables
 if 'vis_type' not in st.session_state:

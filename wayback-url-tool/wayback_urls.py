@@ -15,12 +15,14 @@ st.subheader("Package Versions")
 packages = {
     "requests": requests.__version__,
     "pandas": pd.__version__,
-    "plotly": plotly.__version__
 }
 
 # For diff_match_patch, we'll use a different approach
 dmp = diff_match_patch()
 packages["diff-match-patch"] = getattr(dmp, "VERSION", "Version not available")
+
+# Add plotly version
+packages["plotly"] = plotly.__version__
 
 # Display the versions in a table
 version_df = pd.DataFrame(list(packages.items()), columns=["Package", "Version"])

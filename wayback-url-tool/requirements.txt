@@ -1,4 +1,4 @@
-requests
+requests==2.32.3
 diff-match-patch
-pandas
-plotly
+pandas==2.2.2
+plotly==5.23.0

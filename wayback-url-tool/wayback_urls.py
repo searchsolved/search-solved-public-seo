@@ -8,6 +8,9 @@ import plotly.express as px
 import plotly.graph_objs as go
 import time
 
+st.cache_data.clear()
+st.cache_resource.clear()
+
 # Initialize session state variables
 if 'vis_type' not in st.session_state:
     st.session_state.vis_type = "Stacked Line Chart"

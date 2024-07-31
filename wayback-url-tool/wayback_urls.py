@@ -8,11 +8,6 @@ import plotly.express as px
 import plotly.graph_objs as go
 import time
 
-from urllib import robotparser
-import urllib.parse
-
-import random
-
 # Initialize session state variables
 if 'vis_type' not in st.session_state:
     st.session_state.vis_type = "Stacked Line Chart"
@@ -28,17 +23,6 @@ if 'top_folders_count' not in st.session_state:
     st.session_state.top_folders_count = 10
 if 'frequently_changed_pages' not in st.session_state:
     st.session_state.frequently_changed_pages = []
-
-
-def get_latest_robots_txt(domain):
-    rp = robotparser.RobotFileParser()
-    try:
-        rp.set_url(f"https://web.archive.org/web/0id_/{domain}/robots.txt")
-        rp.read()
-        return rp
-    except Exception as e:
-        st.warning(f"Error fetching robots.txt: {str(e)}")
-        return None
 
 
 def clean_url(url):
@@ -514,6 +498,8 @@ if st.session_state.show_results:
                         use_container_width=True)
 
     elif st.session_state.active_tab == "Frequently Changed Pages":
+        # st.header("Frequently Changed Pages")
+
         top_changing_pages = get_top_changing_pages(st.session_state.unique_urls,
                                                     top_n=st.session_state.top_folders_count)
 
@@ -598,90 +584,31 @@ if st.session_state.show_results:
 
         # Add option for unique URLs
         unique_only = st.checkbox("Export only unique URLs", value=False,
-                                help="If checked, only one instance of each URL will be exported, regardless of how many times it was captured.")
-        
-        # Add option to validate against robots.txt
-        validate_robots = st.checkbox("Validate URLs against latest robots.txt", value=False,
-                                    help="If checked, URLs will be checked against the latest version of robots.txt.")
+                                  help="If checked, only one instance of each URL will be exported, regardless of how many times it was captured.")
 
-        # Function to apply filter                                              
+
+        # Function to apply filter
         def apply_filter(url, option):
             if option == "All (HTML, Images, CSS, JS, etc.)":
                 return True
             elif option == "HTML only":
                 return url.endswith(('.html', '.htm', '/')) or url.endswith('robots.txt')
             elif option == "HTML + Images":
-                return url.endswith(('.html', '.htm', '/', '.jpg', '.jpeg', '.png', '.gif', '.svg')) or url.endswith('robots.txt')
+                return url.endswith(('.html', '.htm', '/', '.jpg', '.jpeg', '.png', '.gif', '.svg')) or url.endswith(
+                    'robots.txt')
 
-        # Fetch and parse robots.txt if validation is requested
-        rp = None
-        robots_txt_content = None
-        if validate_robots:
-            robots_txt_data = fetch_robots_txt_data(st.session_state.domain)
-            if robots_txt_data:
-                changes = process_robots_txt_changes(robots_txt_data)
-                if changes:
-                    latest_robots_txt = changes[-1]  # Get the most recent version
-                    robots_txt_content = fetch_robots_txt_content(st.session_state.domain, latest_robots_txt[0])
-                    if robots_txt_content:
-                        rp = robotparser.RobotFileParser()
-                        rp.parse(robots_txt_content.splitlines())
-                    else:
-                        st.warning("Unable to fetch the content of the latest robots.txt")
-            else:
-                st.warning("No robots.txt data found for this domain")
 
-        # Display robots.txt content
-        if robots_txt_content:
-            st.subheader("Latest robots.txt content:")
-            st.code(robots_txt_content, language="text")
-            
-            # Parse and display rules
-            st.subheader("Parsed robots.txt rules:")
-            for line in robots_txt_content.splitlines():
-                line = line.strip()
-                if line.startswith('User-agent:'):
-                    st.write(f"**{line}**")
-                elif line.startswith('Disallow:') or line.startswith('Allow:'):
-                    st.write(f"- {line}")
+        # Filter URLs based on selected option
+        filtered_urls = [url for url in st.session_state.unique_urls if apply_filter(url[0], filter_option)]
 
-        # Filter and deduplicate URLs
-        filtered_urls = {}
-        for url, timestamp, statuscode, digest in st.session_state.unique_urls:
-            if apply_filter(url, filter_option):
-                full_url = f"https://{st.session_state.domain}{url}"
-                if unique_only:
-                    if url not in filtered_urls or timestamp > filtered_urls[url][0]:
-                        filtered_urls[url] = (statuscode,)
-                else:
-                    if url not in filtered_urls:
-                        filtered_urls[url] = []
-                    filtered_urls[url].append((timestamp, statuscode, digest))
-
-        # Convert back to list format and check against robots.txt
-        final_urls = []
-        for url, data in filtered_urls.items():
-            full_url = f"https://{st.session_state.domain}{url}"
-            if unique_only:
-                statuscode = data[0]
-                allowed = "N/A"
-                if rp:
-                    allowed = "Allowed" if rp.can_fetch("*", full_url) else "Blocked"
-                final_urls.append((url, statuscode, allowed))
-            else:
-                for timestamp, statuscode, digest in data:
-                    allowed = "N/A"
-                    if rp:
-                        allowed = "Allowed" if rp.can_fetch("*", full_url) else "Blocked"
-                    final_urls.append((url, timestamp, statuscode, digest, allowed))
+        # If unique_only is checked, keep only unique URLs
+        if unique_only:
+            filtered_urls = list(dict.fromkeys(filtered_urls))
 
         # Prepare CSV content with headers
-        if unique_only:
-            csv_content = "URL,Status Code,Robots.txt Status\n"
-            csv_content += "\n".join([f"{url},{statuscode},{allowed}" for url, statuscode, allowed in final_urls])
-        else:
-            csv_content = "URL,Timestamp,Status Code,Digest,Robots.txt Status\n"
-            csv_content += "\n".join([f"{url},{timestamp},{statuscode},{digest},{allowed}" for url, timestamp, statuscode, digest, allowed in final_urls])
+        csv_content = "URL,Timestamp,Status Code,Digest\n"
+        csv_content += "\n".join(
+            [f"{url},{timestamp},{statuscode},{digest}" for url, timestamp, statuscode, digest in filtered_urls])
 
         # Convert to bytes with UTF-8-SIG encoding (UTF-8 with BOM)
         csv_bytes = csv_content.encode('utf-8-sig')
@@ -694,39 +621,4 @@ if st.session_state.show_results:
             key="download"
         )
 
-        st.write(f"Total URLs after filtering: {len(final_urls)}")
-
-        # Display summary of robots.txt validation
-        if validate_robots and rp:
-            allowed_count = sum(1 for url in final_urls if url[-1] == "Allowed")
-            blocked_count = sum(1 for url in final_urls if url[-1] == "Blocked")
-            st.write(f"URLs allowed by robots.txt: {allowed_count}")
-            st.write(f"URLs blocked by robots.txt: {blocked_count}")
-
-            # Display sample of URLs and their robots.txt status
-            st.subheader("Sample of URLs and their robots.txt status:")
-            sample_size = min(20, len(final_urls))
-            if final_urls:  # Check if final_urls is not empty
-                sample_urls = random.sample(final_urls, sample_size)
-                for url_data in sample_urls:
-                    if unique_only:
-                        url, statuscode, allowed = url_data
-                    else:
-                        url, timestamp, statuscode, digest, allowed = url_data
-                    
-                    full_url = f"https://{st.session_state.domain}{url}"
-                    robots_status = "Allowed" if rp.can_fetch("*", full_url) else "Blocked"
-                    
-                    st.write(f"URL: {full_url}")
-                    st.write(f"Status: {statuscode}, Robots.txt: {robots_status}")
-                    
-                    # Show which rule matched
-                    for entry in rp.entries:
-                        if entry.applies_to("*"):
-                            for rule in entry.rulelines:
-                                if rule.applies_to(full_url):
-                                    st.write(f"Matched rule: {rule}")
-                                    break
-                    st.write("---")
-            else:
-                st.write("No URLs to display in the sample.")
+        st.write(f"Total URLs after filtering: {len(filtered_urls)}")

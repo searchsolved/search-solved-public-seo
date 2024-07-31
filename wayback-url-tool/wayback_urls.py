@@ -13,10 +13,13 @@ st.subheader("Package Versions")
 # Create a dictionary of packages and their version attributes
 packages = {
     "requests": requests.__version__,
-    "diff-match-patch": diff_match_patch().VERSION,
     "pandas": pd.__version__,
     "plotly": plotly.__version__
 }
+
+# For diff_match_patch, we'll use a different approach
+dmp = diff_match_patch()
+packages["diff-match-patch"] = getattr(dmp, "VERSION", "Version not available")
 
 # Display the versions in a table
 version_df = pd.DataFrame(list(packages.items()), columns=["Package", "Version"])

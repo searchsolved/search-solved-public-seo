@@ -35,7 +35,7 @@ DATE_RANGE_OPTIONS = [
 ]
 DEVICE_OPTIONS = ["All Devices", "desktop", "mobile", "tablet"]
 BASE_DIMENSIONS = ["page", "query", "country", "date"]
-MAX_ROWS = 500_000
+MAX_ROWS = 1_000_000
 DF_PREVIEW_ROWS = 100
 
 

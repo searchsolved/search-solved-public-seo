@@ -18,7 +18,7 @@ if 'unique_urls' not in st.session_state:
 if 'domain' not in st.session_state:
     st.session_state.domain = ""
 if 'active_tab' not in st.session_state:
-    st.session_state.active_tab = "Folder Visualization"
+    st.session_state.active_tab = "Folder Structure Over Time"
 if 'top_folders_count' not in st.session_state:
     st.session_state.top_folders_count = 10
 if 'frequently_changed_pages' not in st.session_state:
@@ -387,7 +387,7 @@ def fetch_urls():
         st.warning("Please enter a domain.")
 
 
-st.set_page_config(page_title="Wayback Machine URL Downloader | LeeFoot.co.uk", page_icon="🕸️", layout="wide")
+st.set_page_config(page_title="Internet Archive Analyser | LeeFoot.co.uk", page_icon="🕸️", layout="wide")
 
 # Sidebar content
 st.sidebar.image(
@@ -431,7 +431,7 @@ st.sidebar.info("""
 """)
 
 # Main content
-st.title("🕸️ Wayback Machine URL Downloader")
+st.title("🕸️ Wayback Machine URL Fetcher")
 
 # Add credit information under the title
 st.markdown(
@@ -475,7 +475,7 @@ def fetch_robots_txt_content(domain, timestamp):
 # Display results after form submission
 if st.session_state.show_results:
     # Create tabs
-    tab_names = ["Folder Visualization", "Status Code Visualization", "Frequently Changed Pages", "robots.txt Changes",
+    tab_names = ["Folder Structure Over Time", "Status Code Visualization", "Frequently Changed Pages", "robots.txt Changes",
                  "Download URLs"]
 
     # Use a single selectbox to choose the active tab
@@ -487,8 +487,8 @@ if st.session_state.show_results:
         st.session_state.active_tab = selected_tab
 
     # Display content based on the selected tab
-    if st.session_state.active_tab == "Folder Visualization":
-        st.header("Folder Visualization")
+    if st.session_state.active_tab == "Folder Structure Over Time":
+        st.header("Folder Structure Over Time")
         st.plotly_chart(visualize_folder_types_over_time(st.session_state.unique_urls, st.session_state.vis_type),
                         use_container_width=True)
 

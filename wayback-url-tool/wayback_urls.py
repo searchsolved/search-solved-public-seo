@@ -18,7 +18,7 @@ if 'unique_urls' not in st.session_state:
 if 'domain' not in st.session_state:
     st.session_state.domain = ""
 if 'active_tab' not in st.session_state:
-    st.session_state.active_tab = "Folder Structure Over Time"
+    st.session_state.active_tab = "Folder Visualisation"
 if 'top_folders_count' not in st.session_state:
     st.session_state.top_folders_count = 10
 if 'frequently_changed_pages' not in st.session_state:
@@ -396,11 +396,11 @@ st.sidebar.image(
 
 st.sidebar.markdown("---")
 
-st.sidebar.subheader("Visualization Options")
+st.sidebar.subheader("Visualisation Options")
 
-# Move visualization type selection to sidebar
+# Move Visualisation type selection to sidebar
 st.sidebar.radio(
-    "Select visualization type:",
+    "Select Visualisation type:",
     ["Stacked Line Chart", "Stacked Bar Chart"],
     key="vis_type_radio",
     on_change=update_vis_type,
@@ -423,7 +423,7 @@ st.sidebar.info("""
     This app leverages the Wayback Machine's CDX server to analyze and visualise the historical evolution of websites.
 
     1. URL Retrieval: Fetches all archived URLs for a given domain from the Internet Archive.
-    2. Folder Structure Visualization: Displays how the website's folder structure has changed over time.
+    2. Folder Structure Visualisation: Displays how the website's folder structure has changed over time.
     3. Status Code Analysis: Shows the distribution of HTTP status codes across the site's history.
     4. Frequently Changed Pages: Identifies and lists the pages that have been modified most often.
     5. robots.txt Evolution: Tracks and visualises changes to the site's robots.txt file over time.
@@ -475,7 +475,7 @@ def fetch_robots_txt_content(domain, timestamp):
 # Display results after form submission
 if st.session_state.show_results:
     # Create tabs
-    tab_names = ["Folder Structure Over Time", "Status Code Visualization", "Frequently Changed Pages", "robots.txt Changes",
+    tab_names = ["Folder Visualisation", "Status Code Visualisation", "Frequently Changed Pages", "robots.txt Changes",
                  "Download URLs"]
 
     # Use a single selectbox to choose the active tab
@@ -487,13 +487,13 @@ if st.session_state.show_results:
         st.session_state.active_tab = selected_tab
 
     # Display content based on the selected tab
-    if st.session_state.active_tab == "Folder Structure Over Time":
-        st.header("Folder Structure Over Time")
+    if st.session_state.active_tab == "Folder Visualisation":
+        st.header("Folder Visualisation")
         st.plotly_chart(visualize_folder_types_over_time(st.session_state.unique_urls, st.session_state.vis_type),
                         use_container_width=True)
 
-    elif st.session_state.active_tab == "Status Code Visualization":
-        st.header("Status Code Visualization")
+    elif st.session_state.active_tab == "Status Code Visualisation":
+        st.header("Status Code Visualisation")
         st.plotly_chart(visualize_status_codes_over_time(st.session_state.unique_urls, st.session_state.vis_type),
                         use_container_width=True)
 
@@ -503,7 +503,7 @@ if st.session_state.show_results:
         top_changing_pages = get_top_changing_pages(st.session_state.unique_urls,
                                                     top_n=st.session_state.top_folders_count)
 
-        # Visualization
+        # Visualisation
         st.subheader(f"Top {st.session_state.top_folders_count} Frequently Changing Pages")
         st.plotly_chart(visualize_top_changing_pages(top_changing_pages, st.session_state.vis_type),
                         use_container_width=True)

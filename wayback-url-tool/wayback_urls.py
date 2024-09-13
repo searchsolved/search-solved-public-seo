@@ -582,7 +582,6 @@ if st.session_state.show_results:
             help="Choose which types of URLs to include in the download. 'HTML only' includes HTML files and robots.txt, but excludes .json, .xml, and other .txt files."
         )
 
-        # Add option for unique URLs
         unique_only = st.checkbox("Export only unique URLs", value=False,
                                   help="If checked, only one instance of each URL will be exported, regardless of how many times it was captured.")
 
@@ -603,7 +602,11 @@ if st.session_state.show_results:
 
         # If unique_only is checked, keep only unique URLs
         if unique_only:
-            filtered_urls = list(dict.fromkeys(filtered_urls))
+            unique_urls = {}
+            for url, timestamp, statuscode, digest in filtered_urls:
+                if url not in unique_urls:
+                    unique_urls[url] = (url, timestamp, statuscode, digest)
+            filtered_urls = list(unique_urls.values())
 
         # Prepare CSV content with headers
         csv_content = "URL,Timestamp,Status Code,Digest\n"

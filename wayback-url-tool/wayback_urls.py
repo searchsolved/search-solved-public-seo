@@ -387,7 +387,7 @@ def fetch_urls():
         st.warning("Please enter a domain.")
 
 
-st.set_page_config(page_title="Internet Archive Analyser | LeeFoot.co.uk", page_icon="🕸️", layout="wide")
+st.set_page_config(page_title="Wayback Machine URL Downloader | LeeFoot.co.uk", page_icon="🕸️", layout="wide")
 
 # Sidebar content
 st.sidebar.image(
@@ -431,7 +431,7 @@ st.sidebar.info("""
 """)
 
 # Main content
-st.title("🕸️ Wayback Machine URL Fetcher")
+st.title("🕸️ Wayback Machine URL Downloader")
 
 # Add credit information under the title
 st.markdown(

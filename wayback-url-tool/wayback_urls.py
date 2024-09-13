@@ -7,7 +7,6 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objs as go
 import time
-from streamlit_option_menu import option_menu
 
 # Initialize session state variables
 if 'vis_type' not in st.session_state:
@@ -18,46 +17,20 @@ if 'unique_urls' not in st.session_state:
     st.session_state.unique_urls = []
 if 'domain' not in st.session_state:
     st.session_state.domain = ""
+if 'active_tab' not in st.session_state:
+    st.session_state.active_tab = "Folder Visualization"
 if 'top_folders_count' not in st.session_state:
     st.session_state.top_folders_count = 10
 if 'frequently_changed_pages' not in st.session_state:
     st.session_state.frequently_changed_pages = []
 
-# Set page config at the very beginning of your script
-st.set_page_config(page_title="Internet Archive Analyser | LeeFoot.co.uk", page_icon="🕸️", layout="wide")
 
-# Custom CSS to make the app look fancier
-st.markdown("""
-<style>
-    .reportview-container {
-        background: #f0f2f6
-    }
-    .main .block-container {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-        padding-left: 5rem;
-        padding-right: 5rem;
-    }
-    h1 {
-        color: #1E3A8A;
-    }
-    .stButton>button {
-        color: #ffffff;
-        background-color: #1E3A8A;
-        border-radius: 5px;
-    }
-    .stTextInput>div>div>input {
-        border-radius: 5px;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# Existing functions
 def clean_url(url):
     parsed = urlparse(url)
     netloc = parsed.netloc.split('@')[-1].split(':')[0]
     clean = urlunparse((parsed.scheme, netloc, parsed.path, parsed.params, parsed.query, parsed.fragment))
     return clean
+
 
 def get_unique_urls(domain):
     domain = domain.replace('http://', '').replace('https://', '').rstrip('/')
@@ -113,6 +86,7 @@ def get_unique_urls(domain):
 
     return unique_urls
 
+
 def get_top_folder(url):
     parsed = urlparse(url)
     path = parsed.path.strip('/')
@@ -120,6 +94,7 @@ def get_top_folder(url):
         return "Root"
     top_folder = path.split('/')[0]
     return f"/{top_folder}/"
+
 
 def visualize_folder_types_over_time(urls, chart_type):
     df = pd.DataFrame(urls, columns=['url', 'timestamp', 'statuscode', 'digest'])
@@ -164,6 +139,7 @@ def visualize_folder_types_over_time(urls, chart_type):
     fig.update_yaxes(title_text="Number of URLs")
     return fig
 
+
 def group_status_code(code):
     try:
         code = int(code)
@@ -189,6 +165,7 @@ def visualize_status_codes_over_time(urls, chart_type):
     df_grouped = df.groupby(['year', 'status_group']).size().unstack(fill_value=0)
     df_grouped = df_grouped.sort_index()
 
+    # Ensure all status groups are present
     all_status_groups = ['1xx', '2xx', '3xx', '4xx', '5xx', 'Unknown']
     for group in all_status_groups:
         if group not in df_grouped.columns:
@@ -246,6 +223,7 @@ def fetch_robots_txt_data(domain):
         st.error("Error: Unable to parse the response from the server.")
         return []
 
+
 def process_robots_txt_changes(robots_txt_data):
     changes = {}
     for item in robots_txt_data:
@@ -259,6 +237,7 @@ def process_robots_txt_changes(robots_txt_data):
             changes[digest] = (timestamp, digest, original)
 
     return sorted(changes.values(), key=lambda x: x[0])  # Sort by timestamp
+
 
 def compare_robots_txt(domain, old_version, new_version):
     old_content = fetch_robots_txt_content(domain, old_version[0])
@@ -280,6 +259,7 @@ def visualize_robots_txt_changes(changes):
 
     fig = go.Figure()
 
+    # Add a dotted line for the entire time range
     fig.add_trace(go.Scatter(
         x=[df['timestamp'].min(), df['timestamp'].max()],
         y=[0, 0],
@@ -288,6 +268,7 @@ def visualize_robots_txt_changes(changes):
         showlegend=False
     ))
 
+    # Add vertical dotted lines for each change
     for ts in df['timestamp']:
         fig.add_shape(
             type="line",
@@ -295,6 +276,7 @@ def visualize_robots_txt_changes(changes):
             line=dict(color="gray", width=1, dash="dot"),
         )
 
+    # Add markers for each change
     fig.add_trace(go.Scatter(
         x=df['timestamp'],
         y=[0] * len(df),
@@ -309,6 +291,7 @@ def visualize_robots_txt_changes(changes):
         name='Changes'
     ))
 
+    # Customize the layout
     fig.update_layout(
         title="Timeline of Unique robots.txt Changes",
         xaxis_title="Date",
@@ -324,6 +307,7 @@ def visualize_robots_txt_changes(changes):
         paper_bgcolor='rgba(0,0,0,0)',
     )
 
+    # Set x-axis range to show a bit before the first change and after the last change
     date_range = df['timestamp'].max() - df['timestamp'].min()
     fig.update_xaxes(
         range=[
@@ -342,6 +326,7 @@ def visualize_robots_txt_changes(changes):
 
     return fig
 
+# New function to get top changing folders
 def get_top_changing_pages(urls, top_n=10):
     page_changes = {}
     for url, _, _, digest in urls:
@@ -353,6 +338,8 @@ def get_top_changing_pages(urls, top_n=10):
     sorted_pages = sorted(page_change_counts.items(), key=lambda x: x[1], reverse=True)
     return sorted_pages[:top_n]
 
+
+# New function to visualize top changing folders
 def visualize_top_changing_pages(top_changing_pages, chart_type):
     df = pd.DataFrame(top_changing_pages, columns=['page', 'changes'])
     df = df.sort_values('changes', ascending=True)
@@ -379,14 +366,11 @@ def visualize_top_changing_pages(top_changing_pages, chart_type):
     return fig
 
 
-def fetch_robots_txt_content(domain, timestamp):
-    url = f"https://web.archive.org/web/{timestamp}id_/{domain}/robots.txt"
-    response = requests.get(url)
-    if response.status_code == 200:
-        return response.text
-    else:
-        return None
+def update_vis_type():
+    st.session_state.vis_type = st.session_state.vis_type_radio
 
+def on_tab_change():
+    st.session_state.active_tab = st.session_state.tab_selector
 
 def fetch_urls():
     if st.session_state.domain:
@@ -403,186 +387,241 @@ def fetch_urls():
         st.warning("Please enter a domain.")
 
 
-# Sidebar
-with st.sidebar:
-    st.image(
-        "https://upload.wikimedia.org/wikipedia/commons/thumb/0/01/Wayback_Machine_logo_2010.svg/1200px-Wayback_Machine_logo_2010.svg.png",
-        width=200)
-    st.markdown("---")
+st.set_page_config(page_title="Internet Archive Analyser | LeeFoot.co.uk", page_icon="🕸️", layout="wide")
 
-    # Use option_menu for a fancy sidebar navigation
-    selected_tab = option_menu("Navigation", ["Home", "Folder Visualization", "Status Code Visualization",
-                                              "Frequently Changed Pages", "robots.txt Changes", "Download URLs"],
-                               icons=['house', 'folder', 'diagram-3', 'file-earmark-text', 'robot', 'cloud-download'],
-                               menu_icon="cast", default_index=0)
+# Sidebar content
+st.sidebar.image(
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/0/01/Wayback_Machine_logo_2010.svg/1200px-Wayback_Machine_logo_2010.svg.png",
+    width=200)
 
-    st.markdown("---")
+st.sidebar.markdown("---")
 
-    # Visualization options
-    st.markdown("### Visualization Options")
-    vis_type = st.radio("Select visualization type:",
-                        ["Stacked Line Chart", "Stacked Bar Chart"],
-                        key="vis_type_radio")
-    top_folders_count = st.slider("Number of top folders to display",
-                                  min_value=5, max_value=50, value=st.session_state.top_folders_count, step=1)
+st.sidebar.subheader("About")
+st.sidebar.info("""
+    This app leverages the Wayback Machine's CDX server to analyze and visualise the historical evolution of websites.
 
-    st.markdown("---")
-    st.markdown("### About")
-    st.info("""
-            This app leverages the Wayback Machine's CDX server to analyze and visualize the historical evolution of websites.
+    1. URL Retrieval: Fetches all archived URLs for a given domain from the Internet Archive.
+    2. Folder Structure Visualization: Displays how the website's folder structure has changed over time.
+    3. Status Code Analysis: Shows the distribution of HTTP status codes across the site's history.
+    4. Frequently Changed Pages: Identifies and lists the pages that have been modified most often.
+    5. robots.txt Evolution: Tracks and visualises changes to the site's robots.txt file over time.
+    6. Rover from Failed Migrations
+""")
 
-            More like this at [LeeFoot.co.uk](https://leefoot.co.uk)
-        """)
+st.sidebar.markdown("---")
 
-# Main content area
+st.sidebar.subheader("Visualization Options")
+
+# Move visualization type selection to sidebar
+st.sidebar.radio(
+    "Select visualization type:",
+    ["Stacked Line Chart", "Stacked Bar Chart"],
+    key="vis_type_radio",
+    on_change=update_vis_type,
+    index=["Stacked Line Chart", "Stacked Bar Chart"].index(st.session_state.vis_type)
+)
+
+# Add slider for top folders count in sidebar
+st.session_state.top_folders_count = st.sidebar.slider(
+    "Number of top folders to display",
+    min_value=5,
+    max_value=50,
+    value=st.session_state.top_folders_count,
+    step=1
+)
+
+# Main content
 st.title("🕸️ Wayback Machine URL Fetcher")
 
-# Input form (always visible at the top)
+# Add credit information under the title
+st.markdown(
+    """
+    <div style="font-size: 0.8em; margin-bottom: 20px;">
+        More like this at <a href='https://leefoot.co.uk' target='_blank'>LeeFoot.co.uk</a>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+st.write("Fetch and filter URLs from the Wayback Machine for any domain.")
+
+def handle_submit():
+    if st.session_state.domain:
+        fetch_urls()
+    else:
+        st.warning("Please enter a domain.")
+
+# Input form
 with st.form(key='url_form'):
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        st.session_state.domain = st.text_input("Enter a domain (e.g., example.com):",
-                                                help="You can enter the domain with or without 'http://' or 'https://'",
-                                                value=st.session_state.domain)
-    with col2:
-        submit_button = st.form_submit_button(label='Fetch URLs')
+    st.session_state.domain = st.text_input(
+        "Enter a domain (e.g., example.com):",
+        help="You can enter the domain with or without 'http://' or 'https://'",
+        value=st.session_state.domain
+    )
+    submit_button = st.form_submit_button(label='Fetch URLs')
 
 if submit_button:
-    fetch_urls()
+    handle_submit()
 
-# Content based on selected tab
-if selected_tab == "Home":
-    st.write("Welcome to the Wayback Machine URL Fetcher. Use the sidebar to navigate through different analyses.")
+def fetch_robots_txt_content(domain, timestamp):
+    url = f"https://web.archive.org/web/{timestamp}id_/{domain}/robots.txt"
+    response = requests.get(url)
+    if response.status_code == 200:
+        return response.text
+    else:
+        return None
 
-    if st.session_state.show_results:
-        st.success(f"Found {len(st.session_state.unique_urls)} URLs for {st.session_state.domain}")
-        st.info("Use the sidebar to navigate to different visualizations and analyses.")
 
-elif selected_tab == "Folder Visualization" and st.session_state.show_results:
-    st.header("Folder Visualization")
-    st.plotly_chart(visualize_folder_types_over_time(st.session_state.unique_urls, vis_type),
-                    use_container_width=True)
+# Display results after form submission
+if st.session_state.show_results:
+    # Create tabs
+    tab_names = ["Folder Visualization", "Status Code Visualization", "Frequently Changed Pages", "robots.txt Changes",
+                 "Download URLs"]
 
-elif selected_tab == "Status Code Visualization" and st.session_state.show_results:
-    st.header("Status Code Visualization")
-    st.plotly_chart(visualize_status_codes_over_time(st.session_state.unique_urls, vis_type),
-                    use_container_width=True)
+    # Use a single selectbox to choose the active tab
+    selected_tab = st.selectbox("Select a tab:", tab_names, key="tab_selector", on_change=on_tab_change,
+                                index=tab_names.index(st.session_state.active_tab))
 
-elif selected_tab == "Frequently Changed Pages" and st.session_state.show_results:
-    st.header("Frequently Changed Pages")
-    top_changing_pages = get_top_changing_pages(st.session_state.unique_urls,
-                                                top_n=top_folders_count)
-    st.plotly_chart(visualize_top_changing_pages(top_changing_pages, vis_type),
-                    use_container_width=True)
+    # Update active_tab based on selection
+    if selected_tab != st.session_state.active_tab:
+        st.session_state.active_tab = selected_tab
 
-    selected_page = st.selectbox(
-        "Select a frequently changing page:",
-        options=[f"{page} ({changes})" for page, changes in top_changing_pages],
-        format_func=lambda x: x
-    )
+    # Display content based on the selected tab
+    if st.session_state.active_tab == "Folder Visualization":
+        st.header("Folder Visualization")
+        st.plotly_chart(visualize_folder_types_over_time(st.session_state.unique_urls, st.session_state.vis_type),
+                        use_container_width=True)
 
-    if selected_page:
-        page = selected_page.split(" (")[0]
-        page_urls = [item for item in st.session_state.unique_urls if item[0] == page]
-        page_urls.sort(key=lambda x: x[1], reverse=True)  # Sort by timestamp, most recent first
+    elif st.session_state.active_tab == "Status Code Visualization":
+        st.header("Status Code Visualization")
+        st.plotly_chart(visualize_status_codes_over_time(st.session_state.unique_urls, st.session_state.vis_type),
+                        use_container_width=True)
 
-        st.subheader(f"Change History for {page}")
-        for i, (url, timestamp, statuscode, digest) in enumerate(page_urls[:50]):  # Show top 50 changes
-            with st.expander(f"{timestamp}"):
-                col1, col2, col3 = st.columns([2, 1, 1])
-                with col1:
-                    st.write(f"URL: {url}")
-                with col2:
-                    st.write(f"Status: {statuscode}")
-                with col3:
-                    wayback_url = f"https://web.archive.org/web/{timestamp}/{url}"
-                    st.markdown(f"[View Version]({wayback_url})")
-                st.write(f"Digest: {digest}")
+    elif st.session_state.active_tab == "Frequently Changed Pages":
+        # st.header("Frequently Changed Pages")
 
-        st.write("Note: Showing up to 50 most recent changes per page.")
+        top_changing_pages = get_top_changing_pages(st.session_state.unique_urls,
+                                                    top_n=st.session_state.top_folders_count)
 
-elif selected_tab == "robots.txt Changes" and st.session_state.show_results:
-    st.header("robots.txt Changes")
-    robots_txt_data = fetch_robots_txt_data(st.session_state.domain)
-    if robots_txt_data:
-        changes = process_robots_txt_changes(robots_txt_data)
-        if changes:
-            fig = visualize_robots_txt_changes(changes)
-            st.plotly_chart(fig, use_container_width=True)
+        # Visualization
+        st.subheader(f"Top {st.session_state.top_folders_count} Frequently Changing Pages")
+        st.plotly_chart(visualize_top_changing_pages(top_changing_pages, st.session_state.vis_type),
+                        use_container_width=True)
 
-            st.subheader("Compare unique robots.txt versions")
-            col1, col2 = st.columns(2)
-            with col1:
-                date1 = st.selectbox("Select first version", options=changes,
-                                     format_func=lambda x: pd.to_datetime(x[0], format='%Y%m%d%H%M%S'), key="date1")
-            with col2:
-                date2 = st.selectbox("Select second version", options=changes,
-                                     format_func=lambda x: pd.to_datetime(x[0], format='%Y%m%d%H%M%S'), index=1,
-                                     key="date2")
+        # Dropdown menu
+        selected_page = st.selectbox(
+            "Select a frequently changing page:",
+            options=[f"{page} ({changes})" for page, changes in top_changing_pages],
+            format_func=lambda x: x
+        )
 
-            if st.button("Compare versions"):
-                with st.spinner("Fetching and comparing robots.txt versions..."):
-                    diffs = compare_robots_txt(st.session_state.domain, date1, date2)
+        if selected_page:
+            page = selected_page.split(" (")[0]
+            page_urls = [item for item in st.session_state.unique_urls if item[0] == page]
+            page_urls.sort(key=lambda x: x[1], reverse=True)  # Sort by timestamp, most recent first
 
-                st.subheader("Full content of selected versions")
+            st.subheader(f"Change History for {page}")
+            for i, (url, timestamp, statuscode, digest) in enumerate(page_urls[:50]):  # Show top 50 changes
+                with st.expander(f"{timestamp}"):
+                    col1, col2, col3 = st.columns([2, 1, 1])
+                    with col1:
+                        st.write(f"URL: {url}")
+                    with col2:
+                        st.write(f"Status: {statuscode}")
+                    with col3:
+                        wayback_url = f"https://web.archive.org/web/{timestamp}/{url}"
+                        st.markdown(f"[View Version]({wayback_url})")
+                    st.write(f"Digest: {digest}")
+
+            st.write("Note: Showing up to 50 most recent changes per page.")
+
+    elif st.session_state.active_tab == "robots.txt Changes":
+        st.header("robots.txt Changes")
+
+        robots_txt_data = fetch_robots_txt_data(st.session_state.domain)
+        if robots_txt_data:
+            changes = process_robots_txt_changes(robots_txt_data)
+            if changes:
+                fig = visualize_robots_txt_changes(changes)
+                st.plotly_chart(fig, use_container_width=True)
+
+                st.subheader("Compare unique robots.txt versions")
                 col1, col2 = st.columns(2)
                 with col1:
-                    st.text(f"Version from {pd.to_datetime(date1[0], format='%Y%m%d%H%M%S')}")
-                    content1 = fetch_robots_txt_content(st.session_state.domain, date1[0])
-                    st.code(content1, language="text")
+                    date1 = st.selectbox("Select first version", options=changes,
+                                         format_func=lambda x: pd.to_datetime(x[0], format='%Y%m%d%H%M%S'), key="date1")
                 with col2:
-                    st.text(f"Version from {pd.to_datetime(date2[0], format='%Y%m%d%H%M%S')}")
-                    content2 = fetch_robots_txt_content(st.session_state.domain, date2[0])
-                    st.code(content2, language="text")
+                    date2 = st.selectbox("Select second version", options=changes,
+                                         format_func=lambda x: pd.to_datetime(x[0], format='%Y%m%d%H%M%S'), index=1,
+                                         key="date2")
 
-elif selected_tab == "Download URLs" and st.session_state.show_results:
-    st.header("Download URLs")
+                if st.button("Compare versions"):
+                    with st.spinner("Fetching and comparing robots.txt versions..."):
+                        diffs = compare_robots_txt(st.session_state.domain, date1, date2)
 
-    filter_option = st.radio(
-        "Select URL filter option:",
-        ["All (HTML, Images, CSS, JS, etc.)", "HTML only", "HTML + Images"],
-        index=0,
-        help="Choose which types of URLs to include in the download. 'HTML only' includes HTML files and robots.txt, but excludes .json, .xml, and other .txt files."
-    )
+                    # Display the full content of both versions
+                    st.subheader("Full content of selected versions")
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.text(f"Version from {pd.to_datetime(date1[0], format='%Y%m%d%H%M%S')}")
+                        content1 = fetch_robots_txt_content(st.session_state.domain, date1[0])
+                        st.code(content1, language="text")
+                    with col2:
+                        st.text(f"Version from {pd.to_datetime(date2[0], format='%Y%m%d%H%M%S')}")
+                        content2 = fetch_robots_txt_content(st.session_state.domain, date2[0])
+                        st.code(content2, language="text")
 
-    unique_only = st.checkbox("Export only unique URLs", value=False,
-                              help="If checked, only one instance of each URL will be exported, regardless of how many times it was captured.")
+    elif st.session_state.active_tab == "Download URLs":
+        st.header("Download URLs")
+
+        # Add filter options here
+        filter_option = st.radio(
+            "Select URL filter option:",
+            ["All (HTML, Images, CSS, JS, etc.)", "HTML only", "HTML + Images"],
+            index=0,
+            help="Choose which types of URLs to include in the download. 'HTML only' includes HTML files and robots.txt, but excludes .json, .xml, and other .txt files."
+        )
+
+        unique_only = st.checkbox("Export only unique URLs", value=False,
+                                  help="If checked, only one instance of each URL will be exported, regardless of how many times it was captured.")
 
 
-    def apply_filter(url, option):
-        if option == "All (HTML, Images, CSS, JS, etc.)":
-            return True
-        elif option == "HTML only":
-            return url.endswith(('.html', '.htm', '/')) or url.endswith('robots.txt')
-        elif option == "HTML + Images":
-            return url.endswith(('.html', '.htm', '/', '.jpg', '.jpeg', '.png', '.gif', '.svg')) or url.endswith(
-                'robots.txt')
+        # Function to apply filter
+        def apply_filter(url, option):
+            if option == "All (HTML, Images, CSS, JS, etc.)":
+                return True
+            elif option == "HTML only":
+                return url.endswith(('.html', '.htm', '/')) or url.endswith('robots.txt')
+            elif option == "HTML + Images":
+                return url.endswith(('.html', '.htm', '/', '.jpg', '.jpeg', '.png', '.gif', '.svg')) or url.endswith(
+                    'robots.txt')
 
 
-    filtered_urls = [url for url in st.session_state.unique_urls if apply_filter(url[0], filter_option)]
+        # Filter URLs based on selected option
+        filtered_urls = [url for url in st.session_state.unique_urls if apply_filter(url[0], filter_option)]
 
-    if unique_only:
-        unique_urls = {}
-        for url, timestamp, statuscode, digest in filtered_urls:
-            if url not in unique_urls:
-                unique_urls[url] = (url, timestamp, statuscode, digest)
-        filtered_urls = list(unique_urls.values())
+        # If unique_only is checked, keep only unique URLs
+        if unique_only:
+            unique_urls = {}
+            for url, timestamp, statuscode, digest in filtered_urls:
+                if url not in unique_urls:
+                    unique_urls[url] = (url, timestamp, statuscode, digest)
+            filtered_urls = list(unique_urls.values())
 
-    csv_content = "URL,Timestamp,Status Code,Digest\n"
-    csv_content += "\n".join(
-        [f"{url},{timestamp},{statuscode},{digest}" for url, timestamp, statuscode, digest in filtered_urls])
+        # Prepare CSV content with headers
+        csv_content = "URL,Timestamp,Status Code,Digest\n"
+        csv_content += "\n".join(
+            [f"{url},{timestamp},{statuscode},{digest}" for url, timestamp, statuscode, digest in filtered_urls])
 
-    csv_bytes = csv_content.encode('utf-8-sig')
+        # Convert to bytes with UTF-8-SIG encoding (UTF-8 with BOM)
+        csv_bytes = csv_content.encode('utf-8-sig')
 
-    st.download_button(
-        label="Download Filtered URLs",
-        data=csv_bytes,
-        file_name=f"{st.session_state.domain}_filtered_urls.csv",
-        mime="text/csv",
-        key="download"
-    )
+        st.download_button(
+            label="Download Filtered URLs",
+            data=csv_bytes,
+            file_name=f"{st.session_state.domain}_filtered_urls.csv",
+            mime="text/csv",
+            key="download"
+        )
 
-    st.write(f"Total URLs after filtering: {len(filtered_urls)}")
-
-else:
-    st.info("Please fetch URLs for a domain to view the analysis.")
+        st.write(f"Total URLs after filtering: {len(filtered_urls)}")

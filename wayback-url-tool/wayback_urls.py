@@ -396,20 +396,6 @@ st.sidebar.image(
 
 st.sidebar.markdown("---")
 
-st.sidebar.subheader("About")
-st.sidebar.info("""
-    This app leverages the Wayback Machine's CDX server to analyze and visualise the historical evolution of websites.
-
-    1. URL Retrieval: Fetches all archived URLs for a given domain from the Internet Archive.
-    2. Folder Structure Visualization: Displays how the website's folder structure has changed over time.
-    3. Status Code Analysis: Shows the distribution of HTTP status codes across the site's history.
-    4. Frequently Changed Pages: Identifies and lists the pages that have been modified most often.
-    5. robots.txt Evolution: Tracks and visualises changes to the site's robots.txt file over time.
-    6. Rover from Failed Migrations
-""")
-
-st.sidebar.markdown("---")
-
 st.sidebar.subheader("Visualization Options")
 
 # Move visualization type selection to sidebar
@@ -429,6 +415,20 @@ st.session_state.top_folders_count = st.sidebar.slider(
     value=st.session_state.top_folders_count,
     step=1
 )
+
+st.sidebar.markdown("---")
+
+st.sidebar.subheader("About")
+st.sidebar.info("""
+    This app leverages the Wayback Machine's CDX server to analyze and visualise the historical evolution of websites.
+
+    1. URL Retrieval: Fetches all archived URLs for a given domain from the Internet Archive.
+    2. Folder Structure Visualization: Displays how the website's folder structure has changed over time.
+    3. Status Code Analysis: Shows the distribution of HTTP status codes across the site's history.
+    4. Frequently Changed Pages: Identifies and lists the pages that have been modified most often.
+    5. robots.txt Evolution: Tracks and visualises changes to the site's robots.txt file over time.
+    6. Rover from Failed Migrations
+""")
 
 # Main content
 st.title("🕸️ Wayback Machine URL Fetcher")

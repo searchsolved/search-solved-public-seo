@@ -156,9 +156,6 @@ def create_wide_format_data(df, max_keywords):
 
     return wide_df
 
-
-# Assume the rest of your script prepares 'keyword_presence' DataFrame and sets 'MAX_KEYWORDS_PER_PAGE'
-
 print("Creating wide format data...")
 wide_format_data = create_wide_format_data(keyword_presence, MAX_KEYWORDS_PER_PAGE)
 

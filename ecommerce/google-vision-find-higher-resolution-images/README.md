@@ -1,4 +1,4 @@
-Automatically Source High-Resolution Image Sourcing for eCommerce
+Automatically Source High-Resolution Images for eCommerce Sites
 
 AutoImageRes leverages the power of Google Vision API to automate the sourcing of high-resolution images for medium to large eCommerce websites. This Python script efficiently upgrades standard product images, providing a seamless transition to higher quality visuals without the manual hassle.
 

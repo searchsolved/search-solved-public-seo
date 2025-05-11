@@ -8,7 +8,6 @@ from tempfile import NamedTemporaryFile
 
 
 def detect_main_subject(img_array):
-    """Detect the main subject using specialized product photography techniques."""
     # Convert to grayscale
     gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
 

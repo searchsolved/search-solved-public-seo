@@ -221,16 +221,32 @@ def center_product_image(img, target_size=(800, 800), bg_color="#FFFFFF", x_offs
     return new_img
 
 
-def save_image(img):
+def save_image(img, output_format="JPEG"):
     """Save the image to a temporary file and return the path."""
-    temp_file = NamedTemporaryFile(delete=False, suffix='.jpg')
-    img.save(temp_file.name, format="JPEG")
+    if output_format == "WEBP":
+        suffix = '.webp'
+    else:
+        suffix = '.jpg'
+        output_format = "JPEG"  # Ensure correct format name
+
+    temp_file = NamedTemporaryFile(delete=False, suffix=suffix)
+    img.save(temp_file.name, format=output_format)
     return temp_file.name
 
 
 # Streamlit app
 st.set_page_config(page_title="eCommerce Image Centering Tool | By Lee Foot")
 st.title("eCommerce Image Centering Tool")
+st.markdown("""
+<div style="margin-bottom: 20px;">
+    <h6>
+        Built with Streamlit & OpenCV | 
+        <a href="https://leefoot.co.uk" target="_blank">By Lee Foot</a> | 
+        <a href="https://x.com/LeeFootSEO/" target="_blank">Twitter/X</a> | 
+        <a href="mailto:hello@leefoot.co.uk">Hire Me</a>
+    </h6>
+</div>
+""", unsafe_allow_html=True)
 st.write("Upload images to center the main subject for consistent product displays")
 
 # Sidebar settings
@@ -306,7 +322,8 @@ padding_color = st.sidebar.color_picker(
 )
 
 # File uploader
-uploaded_files = st.file_uploader("Upload product images", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+uploaded_files = st.file_uploader("Upload product images", type=["jpg", "jpeg", "png", "webp"],
+                                  accept_multiple_files=True)
 
 if uploaded_files:
     st.write(f"Processing {len(uploaded_files)} images...")
@@ -345,32 +362,62 @@ if uploaded_files:
                 st.image(binary_vis, caption="Threshold visualization", use_container_width=True)
 
             st.image(img, caption=f"Centered: {original_name}", use_container_width=True)
-            with open(path, "rb") as file:
+
+            # Add format options
+            format_options = st.radio(f"Format for {original_name}", ["JPEG", "WEBP"], horizontal=True)
+
+            # Save in selected format
+            download_path = save_image(img, output_format=format_options)
+
+            # Determine correct mime type and file extension
+            mime_type = "image/jpeg" if format_options == "JPEG" else "image/webp"
+            file_ext = "jpg" if format_options == "JPEG" else "webp"
+
+            # Create download button
+            with open(download_path, "rb") as file:
                 btn = st.download_button(
                     label=f"Download {original_name}",
                     data=file,
-                    file_name=f"centered_{original_name}",
-                    mime="image/jpeg"
+                    file_name=f"centered_{original_name.split('.')[0]}.{file_ext}",
+                    mime=mime_type
                 )
+
+            # Clean up temporary file
+            try:
+                os.unlink(download_path)
+            except:
+                pass
 
     # Batch download option
     if len(processed_images) > 1:
         st.subheader("Batch Download")
 
-        # Create a zip file containing all processed images
+        # Create batch download option with format selection
         import zipfile
 
+        # Format options for batch download
+        batch_format = st.radio("Batch download format:", ["JPEG", "WEBP"], horizontal=True)
+
         zip_file = NamedTemporaryFile(delete=False, suffix='.zip')
+        file_ext = "jpg" if batch_format == "JPEG" else "webp"
 
         with zipfile.ZipFile(zip_file.name, 'w') as zipf:
-            for _, path, original_name in processed_images:
-                zipf.write(path, arcname=f"centered_{original_name}")
+            for img, _, original_name in processed_images:
+                # Save in selected format
+                temp_img_path = save_image(img, output_format=batch_format)
+                base_name = original_name.split('.')[0]
+                zipf.write(temp_img_path, arcname=f"centered_{base_name}.{file_ext}")
+                # Clean up temp image
+                try:
+                    os.unlink(temp_img_path)
+                except:
+                    pass
 
         with open(zip_file.name, "rb") as file:
             st.download_button(
-                label="Download All Centered Images",
+                label=f"Download All Centered Images ({batch_format})",
                 data=file,
-                file_name="woocommerce_centered_images.zip",
+                file_name=f"ecommerce_centered_images_{batch_format.lower()}.zip",
                 mime="application/zip"
             )
 
@@ -404,4 +451,5 @@ else:
 
 # Footer
 st.markdown("---")
-st.markdown("eCommerce Image Centering Tool | Built with Streamlit & OpenCV | By [Lee Foot](https://leefoot.co.uk) | [Twitter/X](https://x.com/LeeFootSEO/) | [Hire Me](mailto:hello@leefoot.co.uk)")
+st.markdown(
+    "eCommerce Image Centering Tool | By [Lee Foot](https://leefoot.co.uk) | [Twitter/X](https://x.com/LeeFootSEO/) | [Hire Me](mailto:hello@leefoot.co.uk)")

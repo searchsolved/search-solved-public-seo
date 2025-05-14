@@ -108,8 +108,8 @@ def enhance_detection_visualization(img, original_filename):
 
 
 def center_product_image(img, target_size=(800, 800), bg_color="#FFFFFF", x_offset=0, y_offset=0,
-                         remove_bg=True, bg_threshold=240, tight_crop=True, add_padding=True, padding_percent=5):
-    """Process product images with background removal and proper centering."""
+                         add_padding=True, padding_percent=5):
+    """Process product images with proper centering and tight cropping."""
     # Convert PIL Image to numpy array for OpenCV processing
     img_array = np.array(img)
     orig_height, orig_width = img_array.shape[:2]
@@ -117,54 +117,42 @@ def center_product_image(img, target_size=(800, 800), bg_color="#FFFFFF", x_offs
     # Create a copy for processing
     processed = img_array.copy()
 
-    # Background removal if requested
-    if remove_bg:
-        # Convert to RGBA to support transparency
-        if processed.shape[2] == 3:  # RGB
-            # Create alpha channel
-            alpha = np.ones((orig_height, orig_width), dtype=processed.dtype) * 255
-            processed = np.dstack((processed, alpha))
+    # Convert to grayscale for thresholding
+    gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+    
+    # Threshold to identify background (using fixed threshold)
+    bg_threshold = 230
+    _, mask = cv2.threshold(gray, bg_threshold, 255, cv2.THRESH_BINARY)
+    
+    # Invert mask to get foreground
+    mask_inv = cv2.bitwise_not(mask)
+    
+    # Clean up the mask
+    kernel = np.ones((5, 5), np.uint8)
+    mask_inv = cv2.morphologyEx(mask_inv, cv2.MORPH_CLOSE, kernel)
+    mask_inv = cv2.morphologyEx(mask_inv, cv2.MORPH_OPEN, kernel)
 
-        # Convert to grayscale for thresholding
-        gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+    # Use the mask to find the bounding box of the foreground
+    contours, _ = cv2.findContours(mask_inv, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if contours:
+        # Find the largest contour by area
+        largest_contour = max(contours, key=cv2.contourArea)
 
-        # Threshold to identify background
-        _, mask = cv2.threshold(gray, bg_threshold, 255, cv2.THRESH_BINARY)
+        # Get its bounding box
+        x, y, w, h = cv2.boundingRect(largest_contour)
 
-        # Invert mask to get foreground
-        mask_inv = cv2.bitwise_not(mask)
+        # Add small margin (5% of the object size)
+        margin_x = int(w * 0.05)
+        margin_y = int(h * 0.05)
 
-        # Clean up the mask
-        kernel = np.ones((5, 5), np.uint8)
-        mask_inv = cv2.morphologyEx(mask_inv, cv2.MORPH_CLOSE, kernel)
-        mask_inv = cv2.morphologyEx(mask_inv, cv2.MORPH_OPEN, kernel)
+        # Ensure margins don't go out of bounds
+        x = max(0, x - margin_x)
+        y = max(0, y - margin_y)
+        w = min(orig_width - x, w + 2 * margin_x)
+        h = min(orig_height - y, h + 2 * margin_y)
 
-        # Apply mask to alpha channel
-        processed[:, :, 3] = mask_inv
-
-    # Auto-crop to content if requested
-    if remove_bg and tight_crop:
-        # Use the mask to find the bounding box of the foreground
-        contours, _ = cv2.findContours(mask_inv, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        if contours:
-            # Find the largest contour by area
-            largest_contour = max(contours, key=cv2.contourArea)
-
-            # Get its bounding box
-            x, y, w, h = cv2.boundingRect(largest_contour)
-
-            # Add small margin (5% of the object size)
-            margin_x = int(w * 0.05)
-            margin_y = int(h * 0.05)
-
-            # Ensure margins don't go out of bounds
-            x = max(0, x - margin_x)
-            y = max(0, y - margin_y)
-            w = min(orig_width - x, w + 2 * margin_x)
-            h = min(orig_height - y, h + 2 * margin_y)
-
-            # Crop to the object plus margin
-            processed = processed[y:y + h, x:x + w]
+        # Crop to the object plus margin
+        processed = processed[y:y + h, x:x + w]
 
     # Convert processed numpy array back to PIL
     processed_pil = Image.fromarray(processed)
@@ -195,11 +183,8 @@ def center_product_image(img, target_size=(800, 800), bg_color="#FFFFFF", x_offs
     bg_color = bg_color.lstrip('#')
     bg_rgb = tuple(int(bg_color[i:i + 2], 16) for i in (0, 2, 4))
 
-    # Create a new image with the target size
-    if len(processed.shape) > 2 and processed.shape[2] == 4:  # RGBA
-        new_img = Image.new("RGBA", target_size, bg_rgb + (0,))
-    else:
-        new_img = Image.new("RGB", target_size, bg_rgb)
+    # Create a new image with the target size (always RGB)
+    new_img = Image.new("RGB", target_size, bg_rgb)
 
     # Calculate position to paste the resized image centered
     paste_x = (target_size[0] - new_width) // 2
@@ -209,13 +194,8 @@ def center_product_image(img, target_size=(800, 800), bg_color="#FFFFFF", x_offs
     paste_x += x_offset
     paste_y += y_offset
 
-    # Paste with transparency if RGBA
-    if len(processed.shape) > 2 and processed.shape[2] == 4:
-        new_img.paste(img_resized, (paste_x, paste_y), img_resized)
-        # Convert back to RGB for final output
-        new_img = new_img.convert("RGB")
-    else:
-        new_img.paste(img_resized, (paste_x, paste_y))
+    # Paste the image
+    new_img.paste(img_resized, (paste_x, paste_y))
 
     return new_img
 
@@ -251,28 +231,13 @@ st.write("Upload images to center the main subject for consistent product displa
 # Sidebar settings
 st.sidebar.header("Settings")
 
-# Background options
-st.sidebar.subheader("Background Options")
-remove_background = st.sidebar.checkbox("Remove background", value=True,
-                                        help="Automatically removes white/uniform backgrounds")
-
-tight_crop = True
-bg_remove_threshold = 230
-
-if remove_background:
-    bg_remove_threshold = st.sidebar.slider("Background removal threshold",
-                                            180, 250, 230, 5,
-                                            help="Higher values remove more background")
-    tight_crop = st.sidebar.checkbox("Auto-crop to content", value=True,
-                                     help="Automatically crops image close to the product")
-
 # Padding options
 st.sidebar.subheader("Padding")
 add_padding = st.sidebar.checkbox("Add whitespace padding", value=True,
-                                  help="Adds consistent padding around products")
+                                help="Adds consistent padding around products")
 padding_percentage = st.sidebar.slider("Padding amount (%)",
-                                       0, 30, 5, 5,  # Changed default from 10 to 5
-                                       help="Percentage of canvas to use as padding")
+                                     0, 30, 5, 5,
+                                     help="Percentage of canvas to use as padding")
 
 # Manual adjustment options
 st.sidebar.subheader("Manual Adjustment")
@@ -282,28 +247,28 @@ manual_y_offset = 0
 
 if enable_manual_adjustment:
     manual_x_offset = st.sidebar.slider("Horizontal adjustment", -100, 100, 0, 5,
-                                        help="Adjust position left (-) or right (+)")
+                                      help="Adjust position left (-) or right (+)")
     manual_y_offset = st.sidebar.slider("Vertical adjustment", -100, 100, 0, 5,
-                                        help="Adjust position up (-) or down (+)")
+                                      help="Adjust position up (-) or down (+)")
 
 # Output size options
 st.sidebar.subheader("Output Size")
 output_size = st.sidebar.selectbox(
     "Dimensions",
     [
-        "600×600 (Small)",  # Changed to first position to make it default
+        "600×600 (Small)",
         "800×800 (Medium)",
         "1000×1000 (Large)",
         "Custom"
     ],
-    index=0  # Set index to 0 for first option (small)
+    index=0
 )
 
 if output_size == "Custom":
     custom_width = st.sidebar.number_input("Width", min_value=100, max_value=2000, value=600,
-                                           step=50)  # Changed default from 800 to 600
+                                         step=50)
     custom_height = st.sidebar.number_input("Height", min_value=100, max_value=2000, value=600,
-                                            step=50)  # Changed default from 800 to 600
+                                          step=50)
     target_size = (custom_width, custom_height)
 else:
     size_map = {
@@ -322,7 +287,7 @@ padding_color = st.sidebar.color_picker(
 
 # File uploader
 uploaded_files = st.file_uploader("Upload product images", type=["jpg", "jpeg", "png", "webp"],
-                                  accept_multiple_files=True)
+                                accept_multiple_files=True)
 
 if uploaded_files:
     st.write(f"Processing {len(uploaded_files)} images...")
@@ -333,11 +298,10 @@ if uploaded_files:
         # Read image
         img = Image.open(uploaded_file).convert("RGB")
 
-        # Process image
+        # Process image with simplified parameters
         centered_img = center_product_image(img, target_size, padding_color,
-                                            manual_x_offset, manual_y_offset,
-                                            remove_background, bg_remove_threshold,
-                                            tight_crop, add_padding, padding_percentage)
+                                          manual_x_offset, manual_y_offset,
+                                          add_padding, padding_percentage)
 
         # Save processed image
         output_path = save_image(centered_img)
@@ -356,7 +320,7 @@ if uploaded_files:
             if show_detection:
                 # Show the detection visualization
                 detection_vis, binary_vis = enhance_detection_visualization(Image.open(uploaded_files[i]),
-                                                                            original_name)
+                                                                          original_name)
                 st.image(detection_vis, caption=f"Detection: {original_name}", use_container_width=True)
                 st.image(binary_vis, caption="Threshold visualization", use_container_width=True)
 

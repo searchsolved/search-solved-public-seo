@@ -117,47 +117,68 @@ def center_product_image(img, target_size=(800, 800), bg_color="#FFFFFF", x_offs
     # Create a copy for processing
     processed = img_array.copy()
 
+    # For compatibility with the original background removal mode:
     # Convert to grayscale for thresholding
     gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
     
-    # Threshold to identify background (using fixed threshold)
-    bg_threshold = 230
-    _, mask = cv2.threshold(gray, bg_threshold, 255, cv2.THRESH_BINARY)
+    # Try multiple thresholding approaches to get the best contour
+    thresholds = [240, 230, 220, 200]
+    best_contours = []
     
-    # Invert mask to get foreground
-    mask_inv = cv2.bitwise_not(mask)
+    for threshold in thresholds:
+        # Threshold to identify background
+        _, mask = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
+        mask_inv = cv2.bitwise_not(mask)
+        
+        # Clean up the mask
+        kernel = np.ones((5, 5), np.uint8)
+        mask_inv = cv2.morphologyEx(mask_inv, cv2.MORPH_CLOSE, kernel)
+        mask_inv = cv2.morphologyEx(mask_inv, cv2.MORPH_OPEN, kernel)
+        
+        # Find contours
+        contours, _ = cv2.findContours(mask_inv, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if contours and any(cv2.contourArea(c) > img_array.size * 0.01 for c in contours):
+            best_contours = contours
+            break
     
-    # Clean up the mask
-    kernel = np.ones((5, 5), np.uint8)
-    mask_inv = cv2.morphologyEx(mask_inv, cv2.MORPH_CLOSE, kernel)
-    mask_inv = cv2.morphologyEx(mask_inv, cv2.MORPH_OPEN, kernel)
+    # If still no good contours, try adaptive thresholding
+    if not best_contours:
+        binary = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                       cv2.THRESH_BINARY_INV, 21, 5)
+        best_contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    # If still nothing, try Otsu's method
+    if not best_contours:
+        _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        best_contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    # Use the mask to find the bounding box of the foreground
-    contours, _ = cv2.findContours(mask_inv, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    if contours:
-        # Find the largest contour by area
-        largest_contour = max(contours, key=cv2.contourArea)
-
-        # Get its bounding box
-        x, y, w, h = cv2.boundingRect(largest_contour)
-
-        # Add small margin (5% of the object size)
-        margin_x = int(w * 0.05)
-        margin_y = int(h * 0.05)
-
-        # Ensure margins don't go out of bounds
-        x = max(0, x - margin_x)
-        y = max(0, y - margin_y)
-        w = min(orig_width - x, w + 2 * margin_x)
-        h = min(orig_height - y, h + 2 * margin_y)
-
-        # Crop to the object plus margin
-        processed = processed[y:y + h, x:x + w]
+    # Process contours if found
+    if best_contours:
+        # Find all contours with reasonable area (more than 1% of the image)
+        valid_contours = [c for c in best_contours if cv2.contourArea(c) > img_array.size * 0.01]
+        
+        if valid_contours:
+            # Combine all valid contours for bounding box
+            all_points = np.vstack([c.reshape(-1, 2) for c in valid_contours])
+            x, y, w, h = cv2.boundingRect(all_points)
+            
+            # Add small margin (5% of the object size)
+            margin_x = int(w * 0.05)
+            margin_y = int(h * 0.05)
+            
+            # Ensure margins don't go out of bounds
+            x = max(0, x - margin_x)
+            y = max(0, y - margin_y)
+            w = min(orig_width - x, w + 2 * margin_x)
+            h = min(orig_height - y, h + 2 * margin_y)
+            
+            # Crop to the object plus margin
+            processed = processed[y:y + h, x:x + w]
 
     # Convert processed numpy array back to PIL
     processed_pil = Image.fromarray(processed)
 
-    # Apply consistent padding if requested
+    # Apply consistent padding
     if add_padding:
         # Calculate the maximum size based on target dimensions minus padding
         padding_factor = padding_percent / 100

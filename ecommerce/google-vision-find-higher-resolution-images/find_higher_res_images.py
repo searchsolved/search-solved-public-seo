@@ -1,8 +1,8 @@
 ####################################################################################
-# Website  : https://leefoot.co.uk/                                                #
-# Contact  : https://leefoot.co.uk/hire-me/                                        #
+# Website  : https://leefoot.com/                                                #
+# Contact  : https://leefoot.com/hire-me/                                        #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
-# Twitter  : https://twitter.com/LeeFootSEO                                        #
+# Twitter  : https://x.com/LeeFootSEO                                        #
 ####################################################################################
 
 # Standard libraries
@@ -15,6 +15,7 @@ import signal
 import sys
 import atexit
 import time
+import random
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Tuple, Dict, Optional
 from dataclasses import dataclass
@@ -49,13 +50,21 @@ class Config:
     MIN_RESOLUTION: Tuple[int, int] = (1000, 1000)
     MIN_IMPROVEMENT_RATIO: float = 1.2
     MAX_IMAGES: int = 5
-    REQUEST_TIMEOUT: int = 20
-    MAX_WORKERS: int = 10
+    REQUEST_TIMEOUT: int = 30  # Increased timeout for slower, more patient requests
+    MAX_WORKERS: int = 2  # Further reduced for more human-like behavior
     INCLUDE_PARTIAL_MATCHES: bool = True
     INCLUDE_VISUALLY_SIMILAR: bool = True
     INCLUDE_PAGE_MATCHES: bool = True
     SKIPPED_FILE_TYPES: List[str] = None
-    SAME_DOMAIN_DELAY: float = 0.5  # Delay in seconds between requests to the same domain
+    SAME_DOMAIN_DELAY: float = 3.0  # Base delay between same-domain requests
+    SAME_DOMAIN_DELAY_JITTER: float = 2.0  # Random jitter (0 to 2 seconds added)
+    GLOBAL_DELAY_MIN: float = 0.5  # Minimum global delay
+    GLOBAL_DELAY_MAX: float = 1.5  # Maximum global delay
+    USER_AGENT_ROTATION: bool = True  # Rotate user agents
+    SIMULATE_HUMAN_BREAKS: bool = True  # Take breaks after batches
+    BREAK_AFTER_REQUESTS: int = 20  # Take a break after this many requests
+    BREAK_DURATION_MIN: float = 10.0  # Minimum break duration
+    BREAK_DURATION_MAX: float = 30.0  # Maximum break duration
 
     def __post_init__(self):
         if self.SKIPPED_FILE_TYPES is None:
@@ -72,8 +81,18 @@ class MatchType(Enum):
     PAGE = "page_match"
 
 
-# Initialize a session for persistent requests
+# Initialize a session for persistent requests with browser-like configuration
 session = requests.Session()
+# Browser-like session configuration
+session.max_redirects = 10
+adapter = requests.adapters.HTTPAdapter(
+    pool_connections=2,  # Keep low for more human-like behavior
+    pool_maxsize=2,
+    max_retries=0,  # We handle retries manually
+    pool_block=False
+)
+session.mount('http://', adapter)
+session.mount('https://', adapter)
 
 # Global variables
 processed_hashes = set()
@@ -84,6 +103,8 @@ interrupted = False
 # Domain tracking for rate limiting
 domain_last_access = {}
 domain_access_lock = None
+global_last_request_time = 0  # Track last request globally
+total_requests_made = 0  # Track total requests for break simulation
 
 stats = {
     'skipped_format': 0,
@@ -168,8 +189,8 @@ def initialize_client():
 
 
 def apply_domain_rate_limit(url):
-    """Apply rate limiting for same-domain requests"""
-    global domain_last_access, domain_access_lock
+    """Apply human-like rate limiting with randomization"""
+    global domain_last_access, domain_access_lock, global_last_request_time, total_requests_made
     
     domain = urlparse(url).netloc
     if not domain:
@@ -178,14 +199,40 @@ def apply_domain_rate_limit(url):
     with domain_access_lock:
         current_time = time.time()
         
+        # Check if we need a human break
+        if config.SIMULATE_HUMAN_BREAKS and total_requests_made > 0 and total_requests_made % config.BREAK_AFTER_REQUESTS == 0:
+            break_duration = random.uniform(config.BREAK_DURATION_MIN, config.BREAK_DURATION_MAX)
+            logging.info(f"Taking a human-like break for {break_duration:.1f} seconds after {total_requests_made} requests...")
+            time.sleep(break_duration)
+            current_time = time.time()
+        
+        # Apply global rate limit with randomization
+        global_delay = random.uniform(config.GLOBAL_DELAY_MIN, config.GLOBAL_DELAY_MAX)
+        time_since_last_global = current_time - global_last_request_time
+        if time_since_last_global < global_delay:
+            sleep_time = global_delay - time_since_last_global
+            logging.debug(f"Global rate limit: Waiting {sleep_time:.2f}s")
+            time.sleep(sleep_time)
+            current_time = time.time()
+        
+        # Apply domain-specific rate limit with jitter
         if domain in domain_last_access:
             time_since_last = current_time - domain_last_access[domain]
-            if time_since_last < config.SAME_DOMAIN_DELAY:
-                sleep_time = config.SAME_DOMAIN_DELAY - time_since_last
-                logging.debug(f"Rate limiting: Waiting {sleep_time:.2f}s before accessing {domain}")
+            # Add random jitter to the delay
+            domain_delay = config.SAME_DOMAIN_DELAY + random.uniform(0, config.SAME_DOMAIN_DELAY_JITTER)
+            if time_since_last < domain_delay:
+                sleep_time = domain_delay - time_since_last
+                logging.debug(f"Domain rate limit: Waiting {sleep_time:.2f}s before accessing {domain}")
                 time.sleep(sleep_time)
+                current_time = time.time()
+        
+        # Add small random "thinking time" before each request (100-500ms)
+        thinking_time = random.uniform(0.1, 0.5)
+        time.sleep(thinking_time)
         
         domain_last_access[domain] = time.time()
+        global_last_request_time = time.time()
+        total_requests_made += 1
 
 
 def get_image_hash(image_data):
@@ -217,14 +264,69 @@ def check_file_type(url):
     return False
 
 
-def fetch_image_with_requests(url, user_agent):
-    """Fetch the image using requests library with rate limiting"""
+def fetch_image_with_requests(url, user_agent, max_retries=3):
+    """Fetch the image using requests library with human-like behavior"""
     # Apply rate limiting for the domain
     apply_domain_rate_limit(url)
     
-    logging.debug(f"Fetching image with requests for URL {url}")
-    headers = {'User-Agent': user_agent.random}
-    response = session.get(url, timeout=REQUEST_TIMEOUT, headers=headers, stream=True)
+    for attempt in range(max_retries):
+        try:
+            logging.debug(f"Fetching image with requests for URL {url} (attempt {attempt + 1}/{max_retries})")
+            
+            # Build human-like headers
+            headers = {
+                'User-Agent': user_agent.random if config.USER_AGENT_ROTATION else user_agent.chrome,
+                'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'DNT': '1',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+                'Sec-Fetch-Dest': 'image',
+                'Sec-Fetch-Mode': 'no-cors',
+                'Sec-Fetch-Site': 'cross-site',
+                'Cache-Control': 'max-age=0',
+                'Referer': 'https://www.google.com/'  # Simulate coming from Google
+            }
+            
+            # Randomly decide whether to include some headers (more human-like)
+            if random.random() > 0.5:
+                headers['Sec-CH-UA'] = '"Chromium";v="118", "Google Chrome";v="118", "Not=A?Brand";v="99"'
+                headers['Sec-CH-UA-Mobile'] = '?0'
+                headers['Sec-CH-UA-Platform'] = '"Windows"'
+            
+            response = session.get(url, timeout=REQUEST_TIMEOUT, headers=headers, stream=True, allow_redirects=True)
+            
+            # If successful, return the response
+            if response.status_code == 200:
+                return response
+            
+            # For 403/443 errors, wait longer before retry with different user agent
+            if response.status_code in [403, 443] and attempt < max_retries - 1:
+                wait_time = (attempt + 1) * 5 + random.uniform(0, 3)  # 5-8s, 10-13s, etc.
+                logging.warning(f"Got {response.status_code} error for {url}, waiting {wait_time:.1f}s before retry...")
+                time.sleep(wait_time)
+                # Force new user agent on retry
+                user_agent = UserAgent()
+                continue
+            
+            # For other errors, still retry but with shorter wait
+            if response.status_code >= 400 and attempt < max_retries - 1:
+                wait_time = (attempt + 1) * 2 + random.uniform(0, 2)
+                logging.warning(f"Got {response.status_code} error for {url}, waiting {wait_time:.1f}s before retry...")
+                time.sleep(wait_time)
+                continue
+                
+            return response
+                
+        except (RequestException, Timeout) as e:
+            if attempt < max_retries - 1:
+                wait_time = (attempt + 1) * 3 + random.uniform(0, 2)
+                logging.warning(f"Request failed for {url}: {e}. Retrying in {wait_time:.1f}s...")
+                time.sleep(wait_time)
+            else:
+                raise
+    
     return response
 
 
@@ -484,17 +586,22 @@ def fetch_and_process_image_enhanced(url: str, client, image, user_agent):
 
 
 def process_images_enhanced(df, client, image, user_agent):
-    """Process images concurrently - FIXED VERSION"""
+    """Process images concurrently with human-like behavior"""
     global interrupted, all_results_global
 
     logging.info(f"Processing {len(df['Address'])} images...")
-    logging.info(f"Same-domain delay: {config.SAME_DOMAIN_DELAY}s")
+    logging.info(f"Same-domain delay: {config.SAME_DOMAIN_DELAY}s + random jitter")
     stats['total_urls'] = len(df['Address'])
+    
+    # Shuffle URLs to simulate non-sequential browsing (more human-like)
+    urls = list(df['Address'])
+    random.shuffle(urls)
+    logging.info("URLs shuffled for random access pattern (more human-like)")
 
     with ThreadPoolExecutor(max_workers=config.MAX_WORKERS) as executor:
         future_to_url = {
             executor.submit(fetch_and_process_image_enhanced, url, client, image, user_agent): url
-            for url in df['Address']
+            for url in urls
         }
 
         completed_count = 0
@@ -586,9 +693,15 @@ def main():
     global interrupted, all_results_global
 
     logging.info("=" * 60)
-    logging.info("STARTING IMAGE RESOLUTION FINDER")
+    logging.info("STARTING IMAGE RESOLUTION FINDER - HUMAN MODE")
     logging.info("Press Ctrl+C to stop and save results")
-    logging.info(f"Rate limiting: {config.SAME_DOMAIN_DELAY}s delay between same-domain requests")
+    logging.info(f"Human-like settings to avoid detection:")
+    logging.info(f"  - Max concurrent workers: {config.MAX_WORKERS}")
+    logging.info(f"  - Same-domain delay: {config.SAME_DOMAIN_DELAY}-{config.SAME_DOMAIN_DELAY + config.SAME_DOMAIN_DELAY_JITTER}s (randomized)")
+    logging.info(f"  - Global delay: {config.GLOBAL_DELAY_MIN}-{config.GLOBAL_DELAY_MAX}s (randomized)")
+    logging.info(f"  - Request timeout: {config.REQUEST_TIMEOUT}s")
+    logging.info(f"  - Human breaks: Every {config.BREAK_AFTER_REQUESTS} requests for {config.BREAK_DURATION_MIN}-{config.BREAK_DURATION_MAX}s")
+    logging.info(f"  - User agent rotation: {config.USER_AGENT_ROTATION}")
     logging.info("=" * 60)
 
     try:

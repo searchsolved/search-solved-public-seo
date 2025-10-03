@@ -179,7 +179,13 @@ def fetch_gsc_data(webproperty, search_type, start_date, end_date, dimensions, d
         query = query.filter('device', 'equals', device_type.lower())
 
     try:
-        return query.limit(MAX_ROWS).get().to_dataframe()
+        df = query.limit(MAX_ROWS).get().to_dataframe()
+        # Convert CTR and position to numeric types
+        if 'ctr' in df.columns:
+            df['ctr'] = pd.to_numeric(df['ctr'], errors='coerce')
+        if 'position' in df.columns:
+            df['position'] = pd.to_numeric(df['position'], errors='coerce')
+        return df
     except Exception as e:
         show_error(e)
         return pd.DataFrame()

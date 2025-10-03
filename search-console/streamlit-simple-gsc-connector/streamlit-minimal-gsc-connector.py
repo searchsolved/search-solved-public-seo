@@ -241,10 +241,10 @@ def fetch_gsc_data(webproperty, search_type, start_date, end_date, dimensions, d
         
         # Ensure proper data types for all columns
         if 'ctr' in df.columns:
-            df['ctr'] = pd.to_numeric(df['ctr'], errors='coerce').astype(float)
+            df['ctr'] = pd.to_numeric(df['ctr'], errors='coerce').round(2).astype(float)
         
         if 'position' in df.columns:
-            df['position'] = pd.to_numeric(df['position'], errors='coerce').astype(float)
+            df['position'] = pd.to_numeric(df['position'], errors='coerce').round(2).astype(float)
         
         if 'clicks' in df.columns:
             df['clicks'] = pd.to_numeric(df['clicks'], errors='coerce').fillna(0).astype(int)

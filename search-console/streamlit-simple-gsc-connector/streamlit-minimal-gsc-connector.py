@@ -8,7 +8,6 @@
 
 # Standard library imports
 import datetime
-import base64
 
 # Related third-party imports
 import streamlit as st
@@ -17,6 +16,7 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 import pandas as pd
 import searchconsole
+from io import BytesIO
 
 # Configuration: Set to True if running locally, False if running on Streamlit Cloud
 # IS_LOCAL = True
@@ -316,6 +316,62 @@ def property_change():
 # File & Download Operations
 # -------------
 
+def analyze_query_counts(report):
+    """
+    Analyzes query counts by position ranges and month.
+    Returns a DataFrame with monthly breakdown of queries in different position ranges.
+    """
+    if report.empty or 'query' not in report.columns or 'position' not in report.columns or 'date' not in report.columns:
+        return pd.DataFrame()
+    
+    # Convert date to datetime if it's not already
+    report['date'] = pd.to_datetime(report['date'])
+    report['year_month'] = report['date'].dt.to_period('M').astype(str)
+    
+    # Define position ranges
+    def categorize_position(pos):
+        if pos <= 3:
+            return 'Positions 1-3'
+        elif pos <= 10:
+            return 'Positions 4-10'
+        elif pos <= 20:
+            return 'Positions 11-20'
+        else:
+            return 'Positions 20+'
+    
+    # Apply position categorization
+    report['position_range'] = report['position'].apply(categorize_position)
+    
+    # Count unique queries per month per position range
+    query_counts = report.groupby(['year_month', 'position_range'])['query'].nunique().reset_index()
+    query_counts.columns = ['Month', 'Position Range', 'Unique Queries']
+    
+    # Pivot to create a more readable format
+    pivot_table = query_counts.pivot(index='Month', columns='Position Range', values='Unique Queries').fillna(0)
+    
+    # Ensure all position ranges exist in the correct order
+    position_order = ['Positions 1-3', 'Positions 4-10', 'Positions 11-20', 'Positions 20+']
+    for pos_range in position_order:
+        if pos_range not in pivot_table.columns:
+            pivot_table[pos_range] = 0
+    
+    # Reorder columns
+    pivot_table = pivot_table[position_order]
+    
+    # Add total column
+    pivot_table['Total Queries'] = pivot_table.sum(axis=1)
+    
+    # Reset index to make Month a column
+    pivot_table = pivot_table.reset_index()
+    
+    # Convert counts to integers
+    for col in pivot_table.columns:
+        if col != 'Month':
+            pivot_table[col] = pivot_table[col].astype(int)
+    
+    return pivot_table
+
+
 def show_dataframe(report):
     """
     Shows a preview of the first 100 rows of the report DataFrame in an expandable section.
@@ -326,15 +382,60 @@ def show_dataframe(report):
 
 def download_csv_link(report):
     """
-    Generates and displays a download link for the report DataFrame in CSV format.
+    Generates and displays a download button for the report DataFrame in CSV format.
+    Uses Streamlit's built-in download_button for better performance.
     """
+    csv = report.to_csv(index=False, encoding='utf-8-sig')
+    
+    st.download_button(
+        label="📥 Download CSV File",
+        data=csv,
+        file_name=f"search_console_data_{datetime.date.today()}.csv",
+        mime="text/csv",
+        use_container_width=True
+    )
 
-    def to_csv(df):
-        return df.to_csv(index=False, encoding='utf-8-sig')
 
-    csv = to_csv(report)
-    b64_csv = base64.b64encode(csv.encode()).decode()
-    href = f'<a href="data:file/csv;base64,{b64_csv}" download="search_console_data.csv">Download CSV File</a>'
+def download_excel_link(report, query_analysis=None):
+    """
+    Generates and displays a download link for the report DataFrame in Excel format.
+    Includes multiple sheets: main data and optional query count analysis.
+    """
+    output = BytesIO()
+    
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        # Write main data
+        report.to_excel(writer, sheet_name='GSC Data', index=False)
+        
+        # Write query analysis if available
+        if query_analysis is not None and not query_analysis.empty:
+            query_analysis.to_excel(writer, sheet_name='Query Count by Position', index=False)
+            
+            # Auto-adjust column widths for query analysis sheet
+            worksheet = writer.sheets['Query Count by Position']
+            for idx, col in enumerate(query_analysis.columns):
+                max_length = max(
+                    query_analysis[col].astype(str).apply(len).max(),
+                    len(col)
+                ) + 2
+                worksheet.column_dimensions[chr(65 + idx)].width = max_length
+        
+        # Auto-adjust column widths for main data sheet
+        worksheet = writer.sheets['GSC Data']
+        for idx, col in enumerate(report.columns):
+            if idx < 26:  # Limit to first 26 columns (A-Z)
+                max_length = min(
+                    max(
+                        report[col].astype(str).apply(len).max(),
+                        len(col)
+                    ) + 2,
+                    50  # Max width of 50
+                )
+                worksheet.column_dimensions[chr(65 + idx)].width = max_length
+    
+    excel_data = output.getvalue()
+    b64_excel = base64.b64encode(excel_data).decode()
+    href = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64_excel}" download="search_console_data.xlsx">Download Excel File (with Query Analysis)</a>'
     st.markdown(href, unsafe_allow_html=True)
 
 
@@ -421,14 +522,40 @@ def show_dimensions_selector(search_type):
 def show_fetch_data_button(webproperty, search_type, start_date, end_date, selected_dimensions):
     """
     Displays a button to fetch data based on selected parameters.
-    Shows the report DataFrame and download link upon successful data fetching.
+    Shows the report DataFrame, query analysis, and download links upon successful data fetching.
     """
     if st.button("Fetch Data"):
         report = fetch_data_loading(webproperty, search_type, start_date, end_date, selected_dimensions)
 
-        if report is not None:
+        if report is not None and not report.empty:
             show_dataframe(report)
-            download_csv_link(report)
+            
+            # Generate query count analysis if query, position, and date are in dimensions
+            query_analysis = None
+            if all(dim in selected_dimensions for dim in ['query', 'position', 'date']):
+                st.subheader("📊 Query Count Analysis by Position Range")
+                query_analysis = analyze_query_counts(report)
+                
+                if not query_analysis.empty:
+                    st.dataframe(query_analysis, use_container_width=True)
+                    st.caption("Monthly breakdown of unique queries by position ranges")
+                else:
+                    st.info("Unable to generate query analysis. Ensure your data includes query, position, and date dimensions.")
+            else:
+                st.info("💡 Tip: Include 'query', 'position', and 'date' dimensions to see query count analysis by position ranges.")
+            
+            # Download options
+            st.subheader("📥 Download Options")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                download_csv_link(report)
+            
+            with col2:
+                if query_analysis is not None and not query_analysis.empty:
+                    download_excel_link(report, query_analysis)
+                else:
+                    download_excel_link(report)
 
 
 # -------------

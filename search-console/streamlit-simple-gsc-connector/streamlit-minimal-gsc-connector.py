@@ -45,10 +45,10 @@ def setup_streamlit():
     Configures Streamlit's page settings and displays the app title and markdown information.
     Sets the page layout, title, and markdown content with links and app description.
     """
-    st.set_page_config(page_title="✨ Simple Google Search Console Data | LeeFoot.com", layout="wide")
+    st.set_page_config(page_title="✨ GSC Data Exporter | LeeFoot.com", layout="wide")
     
     # Main title
-    st.title("✨ Simple Google Search Console Data Extractor")
+    st.title("✨ GSC Data Exporter")
     
     # Subtitle and social links in a cleaner format
     st.markdown(
@@ -73,7 +73,7 @@ def setup_streamlit():
             Created by <strong>Lee Foot</strong> • 
             <a href="https://twitter.com/LeeFootSEO" target="_blank">Follow me on 𝕏</a> • 
             <a href="https://www.linkedin.com/in/lee-foot/" target="_blank">Connect on LinkedIn</a> • 
-            <a href="https://leefoot.com" target="_blank">🌐 More Tools</a>
+            <a href="https://leefoot.com" target="_blank">🌐 More Tools on my Website</a>
         </div>
         """,
         unsafe_allow_html=True

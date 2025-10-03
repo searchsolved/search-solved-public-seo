@@ -48,15 +48,16 @@ def setup_streamlit():
     Configures Streamlit's page settings and displays the app title and markdown information.
     Sets the page layout, title, and markdown content with links and app description.
     """
-    st.set_page_config(page_title="✨ Simple Google Search Console Data | LeeFoot.co.uk", layout="wide")
-    st.title("✨ Simple Google Search Console Data | June 2024")
+    st.set_page_config(page_title="✨ Simple Google Search Console Data | LeeFoot.com", layout="wide")
+    st.title("✨ Simple Google Search Console Data | 3rd Oct 2025")
     st.markdown(f"### Lightweight GSC Data Extractor. (Max {MAX_ROWS:,} Rows)")
 
     st.markdown(
         """
         <p>
             Created by <a href="https://twitter.com/LeeFootSEO" target="_blank">LeeFootSEO</a> |
-            <a href="https://leefoot.co.uk" target="_blank">More Apps & Scripts on my Website</a>
+            <a href="https://www.linkedin.com/in/lee-foot/" target="_blank">LinkedIn</a> |
+            <a href="https://leefoot.com" target="_blank">More Apps & Scripts on my Website</a>
         """,
         unsafe_allow_html=True
     )
@@ -376,8 +377,8 @@ def main():
     client_config = load_config()
     st.session_state.auth_flow, st.session_state.auth_url = google_auth(client_config)
 
-    query_params = st.experimental_get_query_params()
-    auth_code = query_params.get("code", [None])[0]
+    query_params = st.query_params
+    auth_code = query_params.get("code", None)
 
     if auth_code and not st.session_state.get('credentials'):
         st.session_state.auth_flow.fetch_token(code=auth_code)

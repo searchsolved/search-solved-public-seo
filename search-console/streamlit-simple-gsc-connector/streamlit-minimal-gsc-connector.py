@@ -1,7 +1,7 @@
 ####################################################################################
-# Simple GSC Connector for Streamlit by Lee Foot 12th June 2024                    #
-# Website  : https://leefoot.co.uk/                                                #
-# Contact  : https://leefoot.co.uk/hire-me/                                        #
+# Simple GSC Connector for Streamlit by Lee Foot 3rd Oct 2025                     #
+# Website  : https://leefoot.com/                                                  #
+# Contact  : https://leefoot.com/hire-me/                                          #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
 # Twitter  : https://twitter.com/LeeFootSEO                                        #
 ####################################################################################

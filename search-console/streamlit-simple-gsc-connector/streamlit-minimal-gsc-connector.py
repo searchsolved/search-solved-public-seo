@@ -269,7 +269,7 @@ def fetch_data_in_batches(webproperty, search_type, start_date, end_date, dimens
     estimated_batches = (total_days // batch_days) + 1
     
     # Create progress indicators
-    st.info(f"📊 Fetching {total_days + 1} days of data in {estimated_batches} batches...")
+    batch_info = st.info(f"📊 Fetching {total_days + 1} days of data in {estimated_batches} batches...")
     progress_bar = st.progress(0)
     status_text = st.empty()
     rows_text = st.empty()
@@ -305,6 +305,13 @@ def fetch_data_in_batches(webproperty, search_type, start_date, end_date, dimens
     if all_data:
         with st.spinner('Combining batches...'):
             combined_df = pd.concat(all_data, ignore_index=True)
+        
+        # Clear all the progress messages now that we're done
+        batch_info.empty()
+        progress_bar.empty()
+        status_text.empty()
+        rows_text.empty()
+        
         return combined_df
     else:
         st.warning("No data found for the selected date range.")
@@ -321,8 +328,10 @@ def fetch_data_loading(webproperty, search_type, start_date, end_date, dimension
     
     # Use batch processing for date ranges longer than 30 days
     if days_diff > 30:
-        st.info(f"Large date range detected ({days_diff} days). Using batch processing to prevent timeouts...")
-        return fetch_data_in_batches(webproperty, search_type, start_date, end_date, dimensions, device_type, batch_days=7)
+        info_msg = st.info(f"Large date range detected ({days_diff} days). Using batch processing to prevent timeouts...")
+        result = fetch_data_in_batches(webproperty, search_type, start_date, end_date, dimensions, device_type, batch_days=7)
+        info_msg.empty()  # Clear the info message after completion
+        return result
     else:
         with st.spinner('Fetching data...'):
             return fetch_gsc_data(webproperty, search_type, start_date, end_date, dimensions, device_type)

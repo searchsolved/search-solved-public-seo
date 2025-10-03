@@ -112,6 +112,7 @@ def setup_streamlit():
         - **Large date ranges** (>30 days) will automatically use batch processing – this is normal and ensures reliable data retrieval
         - The tool remembers your last selections, making repeat exports faster
         - You can select multiple dimensions to get more granular insights
+        - **For very large sites** (expecting >500k rows): Consider splitting your export into smaller date ranges (e.g., quarterly or monthly) to avoid browser memory limits
         
         ### Privacy & Security
         
@@ -293,6 +294,10 @@ def fetch_data_in_batches(webproperty, search_type, start_date, end_date, dimens
             all_data.append(batch_data)
             total_rows += len(batch_data)
             rows_text.text(f"📈 Total rows collected: {total_rows:,}")
+            
+            # Warn if dataset is getting very large
+            if total_rows > 1000000 and batch_count == int(estimated_batches * 0.5):
+                st.warning(f"⚠️ Large dataset alert: {total_rows:,} rows collected at 50% completion. Final dataset may exceed 2M rows, which can cause browser memory issues.\n\n**Recommendation:** After this completes, consider splitting your next export into smaller date ranges (e.g., 3-month periods instead of 12 months) to ensure reliable downloads.")
         
         current_date = batch_end + datetime.timedelta(days=1)
     
@@ -305,6 +310,13 @@ def fetch_data_in_batches(webproperty, search_type, start_date, end_date, dimens
     if all_data:
         with st.spinner('Combining batches...'):
             combined_df = pd.concat(all_data, ignore_index=True)
+            
+            # Optimize memory usage for large datasets
+            if len(combined_df) > 100000:
+                # Convert object columns to category type where appropriate
+                for col in combined_df.select_dtypes(include=['object']).columns:
+                    if combined_df[col].nunique() / len(combined_df) < 0.5:  # If less than 50% unique values
+                        combined_df[col] = combined_df[col].astype('category')
         
         # Clear all the progress messages now that we're done
         batch_info.empty()
@@ -505,12 +517,27 @@ def analyze_query_counts(report):
 def download_csv_link(report):
     """
     Generates and displays a download button for the report DataFrame in CSV format.
-    Uses Streamlit's built-in download_button for better performance.
+    Optimized for large datasets to prevent memory issues.
     """
-    csv = report.to_csv(index=False, encoding='utf-8-sig')
+    # Warn users about very large datasets
+    row_count = len(report)
+    if row_count > 500000:
+        st.warning(f"⚠️ Large dataset detected ({row_count:,} rows). CSV generation may take 30-60 seconds and could cause browser slowdown. Consider filtering dimensions or splitting the date range for better performance.")
+    
+    # Convert to CSV in memory-efficient way with caching
+    @st.cache_data(show_spinner=False)
+    def convert_df(df):
+        return df.to_csv(index=False, encoding='utf-8-sig')
+    
+    # Show spinner during CSV generation for large datasets
+    if row_count > 100000:
+        with st.spinner(f'Preparing CSV file ({row_count:,} rows)... This may take a moment.'):
+            csv = convert_df(report)
+    else:
+        csv = convert_df(report)
     
     st.download_button(
-        label="📥 Download CSV File",
+        label=f"📥 Download CSV File ({row_count:,} rows)",
         data=csv,
         file_name=f"search_console_data_{datetime.date.today()}.csv",
         mime="text/csv",

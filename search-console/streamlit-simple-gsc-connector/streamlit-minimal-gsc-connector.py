@@ -191,13 +191,75 @@ def fetch_gsc_data(webproperty, search_type, start_date, end_date, dimensions, d
         return pd.DataFrame()
 
 
+def fetch_data_in_batches(webproperty, search_type, start_date, end_date, dimensions, device_type=None, batch_days=7):
+    """
+    Fetches Google Search Console data in batches to prevent timeouts.
+    Splits the date range into smaller chunks and combines the results.
+    """
+    all_data = []
+    current_date = start_date
+    total_days = (end_date - start_date).days
+    estimated_batches = (total_days // batch_days) + 1
+    
+    # Create progress indicators
+    st.info(f"📊 Fetching {total_days + 1} days of data in {estimated_batches} batches...")
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    rows_text = st.empty()
+    
+    batch_count = 0
+    total_rows = 0
+    
+    while current_date <= end_date:
+        batch_end = min(current_date + datetime.timedelta(days=batch_days - 1), end_date)
+        batch_count += 1
+        
+        # Update progress
+        progress = min((current_date - start_date).days / total_days, 1.0)
+        progress_bar.progress(progress)
+        status_text.text(f"🔄 Batch {batch_count}/{estimated_batches}: {current_date.strftime('%Y-%m-%d')} to {batch_end.strftime('%Y-%m-%d')}")
+        
+        # Fetch data for this batch
+        batch_data = fetch_gsc_data(webproperty, search_type, current_date, batch_end, dimensions, device_type)
+        
+        if not batch_data.empty:
+            all_data.append(batch_data)
+            total_rows += len(batch_data)
+            rows_text.text(f"📈 Total rows collected: {total_rows:,}")
+        
+        current_date = batch_end + datetime.timedelta(days=1)
+    
+    # Complete progress bar
+    progress_bar.progress(1.0)
+    status_text.text(f"✅ Completed! Fetched {batch_count} batches successfully.")
+    rows_text.text(f"📊 Total rows collected: {total_rows:,}")
+    
+    # Combine all batches
+    if all_data:
+        with st.spinner('Combining batches...'):
+            combined_df = pd.concat(all_data, ignore_index=True)
+        st.success(f"✨ Data ready! {len(combined_df):,} rows from {batch_count} batches.")
+        return combined_df
+    else:
+        st.warning("No data found for the selected date range.")
+        return pd.DataFrame()
+
+
 def fetch_data_loading(webproperty, search_type, start_date, end_date, dimensions, device_type=None):
     """
     Fetches Google Search Console data with a loading indicator. Utilises 'fetch_gsc_data' for data retrieval.
     Returns the fetched data as a DataFrame.
     """
-    with st.spinner('Fetching data...'):
-        return fetch_gsc_data(webproperty, search_type, start_date, end_date, dimensions, device_type)
+    # Calculate date range in days
+    days_diff = (end_date - start_date).days
+    
+    # Use batch processing for date ranges longer than 30 days
+    if days_diff > 30:
+        st.info(f"Large date range detected ({days_diff} days). Using batch processing to prevent timeouts...")
+        return fetch_data_in_batches(webproperty, search_type, start_date, end_date, dimensions, device_type, batch_days=7)
+    else:
+        with st.spinner('Fetching data...'):
+            return fetch_gsc_data(webproperty, search_type, start_date, end_date, dimensions, device_type)
 
 
 # -------------

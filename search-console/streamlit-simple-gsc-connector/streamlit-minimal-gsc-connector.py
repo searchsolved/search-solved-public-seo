@@ -525,19 +525,19 @@ def show_google_sign_in(auth_url):
     Displays the Google sign-in button with an animated arrow and authentication URL in the Streamlit sidebar.
     """
     with st.sidebar:
-        # Add animated arrow pointing to the button with enhanced styling
+        # Add animated arrow pointing to the button with ocean blue styling
         st.markdown(
             """
             <style>
             @keyframes bounce {
                 0%, 20%, 50%, 80%, 100% {
-                    transform: translateX(0);
+                    transform: translateY(0);
                 }
                 40% {
-                    transform: translateX(-10px);
+                    transform: translateY(-8px);
                 }
                 60% {
-                    transform: translateX(-5px);
+                    transform: translateY(-4px);
                 }
             }
             @keyframes pulse {
@@ -545,7 +545,7 @@ def show_google_sign_in(auth_url):
                     transform: scale(1);
                 }
                 50% {
-                    transform: scale(1.05);
+                    transform: scale(1.03);
                 }
                 100% {
                     transform: scale(1);
@@ -556,23 +556,31 @@ def show_google_sign_in(auth_url):
                 align-items: center;
                 justify-content: center;
                 margin-bottom: 15px;
-                padding: 15px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                border-radius: 10px;
-                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+                padding: 20px;
+                background: #1eb8d9;
+                border-radius: 12px;
+                box-shadow: 0 4px 15px rgba(30, 184, 217, 0.4);
                 animation: pulse 2s infinite;
             }
             .arrow-text {
-                font-size: 20px;
+                font-size: 22px;
                 color: #ffffff;
                 font-weight: bold;
-                margin-right: 10px;
-                text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+                margin-right: 15px;
+                text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+            }
+            .arrow-icon-box {
+                background: rgba(255, 255, 255, 0.25);
+                padding: 8px 12px;
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
             .arrow-icon {
-                font-size: 36px;
+                font-size: 28px;
                 animation: bounce 2s infinite;
-                filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));
+                filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.2));
             }
             .instructions-text {
                 text-align: center;
@@ -581,10 +589,27 @@ def show_google_sign_in(auth_url):
                 margin-top: 10px;
                 font-style: italic;
             }
+            /* Style the Streamlit link button to match ocean blue theme */
+            .stButton > button {
+                background: #1eb8d9 !important;
+                color: white !important;
+                border: none !important;
+                padding: 12px 24px !important;
+                font-size: 16px !important;
+                font-weight: 600 !important;
+                border-radius: 8px !important;
+                box-shadow: 0 2px 8px rgba(30, 184, 217, 0.3) !important;
+            }
+            .stButton > button:hover {
+                background: #1aa5c4 !important;
+                box-shadow: 0 4px 12px rgba(30, 184, 217, 0.5) !important;
+            }
             </style>
             <div class="arrow-container">
                 <span class="arrow-text">👇 Click here to get started!</span>
-                <span class="arrow-icon">⬇️</span>
+                <div class="arrow-icon-box">
+                    <span class="arrow-icon">⬇</span>
+                </div>
             </div>
             """,
             unsafe_allow_html=True

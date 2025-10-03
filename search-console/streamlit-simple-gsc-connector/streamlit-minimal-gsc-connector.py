@@ -8,7 +8,6 @@
 
 # Standard library imports
 import datetime
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Related third-party imports
 import streamlit as st
@@ -189,95 +188,54 @@ def fetch_gsc_data(webproperty, search_type, start_date, end_date, dimensions, d
         return pd.DataFrame()
 
 
-def fetch_data_in_batches(webproperty, search_type, start_date, end_date, dimensions, device_type=None, batch_days=7, use_parallel=True, max_workers=3):
+def fetch_data_in_batches(webproperty, search_type, start_date, end_date, dimensions, device_type=None, batch_days=7):
     """
     Fetches Google Search Console data in batches to prevent timeouts.
     Splits the date range into smaller chunks and combines the results.
-    Can use parallel processing for faster fetching (respects API rate limits).
     """
-    # Generate all batch date ranges first
-    batch_ranges = []
+    all_data = []
     current_date = start_date
-    while current_date <= end_date:
-        batch_end = min(current_date + datetime.timedelta(days=batch_days - 1), end_date)
-        batch_ranges.append((current_date, batch_end))
-        current_date = batch_end + datetime.timedelta(days=1)
-    
-    total_batches = len(batch_ranges)
     total_days = (end_date - start_date).days
+    estimated_batches = (total_days // batch_days) + 1
     
     # Create progress indicators
-    st.info(f"📊 Fetching {total_days + 1} days of data in {total_batches} batches" + 
-            (f" (using {max_workers} parallel workers for faster retrieval)..." if use_parallel else "..."))
+    st.info(f"📊 Fetching {total_days + 1} days of data in {estimated_batches} batches...")
     progress_bar = st.progress(0)
     status_text = st.empty()
     rows_text = st.empty()
     
-    all_data = []
+    batch_count = 0
     total_rows = 0
-    completed_batches = 0
     
-    def fetch_single_batch(batch_info):
-        """Helper function to fetch a single batch"""
-        batch_start, batch_end = batch_info
-        return fetch_gsc_data(webproperty, search_type, batch_start, batch_end, dimensions, device_type)
-    
-    if use_parallel and total_batches > 1:
-        # Parallel processing
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # Submit all batch jobs
-            future_to_batch = {executor.submit(fetch_single_batch, batch_range): i 
-                             for i, batch_range in enumerate(batch_ranges)}
-            
-            # Process completed batches as they finish
-            for future in as_completed(future_to_batch):
-                batch_idx = future_to_batch[future]
-                batch_start, batch_end = batch_ranges[batch_idx]
-                completed_batches += 1
-                
-                try:
-                    batch_data = future.result()
-                    
-                    if not batch_data.empty:
-                        all_data.append(batch_data)
-                        total_rows += len(batch_data)
-                    
-                    # Update progress
-                    progress = completed_batches / total_batches
-                    progress_bar.progress(progress)
-                    status_text.text(f"🔄 Completed {completed_batches}/{total_batches} batches (latest: {batch_start.strftime('%Y-%m-%d')} to {batch_end.strftime('%Y-%m-%d')})")
-                    rows_text.text(f"📈 Total rows collected: {total_rows:,}")
-                    
-                except Exception as e:
-                    st.warning(f"⚠️ Batch {batch_idx + 1} failed: {batch_start} to {batch_end}")
-    else:
-        # Sequential processing (original method)
-        for batch_idx, (batch_start, batch_end) in enumerate(batch_ranges):
-            completed_batches += 1
-            
-            # Update progress
-            progress = completed_batches / total_batches
-            progress_bar.progress(progress)
-            status_text.text(f"🔄 Batch {completed_batches}/{total_batches}: {batch_start.strftime('%Y-%m-%d')} to {batch_end.strftime('%Y-%m-%d')}")
-            
-            # Fetch data for this batch
-            batch_data = fetch_gsc_data(webproperty, search_type, batch_start, batch_end, dimensions, device_type)
-            
-            if not batch_data.empty:
-                all_data.append(batch_data)
-                total_rows += len(batch_data)
-                rows_text.text(f"📈 Total rows collected: {total_rows:,}")
+    while current_date <= end_date:
+        batch_end = min(current_date + datetime.timedelta(days=batch_days - 1), end_date)
+        batch_count += 1
+        
+        # Update progress
+        progress = min((current_date - start_date).days / total_days, 1.0)
+        progress_bar.progress(progress)
+        status_text.text(f"🔄 Batch {batch_count}/{estimated_batches}: {current_date.strftime('%Y-%m-%d')} to {batch_end.strftime('%Y-%m-%d')}")
+        
+        # Fetch data for this batch
+        batch_data = fetch_gsc_data(webproperty, search_type, current_date, batch_end, dimensions, device_type)
+        
+        if not batch_data.empty:
+            all_data.append(batch_data)
+            total_rows += len(batch_data)
+            rows_text.text(f"📈 Total rows collected: {total_rows:,}")
+        
+        current_date = batch_end + datetime.timedelta(days=1)
     
     # Complete progress bar
     progress_bar.progress(1.0)
-    status_text.text(f"✅ Completed! Fetched {completed_batches} batches successfully.")
+    status_text.text(f"✅ Completed! Fetched {batch_count} batches successfully.")
     rows_text.text(f"📊 Total rows collected: {total_rows:,}")
     
     # Combine all batches
     if all_data:
         with st.spinner('Combining batches...'):
             combined_df = pd.concat(all_data, ignore_index=True)
-        st.success(f"✨ Data ready! {len(combined_df):,} rows from {completed_batches} batches.")
+        st.success(f"✨ Data ready! {len(combined_df):,} rows from {batch_count} batches.")
         return combined_df
     else:
         st.warning("No data found for the selected date range.")

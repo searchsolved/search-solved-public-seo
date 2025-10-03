@@ -539,28 +539,39 @@ def show_fetch_data_button(webproperty, search_type, start_date, end_date, selec
         report = fetch_data_loading(webproperty, search_type, start_date, end_date, selected_dimensions)
 
         if report is not None and not report.empty:
-            # Store report in session state to prevent restart on download
+            # Store report and metadata in session state
             st.session_state.report = report
             st.session_state.query_analysis = None
+            st.session_state.show_data_preview = True
+            st.session_state.show_query_analysis = False
+            st.session_state.fetch_summary = f"✅ Successfully fetched {len(report):,} rows"
             
-            show_dataframe(report)
-            
-            # Generate query count analysis if query and date are in dimensions (position is always included)
+            # Check if we should show query analysis
             if all(dim in selected_dimensions for dim in ['query', 'date']):
-                st.subheader("📊 Query Count Analysis by Position Range")
                 query_analysis = analyze_query_counts(report)
                 
                 if not query_analysis.empty:
                     st.session_state.query_analysis = query_analysis
-                    st.dataframe(query_analysis, use_container_width=True)
-                    st.caption("Monthly breakdown of unique queries by position ranges")
-                else:
-                    st.info("Unable to generate query analysis. Ensure your data includes query, position, and date dimensions.")
-            else:
-                st.info("💡 Tip: Include 'query' and 'date' dimensions to see query count analysis by position ranges.")
-            
-            # Download options
-            st.subheader("📥 Download Options")
+                    st.session_state.show_query_analysis = True
+    
+    # Display fetch summary if available (persists across downloads)
+    if st.session_state.get('fetch_summary'):
+        st.success(st.session_state.fetch_summary)
+    
+    # Display data preview if available (persists across downloads)
+    if st.session_state.get('show_data_preview', False) and 'report' in st.session_state:
+        show_dataframe(st.session_state.report)
+        
+        # Show query analysis if available
+        if st.session_state.get('show_query_analysis', False) and st.session_state.query_analysis is not None:
+            st.subheader("📊 Query Count Analysis by Position Range")
+            st.dataframe(st.session_state.query_analysis, use_container_width=True)
+            st.caption("Monthly breakdown of unique queries by position ranges")
+        elif not st.session_state.get('show_query_analysis', False):
+            st.info("💡 Tip: Include 'query' and 'date' dimensions to see query count analysis by position ranges.")
+        
+        # Download options
+        st.subheader("📥 Download Options")
             
     # Show download buttons if data exists in session state
     if 'report' in st.session_state and st.session_state.report is not None:

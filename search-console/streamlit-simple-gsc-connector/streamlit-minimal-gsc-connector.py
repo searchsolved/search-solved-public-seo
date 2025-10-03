@@ -305,7 +305,6 @@ def fetch_data_in_batches(webproperty, search_type, start_date, end_date, dimens
     if all_data:
         with st.spinner('Combining batches...'):
             combined_df = pd.concat(all_data, ignore_index=True)
-        st.success(f"✨ Data ready! {len(combined_df):,} rows from {batch_count} batches.")
         return combined_df
     else:
         st.warning("No data found for the selected date range.")
@@ -696,12 +695,18 @@ def show_dimensions_selector(search_type):
     Returns the selected dimensions.
     """
     available_dimensions = update_dimensions(search_type)
-    return st.multiselect(
+    selected = st.multiselect(
         "Select Dimensions:",
         available_dimensions,
         default=st.session_state.selected_dimensions,
         key='dimensions_selector'
     )
+    
+    # Show helpful tip about query analysis feature
+    if selected and not (('query' in selected) and ('date' in selected)):
+        st.info("💡 Tip: Include both 'query' and 'date' dimensions to see query count analysis by position ranges.")
+    
+    return selected
 
 
 def show_fetch_data_button(webproperty, search_type, start_date, end_date, selected_dimensions):
@@ -734,10 +739,6 @@ def show_fetch_data_button(webproperty, search_type, start_date, end_date, selec
     
     # Display info and download options if available (persists across downloads)
     if st.session_state.get('show_data_preview', False) and 'report' in st.session_state:
-        # Show tip if query analysis is not available
-        if not st.session_state.get('show_query_analysis', False):
-            st.info("💡 Tip: Include 'query' and 'date' dimensions to see query count analysis by position ranges.")
-        
         # Download options
         st.subheader("📥 Download Options")
             

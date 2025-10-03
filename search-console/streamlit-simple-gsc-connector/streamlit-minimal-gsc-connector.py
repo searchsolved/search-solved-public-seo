@@ -71,8 +71,8 @@ def setup_streamlit():
         </style>
         <div class="social-links">
             Created by <strong>Lee Foot</strong> • 
-            <a href="https://twitter.com/LeeFootSEO" target="_blank">🐦 Follow on X</a> • 
-            <a href="https://www.linkedin.com/in/lee-foot/" target="_blank">💼 Connect on LinkedIn</a> • 
+            <a href="https://twitter.com/LeeFootSEO" target="_blank">𝕏 Follow on X</a> • 
+            <a href="https://www.linkedin.com/in/lee-foot/" target="_blank">in Connect on LinkedIn</a> • 
             <a href="https://leefoot.com" target="_blank">🌐 More Tools</a>
         </div>
         """,
@@ -356,8 +356,11 @@ def create_query_count_chart(query_analysis):
         'Positions 20+': '#e74c3c'
     }
     
+    # Reverse the order so highest positions (1-3) appear on the left in legend
+    position_columns_reversed = list(reversed(position_columns))
+    
     # Add a bar for each position range
-    for col in position_columns:
+    for col in position_columns_reversed:
         fig.add_trace(go.Bar(
             name=col,
             x=query_analysis['Month'],
@@ -377,7 +380,8 @@ def create_query_count_chart(query_analysis):
             yanchor="bottom",
             y=1.02,
             xanchor="right",
-            x=1
+            x=1,
+            traceorder='normal'
         )
     )
     
@@ -438,14 +442,6 @@ def analyze_query_counts(report):
             pivot_table[col] = pivot_table[col].astype(int)
     
     return pivot_table
-
-
-def show_dataframe(report):
-    """
-    Shows a preview of the first 100 rows of the report DataFrame in an expandable section.
-    """
-    with st.expander("Preview the First 100 Rows"):
-        st.dataframe(report.head(100))
 
 
 def download_csv_link(report):
@@ -562,7 +558,7 @@ def show_dimensions_selector(search_type):
 def show_fetch_data_button(webproperty, search_type, start_date, end_date, selected_dimensions):
     """
     Displays a button to fetch data based on selected parameters.
-    Shows the report DataFrame, query analysis, and download links upon successful data fetching.
+    Shows the report DataFrame, query analysis chart, and download links upon successful data fetching.
     """
     if st.button("Fetch Data", key="fetch_button"):
         report = fetch_data_loading(webproperty, search_type, start_date, end_date, selected_dimensions)
@@ -587,17 +583,10 @@ def show_fetch_data_button(webproperty, search_type, start_date, end_date, selec
     if st.session_state.get('fetch_summary'):
         st.success(st.session_state.fetch_summary)
     
-    # Display data preview if available (persists across downloads)
+    # Display info and download options if available (persists across downloads)
     if st.session_state.get('show_data_preview', False) and 'report' in st.session_state:
-        # Show data preview
-        show_dataframe(st.session_state.report)
-        
-        # Show query analysis if available
-        if st.session_state.get('show_query_analysis', False) and st.session_state.query_analysis is not None:
-            st.subheader("📊 Query Count Analysis by Position Range")
-            st.dataframe(st.session_state.query_analysis, use_container_width=True)
-            st.caption("Monthly breakdown of unique queries by position ranges")
-        elif not st.session_state.get('show_query_analysis', False):
+        # Show tip if query analysis is not available
+        if not st.session_state.get('show_query_analysis', False):
             st.info("💡 Tip: Include 'query' and 'date' dimensions to see query count analysis by position ranges.")
         
         # Download options

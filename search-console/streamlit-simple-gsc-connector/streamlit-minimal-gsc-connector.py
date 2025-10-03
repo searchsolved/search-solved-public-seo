@@ -549,14 +549,17 @@ def show_google_sign_in(auth_url):
             unsafe_allow_html=True
         )
         
-        if st.button("Sign in with Google", type="primary", use_container_width=True):
-            # Open the authentication URL
-            st.write('Please click the link below to sign in:')
-            st.markdown(f'[Google Sign-In]({auth_url})', unsafe_allow_html=True)
+        # Use link_button for direct single-click authentication
+        st.link_button(
+            "🔐 Sign in with Google",
+            auth_url,
+            type="primary",
+            use_container_width=True
+        )
         
         # Add helpful instruction text
         st.markdown(
-            '<p class="instructions-text">🔐 Sign in to access your Google Search Console data</p>',
+            '<p class="instructions-text">Click the button above to authenticate with Google</p>',
             unsafe_allow_html=True
         )
 

@@ -238,11 +238,20 @@ def fetch_gsc_data(webproperty, search_type, start_date, end_date, dimensions, d
 
     try:
         df = query.get().to_dataframe()
-        # Convert CTR and position to numeric types
+        
+        # Ensure proper data types for all columns
         if 'ctr' in df.columns:
-            df['ctr'] = pd.to_numeric(df['ctr'], errors='coerce')
+            df['ctr'] = pd.to_numeric(df['ctr'], errors='coerce').astype(float)
+        
         if 'position' in df.columns:
-            df['position'] = pd.to_numeric(df['position'], errors='coerce')
+            df['position'] = pd.to_numeric(df['position'], errors='coerce').astype(float)
+        
+        if 'clicks' in df.columns:
+            df['clicks'] = pd.to_numeric(df['clicks'], errors='coerce').fillna(0).astype(int)
+        
+        if 'impressions' in df.columns:
+            df['impressions'] = pd.to_numeric(df['impressions'], errors='coerce').fillna(0).astype(int)
+        
         return df
     except Exception as e:
         show_error(e)

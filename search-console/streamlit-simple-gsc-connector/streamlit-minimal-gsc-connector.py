@@ -481,13 +481,84 @@ def download_query_analysis_csv(query_analysis):
 
 def show_google_sign_in(auth_url):
     """
-    Displays the Google sign-in button and authentication URL in the Streamlit sidebar.
+    Displays the Google sign-in button with an animated arrow and authentication URL in the Streamlit sidebar.
     """
     with st.sidebar:
-        if st.button("Sign in with Google"):
+        # Add animated arrow pointing to the button with enhanced styling
+        st.markdown(
+            """
+            <style>
+            @keyframes bounce {
+                0%, 20%, 50%, 80%, 100% {
+                    transform: translateX(0);
+                }
+                40% {
+                    transform: translateX(-10px);
+                }
+                60% {
+                    transform: translateX(-5px);
+                }
+            }
+            @keyframes pulse {
+                0% {
+                    transform: scale(1);
+                }
+                50% {
+                    transform: scale(1.05);
+                }
+                100% {
+                    transform: scale(1);
+                }
+            }
+            .arrow-container {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-bottom: 15px;
+                padding: 15px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                border-radius: 10px;
+                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+                animation: pulse 2s infinite;
+            }
+            .arrow-text {
+                font-size: 20px;
+                color: #ffffff;
+                font-weight: bold;
+                margin-right: 10px;
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            }
+            .arrow-icon {
+                font-size: 36px;
+                animation: bounce 2s infinite;
+                filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));
+            }
+            .instructions-text {
+                text-align: center;
+                color: #666;
+                font-size: 14px;
+                margin-top: 10px;
+                font-style: italic;
+            }
+            </style>
+            <div class="arrow-container">
+                <span class="arrow-text">👇 Click here to get started!</span>
+                <span class="arrow-icon">⬇️</span>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        
+        if st.button("Sign in with Google", type="primary", use_container_width=True):
             # Open the authentication URL
             st.write('Please click the link below to sign in:')
             st.markdown(f'[Google Sign-In]({auth_url})', unsafe_allow_html=True)
+        
+        # Add helpful instruction text
+        st.markdown(
+            '<p class="instructions-text">🔐 Sign in to access your Google Search Console data</p>',
+            unsafe_allow_html=True
+        )
 
 
 def show_property_selector(properties, account):

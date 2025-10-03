@@ -16,7 +16,6 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 import pandas as pd
 import searchconsole
-from io import BytesIO
 
 # Configuration: Set to True if running locally, False if running on Streamlit Cloud
 # IS_LOCAL = True
@@ -35,8 +34,6 @@ DATE_RANGE_OPTIONS = [
 ]
 DEVICE_OPTIONS = ["All Devices", "desktop", "mobile", "tablet"]
 BASE_DIMENSIONS = ["page", "query", "country", "date"]
-MAX_ROWS = 1_000_000
-DF_PREVIEW_ROWS = 100
 
 
 # -------------
@@ -50,7 +47,7 @@ def setup_streamlit():
     """
     st.set_page_config(page_title="✨ Simple Google Search Console Data | LeeFoot.com", layout="wide")
     st.title("✨ Simple Google Search Console Data | 3rd Oct 2025")
-    st.markdown(f"### Lightweight GSC Data Extractor. (Max {MAX_ROWS:,} Rows)")
+    st.markdown("### Lightweight GSC Data Extractor")
 
     st.markdown(
         """
@@ -179,7 +176,7 @@ def fetch_gsc_data(webproperty, search_type, start_date, end_date, dimensions, d
         query = query.filter('device', 'equals', device_type.lower())
 
     try:
-        df = query.limit(MAX_ROWS).get().to_dataframe()
+        df = query.get().to_dataframe()
         # Convert CTR and position to numeric types
         if 'ctr' in df.columns:
             df['ctr'] = pd.to_numeric(df['ctr'], errors='coerce')
@@ -377,7 +374,7 @@ def show_dataframe(report):
     Shows a preview of the first 100 rows of the report DataFrame in an expandable section.
     """
     with st.expander("Preview the First 100 Rows"):
-        st.dataframe(report.head(DF_PREVIEW_ROWS))
+        st.dataframe(report.head(100))
 
 
 def download_csv_link(report):
@@ -396,57 +393,19 @@ def download_csv_link(report):
     )
 
 
-def download_excel_link(report, query_analysis=None):
+def download_query_analysis_csv(query_analysis):
     """
-    Generates and displays a download button for the report DataFrame in Excel format.
-    Includes multiple sheets: main data and optional query count analysis.
-    Uses Streamlit's built-in download_button for better performance.
+    Generates and displays a download button for the query analysis DataFrame in CSV format.
     """
-    output = BytesIO()
+    csv = query_analysis.to_csv(index=False, encoding='utf-8-sig')
     
-    try:
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            # Write main data
-            report.to_excel(writer, sheet_name='GSC Data', index=False)
-            
-            # Write query analysis if available
-            if query_analysis is not None and not query_analysis.empty:
-                query_analysis.to_excel(writer, sheet_name='Query Count by Position', index=False)
-                
-                # Auto-adjust column widths for query analysis sheet
-                worksheet = writer.sheets['Query Count by Position']
-                for idx, col in enumerate(query_analysis.columns):
-                    max_length = max(
-                        query_analysis[col].astype(str).apply(len).max(),
-                        len(col)
-                    ) + 2
-                    worksheet.column_dimensions[chr(65 + idx)].width = max_length
-            
-            # Auto-adjust column widths for main data sheet
-            worksheet = writer.sheets['GSC Data']
-            for idx, col in enumerate(report.columns):
-                if idx < 26:  # Limit to first 26 columns (A-Z)
-                    max_length = min(
-                        max(
-                            report[col].astype(str).apply(len).max(),
-                            len(col)
-                        ) + 2,
-                        50  # Max width of 50
-                    )
-                    worksheet.column_dimensions[chr(65 + idx)].width = max_length
-        
-        excel_data = output.getvalue()
-        
-        st.download_button(
-            label="📥 Download Excel File" + (" (with Query Analysis)" if query_analysis is not None else ""),
-            data=excel_data,
-            file_name=f"search_console_data_{datetime.date.today()}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True
-        )
-    except ImportError:
-        st.error("⚠️ Excel export requires the 'openpyxl' package. Please install it or use CSV download instead.")
-        st.info("To install: `pip install openpyxl`")
+    st.download_button(
+        label="📊 Download Query Analysis CSV",
+        data=csv,
+        file_name=f"query_analysis_{datetime.date.today()}.csv",
+        mime="text/csv",
+        use_container_width=True
+    )
 
 
 # -------------
@@ -534,38 +493,45 @@ def show_fetch_data_button(webproperty, search_type, start_date, end_date, selec
     Displays a button to fetch data based on selected parameters.
     Shows the report DataFrame, query analysis, and download links upon successful data fetching.
     """
-    if st.button("Fetch Data"):
+    if st.button("Fetch Data", key="fetch_button"):
         report = fetch_data_loading(webproperty, search_type, start_date, end_date, selected_dimensions)
 
         if report is not None and not report.empty:
+            # Store report in session state to prevent restart on download
+            st.session_state.report = report
+            st.session_state.query_analysis = None
+            
             show_dataframe(report)
             
-            # Generate query count analysis if query, position, and date are in dimensions
-            query_analysis = None
-            if all(dim in selected_dimensions for dim in ['query', 'position', 'date']):
+            # Generate query count analysis if query and date are in dimensions (position is always included)
+            if all(dim in selected_dimensions for dim in ['query', 'date']):
                 st.subheader("📊 Query Count Analysis by Position Range")
                 query_analysis = analyze_query_counts(report)
                 
                 if not query_analysis.empty:
+                    st.session_state.query_analysis = query_analysis
                     st.dataframe(query_analysis, use_container_width=True)
                     st.caption("Monthly breakdown of unique queries by position ranges")
                 else:
                     st.info("Unable to generate query analysis. Ensure your data includes query, position, and date dimensions.")
             else:
-                st.info("💡 Tip: Include 'query', 'position', and 'date' dimensions to see query count analysis by position ranges.")
+                st.info("💡 Tip: Include 'query' and 'date' dimensions to see query count analysis by position ranges.")
             
             # Download options
             st.subheader("📥 Download Options")
-            col1, col2 = st.columns(2)
             
-            with col1:
-                download_csv_link(report)
-            
-            with col2:
-                if query_analysis is not None and not query_analysis.empty:
-                    download_excel_link(report, query_analysis)
-                else:
-                    download_excel_link(report)
+    # Show download buttons if data exists in session state
+    if 'report' in st.session_state and st.session_state.report is not None:
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            download_csv_link(st.session_state.report)
+        
+        with col2:
+            if 'query_analysis' in st.session_state and st.session_state.query_analysis is not None:
+                download_query_analysis_csv(st.session_state.query_analysis)
+            else:
+                st.info("Query analysis not available")
 
 
 # -------------

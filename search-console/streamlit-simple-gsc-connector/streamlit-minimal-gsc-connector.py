@@ -71,8 +71,8 @@ def setup_streamlit():
         </style>
         <div class="social-links">
             Created by <strong>Lee Foot</strong> • 
-            <a href="https://twitter.com/LeeFootSEO" target="_blank">𝕏 Follow on X</a> • 
-            <a href="https://www.linkedin.com/in/lee-foot/" target="_blank">in Connect on LinkedIn</a> • 
+            <a href="https://twitter.com/LeeFootSEO" target="_blank">Follow me on 𝕏</a> • 
+            <a href="https://www.linkedin.com/in/lee-foot/" target="_blank">Connect on LinkedIn</a> • 
             <a href="https://leefoot.com" target="_blank">🌐 More Tools</a>
         </div>
         """,

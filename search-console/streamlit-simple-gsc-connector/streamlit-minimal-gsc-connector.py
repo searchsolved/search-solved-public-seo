@@ -78,6 +78,47 @@ def setup_streamlit():
         """,
         unsafe_allow_html=True
     )
+    
+    # Add help/instructions expander
+    with st.expander("ℹ️ About This Tool & How to Use It", expanded=False):
+        st.markdown("""
+        ### What Does This Tool Do?
+        
+        The **GSC Data Exporter** allows you to extract and analyse your Google Search Console data quickly and efficiently. 
+        Unlike the standard GSC interface which limits exports to 1,000 rows, this tool fetches complete datasets with 
+        automatic batch processing for larger date ranges.
+        
+        ### Key Features
+        
+        - **Unlimited data extraction** – No 1,000 row limit
+        - **Flexible date ranges** – From 7 days to 16 months of historical data
+        - **Multiple dimensions** – Analyse by page, query, country, date, and device
+        - **Batch processing** – Automatically splits large requests to prevent timeouts
+        - **Query position analysis** – See how many queries rank in different position ranges (1-3, 4-10, 11-20, 20+)
+        - **Multiple search types** – Web, image, video, news, Discover, and Google News
+        - **CSV export** – Download your data for further analysis in Excel or other tools
+        
+        ### How to Use
+        
+        1. **Sign in** – Click the "Sign in with Google" button in the sidebar to authenticate
+        2. **Select property** – Choose which website you want to analyse
+        3. **Configure settings** – Select your search type, date range, and dimensions
+        4. **Fetch data** – Click "Fetch Data" to retrieve your GSC information
+        5. **Download** – Export your results as CSV files
+        
+        ### Tips
+        
+        - For **query position analysis**, make sure to include both 'query' and 'date' dimensions
+        - **Large date ranges** (>30 days) will automatically use batch processing – this is normal and ensures reliable data retrieval
+        - The tool remembers your last selections, making repeat exports faster
+        - You can select multiple dimensions to get more granular insights
+        
+        ### Privacy & Security
+        
+        This tool uses Google's official OAuth authentication and only requests read-only access to your Search Console data. 
+        Your credentials are never stored, and all data processing happens in your browser session.
+        """)
+    
     st.divider()
 
 

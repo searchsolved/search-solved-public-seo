@@ -398,45 +398,55 @@ def download_csv_link(report):
 
 def download_excel_link(report, query_analysis=None):
     """
-    Generates and displays a download link for the report DataFrame in Excel format.
+    Generates and displays a download button for the report DataFrame in Excel format.
     Includes multiple sheets: main data and optional query count analysis.
+    Uses Streamlit's built-in download_button for better performance.
     """
     output = BytesIO()
     
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        # Write main data
-        report.to_excel(writer, sheet_name='GSC Data', index=False)
-        
-        # Write query analysis if available
-        if query_analysis is not None and not query_analysis.empty:
-            query_analysis.to_excel(writer, sheet_name='Query Count by Position', index=False)
+    try:
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            # Write main data
+            report.to_excel(writer, sheet_name='GSC Data', index=False)
             
-            # Auto-adjust column widths for query analysis sheet
-            worksheet = writer.sheets['Query Count by Position']
-            for idx, col in enumerate(query_analysis.columns):
-                max_length = max(
-                    query_analysis[col].astype(str).apply(len).max(),
-                    len(col)
-                ) + 2
-                worksheet.column_dimensions[chr(65 + idx)].width = max_length
-        
-        # Auto-adjust column widths for main data sheet
-        worksheet = writer.sheets['GSC Data']
-        for idx, col in enumerate(report.columns):
-            if idx < 26:  # Limit to first 26 columns (A-Z)
-                max_length = min(
-                    max(
-                        report[col].astype(str).apply(len).max(),
+            # Write query analysis if available
+            if query_analysis is not None and not query_analysis.empty:
+                query_analysis.to_excel(writer, sheet_name='Query Count by Position', index=False)
+                
+                # Auto-adjust column widths for query analysis sheet
+                worksheet = writer.sheets['Query Count by Position']
+                for idx, col in enumerate(query_analysis.columns):
+                    max_length = max(
+                        query_analysis[col].astype(str).apply(len).max(),
                         len(col)
-                    ) + 2,
-                    50  # Max width of 50
-                )
-                worksheet.column_dimensions[chr(65 + idx)].width = max_length
-    
-    excel_data = output.getvalue()
-    b64_excel = base64.b64encode(excel_data).decode()
-    href = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64_excel}" download="search_console_data.xlsx">Download Excel File (with Query Analysis)</a>'
-    st.markdown(href, unsafe_allow_html=True)
+                    ) + 2
+                    worksheet.column_dimensions[chr(65 + idx)].width = max_length
+            
+            # Auto-adjust column widths for main data sheet
+            worksheet = writer.sheets['GSC Data']
+            for idx, col in enumerate(report.columns):
+                if idx < 26:  # Limit to first 26 columns (A-Z)
+                    max_length = min(
+                        max(
+                            report[col].astype(str).apply(len).max(),
+                            len(col)
+                        ) + 2,
+                        50  # Max width of 50
+                    )
+                    worksheet.column_dimensions[chr(65 + idx)].width = max_length
+        
+        excel_data = output.getvalue()
+        
+        st.download_button(
+            label="📥 Download Excel File" + (" (with Query Analysis)" if query_analysis is not None else ""),
+            data=excel_data,
+            file_name=f"search_console_data_{datetime.date.today()}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True
+        )
+    except ImportError:
+        st.error("⚠️ Excel export requires the 'openpyxl' package. Please install it or use CSV download instead.")
+        st.info("To install: `pip install openpyxl`")
 
 
 # -------------

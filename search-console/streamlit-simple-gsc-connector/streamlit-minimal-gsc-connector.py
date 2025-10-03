@@ -313,6 +313,245 @@ def property_change():
 # File & Download Operations
 # -------------
 
+def create_time_series_chart(report):
+    """
+    Creates a time series chart showing clicks and impressions over time.
+    Only works if 'date' dimension is present.
+    """
+    if 'date' not in report.columns or 'clicks' not in report.columns:
+        return None
+    
+    # Aggregate by date
+    daily_data = report.groupby('date').agg({
+        'clicks': 'sum',
+        'impressions': 'sum'
+    }).reset_index()
+    
+    daily_data['date'] = pd.to_datetime(daily_data['date'])
+    daily_data = daily_data.sort_values('date')
+    
+    # Create the chart
+    import plotly.graph_objects as go
+    
+    fig = go.Figure()
+    
+    fig.add_trace(go.Scatter(
+        x=daily_data['date'],
+        y=daily_data['clicks'],
+        name='Clicks',
+        line=dict(color='#1f77b4', width=2),
+        mode='lines+markers'
+    ))
+    
+    fig.add_trace(go.Scatter(
+        x=daily_data['date'],
+        y=daily_data['impressions'],
+        name='Impressions',
+        line=dict(color='#ff7f0e', width=2),
+        mode='lines+markers',
+        yaxis='y2'
+    ))
+    
+    fig.update_layout(
+        title='Performance Over Time',
+        xaxis_title='Date',
+        yaxis_title='Clicks',
+        yaxis2=dict(
+            title='Impressions',
+            overlaying='y',
+            side='right'
+        ),
+        hovermode='x unified',
+        height=400
+    )
+    
+    return fig
+
+
+def create_position_distribution_chart(report):
+    """
+    Creates a bar chart showing distribution of keywords by position range.
+    Only works if 'position' and 'query' dimensions are present.
+    """
+    if 'position' not in report.columns or 'query' not in report.columns:
+        return None
+    
+    # Categorize positions
+    def categorize_position(pos):
+        if pos <= 3:
+            return '1-3'
+        elif pos <= 10:
+            return '4-10'
+        elif pos <= 20:
+            return '11-20'
+        else:
+            return '20+'
+    
+    report_copy = report.copy()
+    report_copy['position_range'] = report_copy['position'].apply(categorize_position)
+    
+    # Count unique queries per position range
+    position_counts = report_copy.groupby('position_range')['query'].nunique().reset_index()
+    position_counts.columns = ['Position Range', 'Unique Keywords']
+    
+    # Ensure correct order
+    position_order = ['1-3', '4-10', '11-20', '20+']
+    position_counts['Position Range'] = pd.Categorical(
+        position_counts['Position Range'], 
+        categories=position_order, 
+        ordered=True
+    )
+    position_counts = position_counts.sort_values('Position Range')
+    
+    # Create the chart
+    import plotly.graph_objects as go
+    
+    fig = go.Figure(data=[
+        go.Bar(
+            x=position_counts['Position Range'],
+            y=position_counts['Unique Keywords'],
+            text=position_counts['Unique Keywords'],
+            textposition='auto',
+            marker_color=['#2ecc71', '#3498db', '#f39c12', '#e74c3c']
+        )
+    ])
+    
+    fig.update_layout(
+        title='Keyword Distribution by Position Range',
+        xaxis_title='Position Range',
+        yaxis_title='Number of Unique Keywords',
+        height=400
+    )
+    
+    return fig
+
+
+def create_top_pages_chart(report, top_n=10):
+    """
+    Creates a bar chart showing top pages by clicks.
+    Only works if 'page' and 'clicks' dimensions are present.
+    """
+    if 'page' not in report.columns or 'clicks' not in report.columns:
+        return None
+    
+    # Aggregate clicks by page
+    page_data = report.groupby('page')['clicks'].sum().reset_index()
+    page_data = page_data.sort_values('clicks', ascending=False).head(top_n)
+    
+    # Shorten URLs for display
+    page_data['page_short'] = page_data['page'].apply(
+        lambda x: x.split('/')[-1][:30] + '...' if len(x.split('/')[-1]) > 30 else x.split('/')[-1] or '/'
+    )
+    
+    # Create the chart
+    import plotly.graph_objects as go
+    
+    fig = go.Figure(data=[
+        go.Bar(
+            y=page_data['page_short'],
+            x=page_data['clicks'],
+            orientation='h',
+            text=page_data['clicks'],
+            textposition='auto',
+            marker_color='#3498db'
+        )
+    ])
+    
+    fig.update_layout(
+        title=f'Top {top_n} Pages by Clicks',
+        xaxis_title='Clicks',
+        yaxis_title='Page',
+        height=400,
+        yaxis={'categoryorder': 'total ascending'}
+    )
+    
+    return fig
+
+
+def create_top_queries_chart(report, top_n=10):
+    """
+    Creates a bar chart showing top queries by impressions.
+    Only works if 'query' and 'impressions' dimensions are present.
+    """
+    if 'query' not in report.columns or 'impressions' not in report.columns:
+        return None
+    
+    # Aggregate impressions by query
+    query_data = report.groupby('query')['impressions'].sum().reset_index()
+    query_data = query_data.sort_values('impressions', ascending=False).head(top_n)
+    
+    # Truncate long queries
+    query_data['query_short'] = query_data['query'].apply(
+        lambda x: x[:40] + '...' if len(x) > 40 else x
+    )
+    
+    # Create the chart
+    import plotly.graph_objects as go
+    
+    fig = go.Figure(data=[
+        go.Bar(
+            y=query_data['query_short'],
+            x=query_data['impressions'],
+            orientation='h',
+            text=query_data['impressions'],
+            textposition='auto',
+            marker_color='#e74c3c'
+        )
+    ])
+    
+    fig.update_layout(
+        title=f'Top {top_n} Queries by Impressions',
+        xaxis_title='Impressions',
+        yaxis_title='Query',
+        height=400,
+        yaxis={'categoryorder': 'total ascending'}
+    )
+    
+    return fig
+
+
+def show_visualizations(report):
+    """
+    Displays appropriate visualizations based on available data dimensions.
+    Only shows charts when the required dimensions are present.
+    """
+    st.subheader("📊 Data Visualizations")
+    
+    charts_shown = 0
+    
+    # Time Series Chart (requires 'date')
+    time_chart = create_time_series_chart(report)
+    if time_chart:
+        st.plotly_chart(time_chart, use_container_width=True)
+        charts_shown += 1
+    
+    # Position Distribution (requires 'position' and 'query')
+    position_chart = create_position_distribution_chart(report)
+    if position_chart:
+        st.plotly_chart(position_chart, use_container_width=True)
+        charts_shown += 1
+    
+    # Top Pages and Queries side by side
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        pages_chart = create_top_pages_chart(report)
+        if pages_chart:
+            st.plotly_chart(pages_chart, use_container_width=True)
+            charts_shown += 1
+    
+    with col2:
+        queries_chart = create_top_queries_chart(report)
+        if queries_chart:
+            st.plotly_chart(queries_chart, use_container_width=True)
+            charts_shown += 1
+    
+    if charts_shown == 0:
+        st.info("💡 No visualizations available. Include dimensions like 'date', 'page', 'query', or 'position' to see charts.")
+    
+    return charts_shown > 0
+
+
 def analyze_query_counts(report):
     """
     Analyzes query counts by position ranges and month.
@@ -491,7 +730,7 @@ def show_dimensions_selector(search_type):
 def show_fetch_data_button(webproperty, search_type, start_date, end_date, selected_dimensions):
     """
     Displays a button to fetch data based on selected parameters.
-    Shows the report DataFrame, query analysis, and download links upon successful data fetching.
+    Shows the report DataFrame, visualizations, query analysis, and download links upon successful data fetching.
     """
     if st.button("Fetch Data", key="fetch_button"):
         report = fetch_data_loading(webproperty, search_type, start_date, end_date, selected_dimensions)
@@ -516,8 +755,11 @@ def show_fetch_data_button(webproperty, search_type, start_date, end_date, selec
     if st.session_state.get('fetch_summary'):
         st.success(st.session_state.fetch_summary)
     
-    # Display data preview if available (persists across downloads)
+    # Display visualizations if data is available
     if st.session_state.get('show_data_preview', False) and 'report' in st.session_state:
+        show_visualizations(st.session_state.report)
+        
+        # Show data preview
         show_dataframe(st.session_state.report)
         
         # Show query analysis if available

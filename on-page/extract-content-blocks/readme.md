@@ -1,7 +1,6 @@
 # Web Content Block Extractor
 
-**By Lee Foot | 21st October 2025**  
-[LeeFoot.com](https://LeeFoot.com)
+**By Lee Foot | 21st October 2025** [LeeFoot.com](https://LeeFoot.com)
 
 A Python script that uses Claude AI to automatically identify and extract major content blocks from web pages, generating XPath selectors for each element.
 

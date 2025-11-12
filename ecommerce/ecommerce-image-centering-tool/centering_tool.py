@@ -242,7 +242,7 @@ st.markdown("""
     <h6>
         Built with Streamlit & OpenCV | 
         <a href="https://leefoot.com" target="_blank">By Lee Foot</a> | 
-        <a href="https://www.linkedin.com/in/lee-foot/" target="_blank">LinkedIn/X</a>        
+        <a href="https://www.linkedin.com/in/lee-foot/" target="_blank">LinkedIn</a> |  
         <a href="mailto:hello@leefoot.com">Hire Me</a>
     </h6>
 </div>

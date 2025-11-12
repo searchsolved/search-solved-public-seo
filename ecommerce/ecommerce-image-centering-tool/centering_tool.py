@@ -241,9 +241,9 @@ st.markdown("""
 <div style="margin-bottom: 20px;">
     <h6>
         Built with Streamlit & OpenCV | 
-        <a href="https://leefoot.co.uk" target="_blank">By Lee Foot</a> | 
-        <a href="https://x.com/LeeFootSEO/" target="_blank">Twitter/X</a> | 
-        <a href="mailto:hello@leefoot.co.uk">Hire Me</a>
+        <a href="https://leefoot.com" target="_blank">By Lee Foot</a> | 
+        <a href="https://www.linkedin.com/in/lee-foot/" target="_blank">LinkedIn/X</a>        
+        <a href="mailto:hello@leefoot.com">Hire Me</a>
     </h6>
 </div>
 """, unsafe_allow_html=True)

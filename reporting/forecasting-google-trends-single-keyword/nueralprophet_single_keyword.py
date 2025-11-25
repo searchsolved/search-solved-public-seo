@@ -1,8 +1,10 @@
 ####################################################################################
-# Website  : https://leefoot.co.uk/                                                #
-# Contact  : https://leefoot.co.uk/hire-me/                                        #
+# Author   : Lee Foot                                                              #
+# Website  : https://www.leefoot.com                                               #
+# Contact  : https://www.leefoot.com/contact                                       #
+# Email    : hello@leefoot.com                                                     #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
-# Twitter  : https://twitter.com/LeeFootSEO                                        #
+# Twitter  : https://x.com/LeeFootSEO                                              #
 ####################################################################################
 
 import streamlit as st
@@ -26,7 +28,7 @@ nid_cookie = cookies_map['NID']
 set_random_seed(0)
 
 st.write(
-    "[![this is an image link](https://i.imgur.com/Ex8eeC2.png)](https://www.patreon.com/leefootseo) [Become a Patreon for Early Access, Support & More!](https://www.patreon.com/leefootseo)  |  Made in [![this is an image link](https://i.imgur.com/iIOA6kU.png)](https://www.streamlit.io/) by [@LeeFootSEO](https://twitter.com/LeeFootSEO)")
+    "Made by [@LeeFootSEO](https://x.com/LeeFootSEO) | [Website](https://www.leefoot.com) | [Contact](https://www.leefoot.com/contact)")
 st.title("Google Trends & NeuralProphet - Explainable Trends at Scale")
 
 # streamlit variables

@@ -199,15 +199,16 @@ jupyter notebook visualise_links_screaming_frog.ipynb
 
 ## Support & Documentation
 
-Each tool includes detailed setup instructions and usage examples in its respective directory. For custom reporting solutions or advanced analytics implementations, visit [LeeFoot.com](https://leefoot.com).
+Each tool includes detailed setup instructions and usage examples in its respective directory. For custom reporting solutions or advanced analytics implementations, visit [LeeFoot.com](https://www.leefoot.com).
 
 ## Author
 
 **Lee Foot** - SEO Data Analyst specializing in advanced analytics, forecasting, and reporting automation.
 
-- 🌐 [Website](https://leefoot.com)
-- 🐦 [Twitter/X](https://x.com/LeeFootSEO/)
-- ✉️ [Contact](mailto:hello@leefoot.com)
+- 🌐 [Website](https://www.leefoot.com)
+- 🐦 [Twitter/X](https://x.com/LeeFootSEO)
+- 💼 [LinkedIn](https://www.linkedin.com/in/lee-foot/)
+- ✉️ [Contact](https://www.leefoot.com/contact)
 
 ---
 

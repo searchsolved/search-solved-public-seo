@@ -183,15 +183,16 @@ jupyter notebook automatically_map_internal_searches_to_landing_pages.ipynb
 
 ## Support & Documentation
 
-Detailed implementation guides, best practices, and troubleshooting information are available in the tool directory. For custom implementations or enterprise-scale solutions, visit [LeeFoot.com](https://leefoot.com).
+Detailed implementation guides, best practices, and troubleshooting information are available in the tool directory. For custom implementations or enterprise-scale solutions, visit [LeeFoot.com](https://www.leefoot.com).
 
 ## Author
 
 **Lee Foot** - UX and SEO Consultant specializing in site search optimization and user experience analytics.
 
-- 🌐 [Website](https://leefoot.com)
-- 🐦 [Twitter/X](https://x.com/LeeFootSEO/)
-- ✉️ [Contact](mailto:hello@leefoot.com)
+- 🌐 [Website](https://www.leefoot.com)
+- 🐦 [Twitter/X](https://x.com/LeeFootSEO)
+- 💼 [LinkedIn](https://www.linkedin.com/in/lee-foot/)
+- ✉️ [Contact](https://www.leefoot.com/contact)
 
 ---
 

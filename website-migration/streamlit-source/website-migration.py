@@ -1,3 +1,12 @@
+####################################################################################
+# Author   : Lee Foot                                                              #
+# Website  : https://www.leefoot.com                                               #
+# Contact  : https://www.leefoot.com/contact                                       #
+# Email    : hello@leefoot.com                                                     #
+# LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
+# Twitter  : https://x.com/LeeFootSEO                                              #
+####################################################################################
+
 import base64
 import chardet
 import numpy as np
@@ -9,8 +18,6 @@ from polyfuzz.models import TFIDF, EditDistance, RapidFuzz
 import plotly.graph_objects as go
 import xlsxwriter
 
-# LeeFootSEO | https://leefoot.co.uk | 10th December 2023
-
 # Streamlit Interface Setup and Utilities ------------------------------------------------------------------------------
 
 def setup_streamlit_interface():
@@ -18,15 +25,15 @@ def setup_streamlit_interface():
     Sets up the Streamlit interface for the Automatic Website Migration Tool.
     Configures the page layout, title, and adds creator information and instructions.
     """
-    st.set_page_config(page_title="Automatic Website Migration Tool | LeeFoot.co.uk", layout="wide")
+    st.set_page_config(page_title="Automatic Website Migration Tool | LeeFoot.com", layout="wide")
     st.title("Automatic Website Migration Tool")
     st.markdown("### Effortlessly migrate your website data")
 
     st.markdown(
         """
         <p style="font-style: italic;">
-            Created by <a href="https://twitter.com/LeeFootSEO" target="_blank">LeeFootSEO</a> |
-            <a href="https://leefoot.co.uk" target="_blank">More Apps & Scripts on my Website</a>
+            Created by <a href="https://x.com/LeeFootSEO" target="_blank">LeeFootSEO</a> |
+            <a href="https://www.leefoot.com" target="_blank">More Apps & Scripts on my Website</a>
         </p>
         """,
         unsafe_allow_html=True
@@ -105,7 +112,7 @@ def create_page_footer_with_contact_info():
     footer_html = (
         "<hr style='height:2px;border-width:0;color:gray;background-color:gray'>"
         "<p style='font-style: italic;'>Need an app? Need this run as a managed service? "
-        "<a href='mailto:hello@leefoot.co.uk'>Hire Me!</a></p>"
+        "<a href='https://www.leefoot.com/contact'>Hire Me!</a></p>"
     )
     st.markdown(footer_html, unsafe_allow_html=True)
 

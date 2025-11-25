@@ -4,13 +4,14 @@ A comprehensive collection of SEO tools, Streamlit applications, and data analys
 
 ## 📞 Contact & Links
 
-- 🌐 **Website**: [LeeFoot.com](https://LeeFoot.com)  
-- 📧 **Contact**: [LeeFoot.com/hire-me](https://leefoot.com/hire-me/)
+- 🌐 **Website**: [LeeFoot.com](https://www.leefoot.com)
+- 📧 **Contact**: [LeeFoot.com/contact](https://www.leefoot.com/contact)
 - 🐦 **X (Twitter)**: [@LeeFootSEO](https://x.com/LeeFootSEO)
+- 💼 **LinkedIn**: [Lee Foot](https://www.linkedin.com/in/lee-foot/)
 
 ## 📖 About
 
-A treasure trove of SEO scripts and applications designed to supercharge your digital marketing strategies. This collection is a culmination of practical, scripts developed whilst automating my day job as an [eCommerce SEO Consultant](https://leefoot.com). Dive into a range of tools, from automating mundane tasks to extracting valuable insights from your data.
+A treasure trove of SEO scripts and applications designed to supercharge your digital marketing strategies. This collection is a culmination of practical, scripts developed whilst automating my day job as an [eCommerce SEO Consultant](https://www.leefoot.com). Dive into a range of tools, from automating mundane tasks to extracting valuable insights from your data.
 
 ## ⭐ Featured Scripts and Apps
 

@@ -1,8 +1,13 @@
-"""Script by @LeeFootSEO -
-For early access to scripts / request features
-Join the Patreon: https://www.patreon.com/leefootseo <-------------------------
+####################################################################################
+# Author   : Lee Foot                                                              #
+# Website  : https://www.leefoot.com                                               #
+# Contact  : https://www.leefoot.com/contact                                       #
+# Email    : hello@leefoot.com                                                     #
+# LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
+# Twitter  : https://x.com/LeeFootSEO                                              #
+####################################################################################
 
-Internal Links Vs High Transactions Report by @LeeFootSEO Jan 2021
+"""Internal Links Vs High Transactions Report
 Fuses the 'Top linked pages – internally' Export from Search Console with the Landing Page Report from Google Analytics.
 
 How to Use:

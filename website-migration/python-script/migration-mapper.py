@@ -1,4 +1,13 @@
-""" Automatic Website Migration Tool V5, By @LeeFootSEO | https://LeeFoot.co.uk | 06/12/2023 
+####################################################################################
+# Author   : Lee Foot                                                              #
+# Website  : https://www.leefoot.com                                               #
+# Contact  : https://www.leefoot.com/contact                                       #
+# Email    : hello@leefoot.com                                                     #
+# LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
+# Twitter  : https://x.com/LeeFootSEO                                              #
+####################################################################################
+
+"""Automatic Website Migration Tool V5
 
 Uses a grid search to find the highest scoring match between columns specified in the matching_columns variable.
 """

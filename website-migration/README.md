@@ -225,15 +225,16 @@ Redirect 301 /another-old-page/ https://newsite.com/updated-page/
 
 ## Support & Documentation
 
-Detailed migration guides, troubleshooting information, and best practices are available in each tool's directory. For complex enterprise migrations or custom implementations, visit [LeeFoot.com](https://leefoot.com).
+Detailed migration guides, troubleshooting information, and best practices are available in each tool's directory. For complex enterprise migrations or custom implementations, visit [LeeFoot.com](https://www.leefoot.com).
 
 ## Author
 
 **Lee Foot** - Technical SEO Consultant specializing in website migrations and SEO preservation strategies.
 
-- 🌐 [Website](https://leefoot.com)
-- 🐦 [Twitter/X](https://x.com/LeeFootSEO/)
-- ✉️ [Contact](mailto:hello@leefoot.com)
+- 🌐 [Website](https://www.leefoot.com)
+- 🐦 [Twitter/X](https://x.com/LeeFootSEO)
+- 💼 [LinkedIn](https://www.linkedin.com/in/lee-foot/)
+- ✉️ [Contact](https://www.leefoot.com/contact)
 
 ---
 

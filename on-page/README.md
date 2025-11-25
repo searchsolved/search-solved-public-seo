@@ -176,15 +176,16 @@ python striking_distance_report.py
 
 ## Support & Documentation
 
-Detailed implementation guides and troubleshooting information are available in each tool's directory. For custom implementations or advanced analytics, visit [LeeFoot.com](https://leefoot.com).
+Detailed implementation guides and troubleshooting information are available in each tool's directory. For custom implementations or advanced analytics, visit [LeeFoot.com](https://www.leefoot.com).
 
 ## Author
 
 **Lee Foot** - SEO Consultant specializing in data-driven on-page optimization and keyword strategy.
 
-- 🌐 [Website](https://leefoot.com)
-- 🐦 [Twitter/X](https://x.com/LeeFootSEO/)
-- ✉️ [Contact](mailto:hello@leefoot.com)
+- 🌐 [Website](https://www.leefoot.com)
+- 🐦 [Twitter/X](https://x.com/LeeFootSEO)
+- 💼 [LinkedIn](https://www.linkedin.com/in/lee-foot/)
+- ✉️ [Contact](https://www.leefoot.com/contact)
 
 ---
 

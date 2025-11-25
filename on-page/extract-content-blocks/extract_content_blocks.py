@@ -1,3 +1,12 @@
+####################################################################################
+# Author   : Lee Foot                                                              #
+# Website  : https://www.leefoot.com                                               #
+# Contact  : https://www.leefoot.com/contact                                       #
+# Email    : hello@leefoot.com                                                     #
+# LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
+# Twitter  : https://x.com/LeeFootSEO                                              #
+####################################################################################
+
 import requests
 from bs4 import BeautifulSoup
 import time

@@ -1,12 +1,13 @@
-# Automatic Category Suggester by LeeFoot
-# Twitter: @leefootseo
-# Web: https://LeeFoot.co.uk
-# Contact me if you'd like this run as a managed service.
+####################################################################################
+# Author   : Lee Foot                                                              #
+# Website  : https://www.leefoot.com                                               #
+# Contact  : https://www.leefoot.com/contact                                       #
+# Email    : hello@leefoot.com                                                     #
+# LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
+# Twitter  : https://x.com/LeeFootSEO                                              #
+####################################################################################
 
-# Automatic Category Suggester by LeeFoot
-# Twitter: @leefootseo
-# Web: https://LeeFoot.co.uk
-# Contact me if you'd like this run as a managed service.
+# Automatic Category Suggester
 
 import pandas as pd
 import re

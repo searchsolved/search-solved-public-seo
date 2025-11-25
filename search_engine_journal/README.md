@@ -188,10 +188,11 @@ jupyter notebook Top_Traffic_Pages_Search_Console_API_V1.ipynb
 
 **Lee Foot** - Published SEO researcher and consultant, featured contributor to Search Engine Journal.
 
-- 🌐 [Website](https://leefoot.com)
-- 🐦 [Twitter/X](https://x.com/LeeFootSEO/)
-- 📚 [Publications](https://leefoot.com/publications/)
-- ✉️ [Contact](mailto:hello@leefoot.com)
+- 🌐 [Website](https://www.leefoot.com)
+- 🐦 [Twitter/X](https://x.com/LeeFootSEO)
+- 💼 [LinkedIn](https://www.linkedin.com/in/lee-foot/)
+- 📚 [Publications](https://www.leefoot.com/publications/)
+- ✉️ [Contact](https://www.leefoot.com/contact)
 
 ## Publication History
 

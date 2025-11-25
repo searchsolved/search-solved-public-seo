@@ -214,15 +214,16 @@ pip install streamlit plotly pandas
 
 ## Support & Documentation
 
-Each tool includes comprehensive documentation in its respective directory. For custom implementations or enterprise solutions, visit [LeeFoot.com](https://leefoot.com).
+Each tool includes comprehensive documentation in its respective directory. For custom implementations or enterprise solutions, visit [LeeFoot.com](https://www.leefoot.com).
 
 ## Author
 
 **Lee Foot** - Technical SEO Consultant specializing in internal linking optimization and site architecture.
 
-- 🌐 [Website](https://leefoot.com)
-- 🐦 [Twitter/X](https://x.com/LeeFootSEO/)
-- ✉️ [Contact](mailto:hello@leefoot.com)
+- 🌐 [Website](https://www.leefoot.com)
+- 🐦 [Twitter/X](https://x.com/LeeFootSEO)
+- 💼 [LinkedIn](https://www.linkedin.com/in/lee-foot/)
+- ✉️ [Contact](https://www.leefoot.com/contact)
 
 ---
 

@@ -1,11 +1,13 @@
-"""
-Brand Stockists SERP Scraper using ValueSERP API
+####################################################################################
+# Author   : Lee Foot                                                              #
+# Website  : https://www.leefoot.com                                               #
+# Contact  : https://www.leefoot.com/contact                                       #
+# Email    : hello@leefoot.com                                                     #
+# LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
+# Twitter  : https://x.com/LeeFootSEO                                              #
+####################################################################################
 
-Website  : https://leefoot.co.uk/
-Contact  : https://leefoot.co.uk/hire-me/
-LinkedIn : https://www.linkedin.com/in/lee-foot/
-Twitter  : https://twitter.com/LeeFootSEO
-"""
+"""Brand Stockists SERP Scraper using ValueSERP API"""
 
 import json
 import os

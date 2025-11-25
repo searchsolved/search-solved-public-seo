@@ -1,5 +1,13 @@
-# Inject branding into PDFs by Lee Foot 23-12-2023. 
-# More like this @ https://leefoot.co.uk
+####################################################################################
+# Author   : Lee Foot                                                              #
+# Website  : https://www.leefoot.com                                               #
+# Contact  : https://www.leefoot.com/contact                                       #
+# Email    : hello@leefoot.com                                                     #
+# LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
+# Twitter  : https://x.com/LeeFootSEO                                              #
+####################################################################################
+
+# Inject branding into PDFs
 
 import os
 from datetime import datetime

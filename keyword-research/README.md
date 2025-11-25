@@ -178,15 +178,16 @@ Many tools require API access:
 
 ## Support & Documentation
 
-Each tool includes detailed setup instructions and configuration guides in its respective directory. For advanced implementations or custom requirements, visit [LeeFoot.com](https://leefoot.com).
+Each tool includes detailed setup instructions and configuration guides in its respective directory. For advanced implementations or custom requirements, visit [LeeFoot.com](https://www.leefoot.com).
 
 ## Author
 
 **Lee Foot** - SEO Consultant specializing in keyword research automation and competitive analysis.
 
-- 🌐 [Website](https://leefoot.com)
-- 🐦 [Twitter/X](https://x.com/LeeFootSEO/)
-- ✉️ [Contact](mailto:hello@leefoot.com)
+- 🌐 [Website](https://www.leefoot.com)
+- 🐦 [Twitter/X](https://x.com/LeeFootSEO)
+- 💼 [LinkedIn](https://www.linkedin.com/in/lee-foot/)
+- ✉️ [Contact](https://www.leefoot.com/contact)
 
 ---
 

@@ -1,3 +1,12 @@
+####################################################################################
+# Author   : Lee Foot                                                              #
+# Website  : https://www.leefoot.com                                               #
+# Contact  : https://www.leefoot.com/contact                                       #
+# Email    : hello@leefoot.com                                                     #
+# LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
+# Twitter  : https://x.com/LeeFootSEO                                              #
+####################################################################################
+
 import streamlit as st
 import requests
 import json
@@ -437,7 +446,7 @@ st.title("🕸️ Wayback Machine URL Fetcher")
 st.markdown(
     """
     <div style="font-size: 0.8em; margin-bottom: 20px;">
-        More like this at <a href='https://leefoot.co.uk' target='_blank'>LeeFoot.co.uk</a>
+        More like this at <a href='https://www.leefoot.com' target='_blank'>LeeFoot.com</a>
     </div>
     """,
     unsafe_allow_html=True

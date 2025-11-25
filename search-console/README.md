@@ -194,15 +194,16 @@ API_SETTINGS = {
 
 ## Support & Documentation
 
-Detailed setup guides, troubleshooting information, and advanced configuration options are available in the tool directory. For enterprise implementations or custom integrations, visit [LeeFoot.com](https://leefoot.com).
+Detailed setup guides, troubleshooting information, and advanced configuration options are available in the tool directory. For enterprise implementations or custom integrations, visit [LeeFoot.com](https://www.leefoot.com).
 
 ## Author
 
 **Lee Foot** - SEO Consultant specializing in Search Console optimization and automated reporting.
 
-- 🌐 [Website](https://leefoot.com)
-- 🐦 [Twitter/X](https://x.com/LeeFootSEO/)
-- ✉️ [Contact](mailto:hello@leefoot.com)
+- 🌐 [Website](https://www.leefoot.com)
+- 🐦 [Twitter/X](https://x.com/LeeFootSEO)
+- 💼 [LinkedIn](https://www.linkedin.com/in/lee-foot/)
+- ✉️ [Contact](https://www.leefoot.com/contact)
 
 ---
 

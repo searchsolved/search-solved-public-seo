@@ -1,10 +1,13 @@
 ####################################################################################
-# Simple GSC Connector for Streamlit by Lee Foot 3rd Oct 2025                     #
-# Website  : https://leefoot.com/                                                  #
-# Contact  : https://leefoot.com/hire-me/                                          #
+# Author   : Lee Foot                                                              #
+# Website  : https://www.leefoot.com                                               #
+# Contact  : https://www.leefoot.com/contact                                       #
+# Email    : hello@leefoot.com                                                     #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
-# Twitter  : https://twitter.com/LeeFootSEO                                        #
+# Twitter  : https://x.com/LeeFootSEO                                              #
 ####################################################################################
+
+# Simple GSC Connector for Streamlit
 
 # Standard library imports
 import datetime
@@ -71,9 +74,9 @@ def setup_streamlit():
         </style>
         <div class="social-links">
             Created by <strong>Lee Foot</strong> • 
-            <a href="https://twitter.com/LeeFootSEO" target="_blank">Follow me on 𝕏</a> • 
-            <a href="https://www.linkedin.com/in/lee-foot/" target="_blank">Connect on LinkedIn</a> • 
-            <a href="https://leefoot.com" target="_blank">🌐 More Tools on my Website</a>
+            <a href="https://x.com/LeeFootSEO" target="_blank">Follow me on 𝕏</a> •
+            <a href="https://www.linkedin.com/in/lee-foot/" target="_blank">Connect on LinkedIn</a> •
+            <a href="https://www.leefoot.com" target="_blank">🌐 More Tools on my Website</a>
         </div>
         """,
         unsafe_allow_html=True

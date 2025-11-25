@@ -1,8 +1,10 @@
 ####################################################################################
-# Website  : https://leefoot.co.uk/                                                #
-# Contact  : https://leefoot.co.uk/hire-me/                                        #
+# Author   : Lee Foot                                                              #
+# Website  : https://www.leefoot.com                                               #
+# Contact  : https://www.leefoot.com/contact                                       #
+# Email    : hello@leefoot.com                                                     #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
-# Twitter  : https://twitter.com/LeeFootSEO                                        #
+# Twitter  : https://x.com/LeeFootSEO                                              #
 ####################################################################################
 
 from woocommerce import API

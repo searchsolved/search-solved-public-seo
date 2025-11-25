@@ -69,15 +69,16 @@ Automatically sorts WooCommerce products by relevancy scores to improve user exp
 
 ## Support & Documentation
 
-Each tool includes detailed documentation in its respective directory. For additional support or custom implementations, visit [LeeFoot.com](https://leefoot.com).
+Each tool includes detailed documentation in its respective directory. For additional support or custom implementations, visit [LeeFoot.com](https://www.leefoot.com).
 
 ## Author
 
 **Lee Foot** - eCommerce SEO Consultant specializing in technical SEO automation.
 
-- 🌐 [Website](https://leefoot.com)
-- 🐦 [Twitter/X](https://x.com/LeeFootSEO/)
-- ✉️ [Contact](mailto:hello@leefoot.com)
+- 🌐 [Website](https://www.leefoot.com)
+- 🐦 [Twitter/X](https://x.com/LeeFootSEO)
+- 💼 [LinkedIn](https://www.linkedin.com/in/lee-foot/)
+- ✉️ [Contact](https://www.leefoot.com/contact)
 
 ---
 

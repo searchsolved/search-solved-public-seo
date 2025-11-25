@@ -1,3 +1,12 @@
+####################################################################################
+# Author   : Lee Foot                                                              #
+# Website  : https://www.leefoot.com                                               #
+# Contact  : https://www.leefoot.com/contact                                       #
+# Email    : hello@leefoot.com                                                     #
+# LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
+# Twitter  : https://x.com/LeeFootSEO                                              #
+####################################################################################
+
 """
 This script clusters keywords using the PolyFuzz library, which leverages the SentenceTransformers library for semantic similarity. The script reads a CSV file, clusters keywords based on their semantic similarity, and outputs a sunburst chart using Plotly and a CSV file with the results.
 

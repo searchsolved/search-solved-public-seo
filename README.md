@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Google Colab](https://img.shields.io/badge/Google%20Colab-Notebooks-F9AB00.svg)](https://colab.research.google.com/)
 
-A comprehensive collection of **30+ SEO tools**, Streamlit applications, and Python scripts for eCommerce SEO, keyword research, link building, and data analysis.
+A comprehensive collection of **40+ SEO tools**, Streamlit applications, APIs, and Python scripts for eCommerce SEO, keyword research, link building, and data analysis.
 
 ---
 
@@ -70,12 +70,14 @@ See the [search_engine_journal](./search_engine_journal) folder for full publica
 | [eBay Related Searches](./keyword-research/ebay-related-searches) | Scrape related search keywords from eBay with tree visualization | Streamlit |
 | [Bulk Keyword Tagger](./keyword-research/bulk-keyword-tagger) | Tag thousands of keywords with custom categories | Colab |
 | [SERP Keyword Extractor](./keyword-research/serp-keyword-extractor) | Extract PAA questions and related searches from Google via ValueSERP API | Streamlit |
+| [Question Extraction GSC](./keyword-research/question-extraction-gsc) | Extract question-type keywords from Google Search Console data | Python |
 
 ### Keyword Clustering
 
 | Tool | Description | Type |
 |------|-------------|------|
 | [Semantic Clustering Tool](./keyword-clustering/semantic-clustering) | Group keywords into topical clusters using sentence transformers and ML | CLI / Colab |
+| [SERP Clustering at Scale](./keyword-clustering/serp-clustering-at-scale) | Cluster keywords based on common SERP URLs from ValueSERP exports | Python |
 
 ### Link Building
 
@@ -128,16 +130,44 @@ See the [search_engine_journal](./search_engine_journal) folder for full publica
 |------|-------------|------|
 | [Wayback URL Extractor](./wayback-url-tool) | Bulk extract historical URLs from archive.org for any domain | Streamlit |
 
+### Technical SEO
+
+| Tool | Description | Type |
+|------|-------------|------|
+| [Template Fingerprinting](./technical-seo/template-fingerprinting) | Identify page templates using HTML structure analysis and ML clustering | Python |
+
+### Content Analysis
+
+| Tool | Description | Type |
+|------|-------------|------|
+| [Content Hub Classification](./content-analysis/content-hub-classification) | Classify articles into content hub categories using OpenAI GPT | Python |
+
+### Streamlit Apps (New)
+
+| App | Description | Type |
+|-----|-------------|------|
+| [Category Generator](./streamlit-apps/category-generator) | Auto-suggest new category pages based on product inventory | Streamlit |
+| [Keyword Difficulty Checker](./streamlit-apps/keyword-difficulty-checker) | Check difficulty with allintitle, phrase match, and SERP clustering | Streamlit |
+| [Striking Distance V2](./streamlit-apps/striking-distance-v2) | Find keywords ranking 4-20 and check title/H1/copy presence | Streamlit |
+| [Entity Extractor](./streamlit-apps/entity-extractor) | Extract entities from SERPs, CSV files, or YouTube transcripts | Streamlit |
+
+### API Services
+
+| API | Description | Type |
+|-----|-------------|------|
+| [SERP Clustering API](./api-services/serp-clustering-api) | FastAPI service for clustering keywords via REST endpoint | FastAPI |
+
 ---
 
 ## Tool Types
 
 | Type | Description | Run Command |
 |------|-------------|-------------|
-| **Streamlit** | Interactive web apps (6 live) | `streamlit run app.py` |
+| **Streamlit** | Interactive web apps (10 total) | `streamlit run app.py` |
 | **Colab** | Google Colab notebooks | Click "Open in Colab" badge |
 | **Python** | Standalone scripts | `python script.py` |
 | **CLI** | Command-line tools | `python script.py --args` |
+| **FastAPI** | REST API services | `uvicorn app:app --reload` |
 
 ---
 

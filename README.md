@@ -26,8 +26,12 @@ Try these tools directly in your browser — no installation required:
 
 | App | Description | Link |
 |-----|-------------|------|
-| **eBay Related Searches** | Scrape related keywords from eBay with interactive tree visualization | [![Open App](https://img.shields.io/badge/Open_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://searchebay.streamlit.app/) |
-| **Wayback URL Tool** | Extract historical URLs from the Wayback Machine | [![Open App](https://img.shields.io/badge/Open_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://wayback.streamlit.app/) |
+| **Image Centering Tool** | Batch center and resize product images | [![Open App](https://img.shields.io/badge/Open_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://imagewiz.streamlit.app/) |
+| **Wikipedia Citation Finder** | Find Wikipedia pages needing citations for link opportunities | [![Open App](https://img.shields.io/badge/Open_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://wikicite.streamlit.app/) |
+| **GSC Data Downloader** | Download your Google Search Console data | [![Open App](https://img.shields.io/badge/Open_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://gscdata.streamlit.app/) |
+| **Website Migration Mapper** | Auto-map URLs from old site to new | [![Open App](https://img.shields.io/badge/Open_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://migration.streamlit.app/) |
+| **BERT Semantic Interlinker** | Find internal linking opportunities using BERT | [![Open App](https://img.shields.io/badge/Open_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://bertlinker.streamlit.app/) |
+| **Wayback URL Extractor** | Extract historical URLs from archive.org | [![Open App](https://img.shields.io/badge/Open_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://wayback.streamlit.app/) |
 
 ---
 
@@ -130,7 +134,7 @@ See the [search_engine_journal](./search_engine_journal) folder for full publica
 
 | Type | Description | Run Command |
 |------|-------------|-------------|
-| **Streamlit** | Interactive web apps (9 available) | `streamlit run app.py` |
+| **Streamlit** | Interactive web apps (6 live) | `streamlit run app.py` |
 | **Colab** | Google Colab notebooks | Click "Open in Colab" badge |
 | **Python** | Standalone scripts | `python script.py` |
 | **CLI** | Command-line tools | `python script.py --args` |

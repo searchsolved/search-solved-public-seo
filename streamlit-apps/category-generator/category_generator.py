@@ -30,56 +30,92 @@ st.set_page_config(
     page_icon="chart_with_upwards_trend",
     layout="wide",
 )
+
+# -------------------------------- Sidebar Configuration --------------------------------
+st.sidebar.title("Settings")
+
+# API Configuration
+st.sidebar.header("Keywords Everywhere API")
+kwe_key = st.sidebar.text_input(
+    'API Key',
+    type="password",
+    help="Get your API key from keywordseverywhere.com"
+)
+country_kwe = st.sidebar.selectbox(
+    'Country',
+    ('us', 'uk', 'au', 'ca', 'in', 'nz', 'za'),
+    index=0,
+    help="Country for search volume data"
+)
+currency_kwe = st.sidebar.selectbox(
+    'Currency',
+    ('usd', 'gbp', 'eur', 'aud', 'cad', 'inr', 'nzd'),
+    index=0,
+    help="Currency for CPC data"
+)
+
+# Filtering Options
+st.sidebar.header("Filtering")
+min_search_vol = st.sidebar.number_input('Minimum Search Volume', value=100, min_value=0)
+min_cpc = st.sidebar.slider("Minimum CPC ($)", value=0, min_value=0, max_value=50)
+min_product_match_exact = st.sidebar.slider("Min Products (Exact Match)", value=3, min_value=1, max_value=100)
+min_product_match_fuzzy = st.sidebar.slider("Min Products (Fuzzy Match)", value=3, min_value=1, max_value=100)
+min_sim_match = st.sidebar.slider(
+    "Max Similarity to Existing Category",
+    value=96,
+    min_value=0,
+    max_value=100,
+    help="Lower = more unique suggestions"
+)
+
+# Advanced Options
+st.sidebar.header("Advanced")
+keep_longest_word = st.sidebar.checkbox('Keep Longest Word Only', value=True, help="Remove shorter keyword fragments")
+enable_fuzzy_product_match = st.sidebar.checkbox('Enable Fuzzy Matching (Slower)', value=False)
+
+# Author info in sidebar
+st.sidebar.markdown("---")
+st.sidebar.markdown("**Author:** [Lee Foot](https://www.leefoot.com)")
+st.sidebar.markdown("[@LeeFootSEO](https://x.com/LeeFootSEO) · [LinkedIn](https://www.linkedin.com/in/lee-foot/)")
+
+# -------------------------------- Main Content --------------------------------
 st.title("Automatic Category Page Suggester")
-st.subheader("Automatically align your inventory with search demand.")
+st.markdown("*Discover new category page opportunities based on your product inventory and real search demand.*")
 
-st.markdown("""
-**How it works:**
-1. Export **inlinks to your product pages** from Screaming Frog (Bulk Export > Links > All Inlinks)
-2. Export **internal_html.csv** from Screaming Frog
-3. The script uses **n-grams** to generate thousands of keyword variations from your product titles
-4. The **Keywords Everywhere API** validates suggestions against real search volume data
+# Instructions in an expander (expanded by default)
+with st.expander("How to Use This Tool", expanded=True):
+    st.markdown("""
+    ### Prerequisites
+    You need **two exports from Screaming Frog** with custom extraction configured:
 
-This identifies new category page opportunities that match both your inventory AND actual search demand.
-""")
+    **1. Set up Custom Extraction in Screaming Frog:**
+    - Configuration > Custom > Extraction
+    - Create extractions to identify **Product Pages** and **Category Pages**
+    - Example: Extract a unique element that only appears on product pages
+
+    **2. Export the required files:**
+
+    | File | How to Export |
+    |------|---------------|
+    | `inlinks.csv` | Right-click any product URL > Export > Inlinks |
+    | `internal_html.csv` | Bulk Export > All > Internal HTML |
+
+    ### How It Works
+    1. **N-grams** extract 2-7 word phrases from your product H1 tags
+    2. Phrases are **matched to products** to ensure inventory coverage
+    3. **PolyFuzz** checks similarity to existing categories (removes duplicates)
+    4. **Keywords Everywhere** validates real search volume (optional but recommended)
+
+    ### Tips
+    - The Keywords Everywhere API key is optional but highly recommended
+    - Without it, you'll get all n-gram combinations (many won't have search volume)
+    - Get your API key at [keywordseverywhere.com](https://keywordseverywhere.com/)
+    """)
 
 st.markdown("---")
-st.markdown("**Author:** [Lee Foot](https://www.leefoot.com) · [@LeeFootSEO](https://x.com/LeeFootSEO) · [LinkedIn](https://www.linkedin.com/in/lee-foot/)")
-st.write("")
 
-# set the layout columns
-col1, col2 = st.columns(2)
-
-# set variables
-min_product_match_exact = st.sidebar.slider("Minimum products to match to (Exact match): 0-100", value=3, min_value=1)
-min_product_match_fuzzy = st.sidebar.slider("Minimum products to match to (Fuzzy match): 0-100", value=3, min_value=1)
-
-min_sim_match = st.sidebar.slider("Minimum similarity to an existing category: 0-100", value=96)
-min_cpc = st.sidebar.slider("Minimum CPC in $", value=0)
-min_search_vol = st.sidebar.text_input('Set the minimum search volume', 100)
-kwe_key = st.sidebar.text_input('Paste your Keywords Everywhere API key')
-
-country_kwe = st.sidebar.selectbox('Set the country to pull search data from',
-                                   ('us', 'uk', 'au', 'ca', 'in', 'nz', 'za'), index=0)
-
-currency_kwe = st.sidebar.selectbox('Set the currency to use for CPC data', (
-    'usd', 'gbp', 'bdt', 'bgn', 'bhd', 'bif', 'bmd', 'bnd', 'bob', 'brl', 'bsd', 'btn', 'bwp', 'byr', 'bzd', 'cad',
-    'chf', 'clp',
-    'cny', 'cop', 'crc', 'cup', 'cve', 'czk', 'djf', 'dkk', 'dop', 'dzd', 'eek', 'egp', 'etb', 'eur', 'fjd', 'fkp',
-    'ghs', 'gmd', 'gnf', 'gtq', 'gyd', 'hkd', 'hnl', 'hrk', 'huf', 'idr', 'ils', 'inr', 'iqd', 'isk', 'jod', 'jpy',
-    'kes',
-    'kgs', 'khr', 'kmf', 'kpw', 'krw', 'kwd', 'kyd', 'kzt', 'lkr', 'mad', 'mdl', 'mkd', 'mmk', 'mnt', 'mop', 'mro',
-    'mur',
-    'mvr', 'mwk', 'mxn', 'myr', 'nad', 'ngn', 'nio', 'nok', 'npr', 'nzd', 'omr', 'pab', 'pen', 'pgk', 'php', 'pkr',
-    'pln',
-    'qar', 'ron', 'rub', 'rwf', 'sar', 'sbd', 'scr', 'sdg', 'sek', 'sgd', 'shp', 'skk', 'sll', 'sos', 'std', 'svc',
-    'syp',
-    'szl', 'thb', 'tnd', 'top', 'try', 'ttd', 'twd', 'tzs', 'ugx', 'uyu', 'uzs', 'vef', 'vnd', 'vuv', 'wst', 'xaf',
-    'xcd', 'xof', 'xpf', 'yer', 'zar', 'zmk'
-), index=0)
-
-keep_longest_word = st.sidebar.checkbox('Keep The Longest Word Suggestion', value=True)
-enable_fuzzy_product_match = st.sidebar.checkbox('Enable Fuzzy Product Matching? (Slow)', value=False)
+# File upload section
+st.subheader("Step 1: Upload Your Screaming Frog Exports")
 
 min_search_vol = int(min_search_vol)
 data_source_kwe = 'gkp'  # gkp = google keyword planner only // cli = clickstream data + keyword planner
@@ -88,10 +124,16 @@ http_or_https_gsc = "https://"  # http prefix // default = https://
 parms = "page=|p=|utm_medium|sessionid|affiliateid|sort=|order=|type=|categoryid=|itemid=|viewItems=|query" \
         "=|search=|lang="  # drop common parameter urls
 
-# -------------------------------- read the keyword to a dataframe called df_crawl ----------------------------------
+# -------------------------------- File Upload Section ----------------------------------
+col1, col2 = st.columns(2)
+
 with col1:
-    uploaded_file = st.file_uploader("Upload your inlinks.csv crawl file",
-                                     help="""Which reports does the tool currently support?""")
+    st.markdown("**Inlinks Export**")
+    uploaded_file = st.file_uploader(
+        "Upload inlinks.csv",
+        type=['csv'],
+        help="Right-click a product URL in Screaming Frog > Export > Inlinks"
+    )
 
     if uploaded_file is not None:
         try:
@@ -112,20 +154,25 @@ with col1:
             )
             number_of_rows = len(df_all_inlinks)
             if number_of_rows == 0:
-                st.caption("Your sheet seems empty!")
+                st.error("File is empty!")
+            else:
+                st.success(f"Loaded {number_of_rows:,} rows")
 
         except UnicodeDecodeError:
-            st.warning("""The file doesn't seem to load. Check the filetype, file format and Schema""")
-
+            st.error("Could not read file. Check encoding.")
     else:
+        st.info("Waiting for inlinks.csv...")
         st.stop()
 
-# -------------------------------- read the crawl file to a dataframe called df_crawl ----------------------------------
 with col2:
-    uploaded_crawl_file = st.file_uploader("Upload your internal_html.csv crawl export",
-                                           help="""Which reports does the tool currently support?""")
-    if uploaded_crawl_file is not None:
+    st.markdown("**Internal HTML Export**")
+    uploaded_crawl_file = st.file_uploader(
+        "Upload internal_html.csv",
+        type=['csv'],
+        help="Screaming Frog > Bulk Export > All > Internal HTML"
+    )
 
+    if uploaded_crawl_file is not None:
         try:
             result = chardet.detect(uploaded_crawl_file.getvalue())
             encoding_value = result["encoding"]
@@ -144,20 +191,40 @@ with col2:
 
             number_of_rows = len(df_internal_html)
             if number_of_rows == 0:
-                st.caption("Your sheet seems empty!")
+                st.error("File is empty!")
+            else:
+                st.success(f"Loaded {number_of_rows:,} rows")
 
         except UnicodeDecodeError:
-            st.warning("""The file doesn't seem to load. Check the filetype, file format and Schema""")
-
+            st.error("Could not read file. Check encoding.")
     else:
+        st.info("Waiting for internal_html.csv...")
         st.stop()
 
-with col2:
-    with st.form(key='columns_in_form_2'):
-        st.subheader("Map the Product & Category Columns")
-        product_extract_col = st.selectbox('Select the PRODUCT column:', df_internal_html.columns)
-        category_extract_col = st.selectbox('Select the CATEGORY column:', df_internal_html.columns)
-        submitted_crawl_btn = st.form_submit_button('Submit')
+# -------------------------------- Column Mapping Section ----------------------------------
+st.markdown("---")
+st.subheader("Step 2: Map Your Custom Extraction Columns")
+st.markdown("Select the columns from your Screaming Frog custom extraction that identify product and category pages.")
+
+col3, col4 = st.columns(2)
+
+with col3:
+    product_extract_col = st.selectbox(
+        'Product Page Column',
+        df_internal_html.columns,
+        help="Column that identifies product pages (from custom extraction)"
+    )
+
+with col4:
+    category_extract_col = st.selectbox(
+        'Category Page Column',
+        df_internal_html.columns,
+        help="Column that identifies category pages (from custom extraction)"
+    )
+
+st.markdown("---")
+st.subheader("Step 3: Generate Category Suggestions")
+submitted_crawl_btn = st.button('Generate Suggestions', type='primary', use_container_width=True)
 
 # ------------------------------------- start rest of code -------------------------------------------------------
 if submitted_crawl_btn == True:
@@ -272,8 +339,7 @@ if submitted_crawl_btn == True:
 
     df_ngrams = pd.concat(appended_data)  # concat the list of dataframes
     ngram_count = df_ngrams.shape[0]  # get the row count
-    with col1:
-        st.info('Total keywords generated via ngrams: ' + str(ngram_count))
+    st.info(f'Total keywords generated via n-grams: {ngram_count:,}')
 
     df_ngrams = df_ngrams.sort_values(by="Frequency", ascending=False)
     df_ngrams["Keyword"] = [' '.join(entry) for entry in df_ngrams["Keyword"]]
@@ -294,8 +360,7 @@ if submitted_crawl_btn == True:
 
     # ---------------------- keep only suggestions which match to products x times -----------------------------------------
 
-    with col1:
-        st.write("Exact matching to a minimum of", min_product_match_exact, "products ..")
+    st.write(f"Exact matching to a minimum of {min_product_match_exact} products...")
     check_list_exact = []
     for i in stqdm(keyword_list):
         check_freq = sum(i in s for s in target_keyword_list)
@@ -303,8 +368,7 @@ if submitted_crawl_btn == True:
 
     # search in a fuzzy match
     if enable_fuzzy_product_match:
-        with col1:
-            st.write("Fuzzy matching keywords to a minimum of", min_product_match_fuzzy, "products ..")
+        st.write(f"Fuzzy matching keywords to a minimum of {min_product_match_fuzzy} products...")
         check_list_fuzzy = []
         for keywords in stqdm(keyword_list):
             check_list_fuzzy.append(
@@ -357,10 +421,7 @@ if submitted_crawl_btn == True:
             creds_available = response.content.decode('utf-8')
             creds_available = creds_available.split()
             creds_available = int(creds_available[1])
-            with col1:
-                st.write("This operation will require", creds_required, "Keywords Everywhere API credits. \nYou have",
-                         creds_available,
-                         "credits remaining.")
+            st.write(f"This operation will require {creds_required:,} Keywords Everywhere API credits. You have {creds_available:,} credits remaining.")
             if creds_available < creds_required:
                 st.write("Not enough keywords everywhere credits available!")
                 st.stop
@@ -375,8 +436,7 @@ if submitted_crawl_btn == True:
         fixed_loops = loops * 100  # fixes the total loop counter displayed value
         ngram_loop_count_100 = ngram_loop_count * 100
 
-        with col1:
-            st.write("Fetching search volume & CPC data from Keywords Everywhere.")
+        st.write("Fetching search volume & CPC data from Keywords Everywhere...")
         for i in stqdm(range(0, loops)):
 
             while ngram_loop_count != loops:
@@ -417,8 +477,7 @@ if submitted_crawl_btn == True:
                 ngram_loop_count += +1
                 ngram_loop_count_100 += 100
 
-        with col1:
-            st.success("Got search volume and CPC data successfully!")
+        st.success("Got search volume and CPC data successfully!")
 
         df_kwe = pd.concat(df_data)
         df_kwe["Search Volume"] = df_kwe["Search Volume"].astype(int)
@@ -454,18 +513,16 @@ if submitted_crawl_btn == True:
     # --------------------------- keep the longest word and discard the fragments ------------------------------------------
 
     if keep_longest_word == True:
-        with col1:
-            st.write("\nKeeping Longest Word and Discarding Fragments ..")
+        st.write("Keeping longest word and discarding fragments...")
 
         list1 = df_kwe["Keyword"]
         substrings = {w1 for w1 in list1 for w2 in list1 if w1 in w2 and w1 != w2}
         longest_word = set(list1) - substrings
         longest_word = list(longest_word)
         shortest_word_list = list(set(list1) - set(longest_word))
-        with col1:
-            with st.expander("Click to see which short words were discarded .."):
-                st.write("Discarded the following short words:\n", shortest_word_list)
-            df_kwe = df_kwe[~df_kwe['Keyword'].isin(shortest_word_list)]
+        with st.expander(f"View {len(shortest_word_list)} discarded fragments"):
+            st.write(shortest_word_list)
+        df_kwe = df_kwe[~df_kwe['Keyword'].isin(shortest_word_list)]
 
     # ------------------------------ merge in page title for matched category ----------------------------------------------
 
@@ -525,15 +582,23 @@ if submitted_crawl_btn == True:
     keyword_volume_count = df_kwe.shape[0]
     df_kwe.sort_values(["Parent Category", "Keyword"], ascending=[True, True], inplace=True)
 
+    st.markdown("---")
+    st.subheader("Results")
+    st.success(f"Found {keyword_volume_count:,} category suggestions!")
+
+    # Show preview
+    st.dataframe(df_kwe, use_container_width=True)
 
     @st.cache_data
     def convert_df(df):  # IMPORTANT: Cache the conversion to prevent computation on every rerun
         return df.to_csv(index=False).encode('utf-8')
 
-
     csv = convert_df(df_kwe)
     st.download_button(
-        label="Download your Landing Page Suggester Report!",
+        label="Download Category Suggestions (CSV)",
         data=csv,
         file_name='category_opportunities.csv',
-        mime='text/csv')
+        mime='text/csv',
+        type='primary',
+        use_container_width=True
+    )

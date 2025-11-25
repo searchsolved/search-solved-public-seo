@@ -85,7 +85,7 @@ st.markdown("**By [Lee Foot](https://www.leefoot.com)** · [@LeeFootSEO](https:/
 st.markdown("")
 
 # Instructions in an expander (expanded by default)
-with st.expander("How to Use This Tool", expanded=True):
+with st.expander("How to Use This Tool", expanded=False):
     st.markdown("""
     ### Prerequisites
     You need **two exports from Screaming Frog** with custom extraction configured:

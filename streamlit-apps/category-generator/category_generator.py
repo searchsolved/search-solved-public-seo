@@ -32,10 +32,19 @@ st.set_page_config(
 )
 st.title("Automatic Category Page Suggester")
 st.subheader("Automatically align your inventory with search demand.")
-st.write(
-    "An app which reviews opportunities to create new categories to align with search demand.")
-st.write(
-    "Made in [![this is an image link](https://i.imgur.com/iIOA6kU.png)](https://www.streamlit.io/) by [@LeeFootSEO](https://x.com/LeeFootSEO)")
+
+st.markdown("""
+**How it works:**
+1. Export **inlinks to your product pages** from Screaming Frog (Bulk Export > Links > All Inlinks)
+2. Export **internal_html.csv** from Screaming Frog
+3. The script uses **n-grams** to generate thousands of keyword variations from your product titles
+4. The **Keywords Everywhere API** validates suggestions against real search volume data
+
+This identifies new category page opportunities that match both your inventory AND actual search demand.
+""")
+
+st.markdown("---")
+st.markdown("**Author:** [Lee Foot](https://www.leefoot.com) · [@LeeFootSEO](https://x.com/LeeFootSEO) · [LinkedIn](https://www.linkedin.com/in/lee-foot/)")
 st.write("")
 
 # set the layout columns

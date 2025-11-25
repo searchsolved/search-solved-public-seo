@@ -1,48 +1,115 @@
-# Automatic Category Suggester Script - Updated 01/03/2024
-### Twitter: @LeeFootSEO
-### Web: https://leefoot.com
+# Automatic Category Page Suggester
 
-This script merges two crawl files from Screaming Frog to suggest new landing pages to align invetory to search demand.
-## Preparatory Steps
+A Streamlit app that analyzes your crawl data to suggest new category pages based on your product inventory and real search demand.
 
-Before running this script, please follow these steps to prepare your data:
+**Originally presented at Brighton SEO.**
 
-### Conducting a Crawl with Screaming Frog
-1. Conduct a crawl of your website using Screaming Frog to gather necessary data.
+[![Open App](https://img.shields.io/badge/Open_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://category-generator.streamlit.app/)
 
-### Preparing the Internal HTML Report
-2. Export the "Internal HTML" report from Screaming Frog.
-3. Open the exported file in Excel (or any compatible spreadsheet software) and add a column named "Page Type" to the data.
-4. Manually tag each product page with 'Product Page' in the "Page Type" column.
-5. Manually tag each category page with 'Category Page' in the "Page Type" column.
+## How It Works
 
-### Exporting and Preparing Inlinks Data
-6. Select all product URLs in the crawl.
-7. Right-click on the selection and choose 'Export Inlinks'.
-8. Save the exported "Inlinks" file.
+1. **N-Gram Generation**: Extracts 2-7 word n-grams from product H1 tags to generate thousands of potential category keywords
+2. **Product Matching**: Filters suggestions to only those matching a minimum number of products (exact and fuzzy matching)
+3. **Duplicate Detection**: Uses PolyFuzz TF-IDF matching to identify suggestions too similar to existing categories
+4. **Search Validation**: Keywords Everywhere API validates suggestions against real search volume data, keeping only legitimate keywords with actual demand
+5. **Fragment Removal**: Optionally keeps only the longest keyword variant, removing shorter fragments
 
-Place both the modified "Internal HTML" file and the "Inlinks" file in a designated folder. Update the file paths in the `main` function of this script to point to the location where you've stored these files.
+## Features
 
-## Installation
+- Generates thousands of keyword variations from product titles using n-grams
+- Matches suggestions to existing categories using fuzzy matching (PolyFuzz)
+- Keywords Everywhere API integration filters to only real search terms
+- Configurable similarity threshold to avoid duplicate categories
+- Export results to CSV
 
-Ensure that the necessary third-party libraries (pandas, tqdm, torch, sentence-transformers, nltk) are installed in your environment. You can install these dependencies via pip:
+## Requirements
 
 ```bash
-pip install pandas tqdm torch sentence-transformers nltk
+pip install -r requirements.txt
 ```
 
 ## Usage
 
-Run the script after completing the data preparation steps. The script will process the provided data, performing operations such as filtering, n-gram generation, exact and partial match calculation, and fuzzy matching. The final results will be saved to a specified CSV file.
+1. **Start the app:**
+   ```bash
+   streamlit run category_generator.py
+   ```
 
-```python
-python automatic_category_suggester.py
-```
+2. **Upload files from Screaming Frog:**
+   - `inlinks.csv` - Export inlinks to your product pages (Bulk Export > Links > All Inlinks)
+   - `internal_html.csv` - HTML export (Bulk Export > All > Internal HTML)
 
-Replace `automatic_category_suggester.py` with the actual name of your Python script.
+3. **Map columns:**
+   - Select which custom extraction column identifies product pages
+   - Select which custom extraction column identifies category pages
 
-## Contributing
+4. **Configure settings** in the sidebar
 
-Contributions to improve the script are welcome. Please feel free to fork the repository and submit pull requests.
+5. **Download results** as CSV
 
-### Don't want to mess around with Python? Contact me about my managed service and let me take care of it! https://leefoot.com/services/managed-service/
+## Input Files
+
+### inlinks.csv
+Export from Screaming Frog: **Bulk Export > Links > All Inlinks**
+
+Required columns:
+- `From` / `Source` - The linking page
+- `To` / `Destination` - The linked page
+
+### internal_html.csv
+Export from Screaming Frog: **Bulk Export > All > Internal HTML**
+
+Required columns:
+- `Address` - Page URL
+- `Indexability` - Indexability status
+- `H1-1` - Primary H1 tag
+- `Title 1` - Page title
+- Custom extraction columns for product/category identification
+
+## Configuration Options
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| Min Product Match (Exact) | Minimum products a keyword must exactly match | 3 |
+| Min Product Match (Fuzzy) | Minimum fuzzy matches required | 3 |
+| Min Similarity | Max similarity to existing category (lower = more unique) | 96% |
+| Min CPC | Minimum cost-per-click filter | $0 |
+| Min Search Volume | Minimum monthly search volume | 100 |
+| Keep Longest Word | Remove shorter keyword fragments | Enabled |
+| Fuzzy Product Match | Enable slower but more thorough matching | Disabled |
+
+## Keywords Everywhere Integration
+
+Add your [Keywords Everywhere](https://keywordseverywhere.com/) API key to validate suggestions against real search data. This filters out n-gram combinations that nobody actually searches for.
+
+- Validates keyword suggestions have real search volume
+- Provides CPC data for commercial intent analysis
+- PAYG pricing with no expiration
+
+## Output
+
+CSV file with columns:
+- **Parent Category** - The category the products belong to
+- **Keyword** - Suggested new category name
+- **Search Volume** - Monthly searches (if KWE enabled)
+- **CPC** - Cost per click (if KWE enabled)
+- **Matching Products (Exact)** - Products containing exact keyword
+- **Matching Products (Fuzzy)** - Products matching all words
+- **Matched Category** - Most similar existing category
+- **Similarity** - How similar to existing (lower = more unique)
+
+## Use Cases
+
+- **Expand category structure** based on actual product inventory
+- **Align taxonomy with search demand** using real keyword data
+- **Identify gaps** between what you sell and how users search
+- **Prioritize new categories** by search volume and product coverage
+
+## Author
+
+**Lee Foot** - eCommerce SEO Consultant
+
+- Website: [leefoot.com](https://www.leefoot.com)
+- Twitter/X: [@LeeFootSEO](https://x.com/LeeFootSEO)
+- LinkedIn: [lee-foot](https://www.linkedin.com/in/lee-foot/)
+- Contact: [Get in touch](https://www.leefoot.com/contact)

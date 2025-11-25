@@ -55,7 +55,7 @@ See the [search_engine_journal](./search_engine_journal) folder for full publica
 
 | Tool | Description | Type |
 |------|-------------|------|
-| [Automatic Category Suggester](./ecommerce/automatic-category-suggester) | Auto-suggest website categories based on existing products using NLP | Python |
+| [Automatic Category Suggester](./ecommerce/automatic-category-suggester) | Auto-suggest new category pages from product inventory using n-grams | Streamlit |
 | [Best Selling Products to XML Sitemap](./ecommerce/best-selling-products-to-xml-sitemap) | Create dedicated sitemaps for top-performing products | Colab |
 | [eCommerce Image Centering Tool](./ecommerce/ecommerce-image-centering-tool) | Batch center and resize product images with white background | Streamlit |
 | [Google Vision Higher Res Images](./ecommerce/google-vision-find-higher-resolution-images) | Find higher resolution versions of product images using Google Vision API | Python |
@@ -72,6 +72,7 @@ See the [search_engine_journal](./search_engine_journal) folder for full publica
 | [Bulk Keyword Tagger](./keyword-research/bulk-keyword-tagger) | Tag thousands of keywords with custom categories | Colab |
 | [SERP Keyword Extractor](./keyword-research/serp-keyword-extractor) | Extract PAA questions and related searches from Google via ValueSERP API | Streamlit |
 | [Question Extraction GSC](./keyword-research/question-extraction-gsc) | Extract question-type keywords from Google Search Console data | Python |
+| [Keyword Difficulty Checker](./keyword-research/keyword-difficulty-checker) | Check difficulty with allintitle, phrase match, and SERP clustering | Streamlit |
 
 ### Keyword Clustering
 
@@ -79,6 +80,7 @@ See the [search_engine_journal](./search_engine_journal) folder for full publica
 |------|-------------|------|
 | [Semantic Clustering Tool](./keyword-clustering/semantic-clustering) | Group keywords into topical clusters using sentence transformers and ML | CLI / Colab |
 | [SERP Clustering at Scale](./keyword-clustering/serp-clustering-at-scale) | Cluster keywords based on common SERP URLs from ValueSERP exports | Python |
+| [SERP Clustering API](./keyword-clustering/serp-clustering-api) | FastAPI service for clustering keywords via REST endpoint | FastAPI |
 
 ### Link Building
 
@@ -93,7 +95,8 @@ See the [search_engine_journal](./search_engine_journal) folder for full publica
 | Tool | Description | Type |
 |------|-------------|------|
 | [Extract Content Blocks](./on-page/extract-content-blocks) | Extract and categorize page content blocks using Claude AI | Python |
-| [Striking Distance Keywords](./on-page/striking-distance-keywords) | Find keywords ranking positions 4-20 and check if they're in title/H1/copy | Python / Colab |
+| [Striking Distance V1](./on-page/striking-distance-v1) | Find keywords ranking positions 4-20 and check if they're in title/H1/copy | Python / Colab |
+| [Striking Distance V2](./on-page/striking-distance-v2) | Enhanced version with title/H1/copy presence checking | Streamlit |
 
 ### Reporting & Analytics
 
@@ -142,21 +145,7 @@ See the [search_engine_journal](./search_engine_journal) folder for full publica
 | Tool | Description | Type |
 |------|-------------|------|
 | [Content Hub Classification](./content-analysis/content-hub-classification) | Classify articles into content hub categories using OpenAI GPT | Python |
-
-### Streamlit Apps (New)
-
-| App | Description | Type |
-|-----|-------------|------|
-| [Category Generator](./streamlit-apps/category-generator) | Auto-suggest new category pages based on product inventory | Streamlit |
-| [Keyword Difficulty Checker](./streamlit-apps/keyword-difficulty-checker) | Check difficulty with allintitle, phrase match, and SERP clustering | Streamlit |
-| [Striking Distance V2](./streamlit-apps/striking-distance-v2) | Find keywords ranking 4-20 and check title/H1/copy presence | Streamlit |
-| [Entity Extractor](./streamlit-apps/entity-extractor) | Extract entities from SERPs, CSV files, or YouTube transcripts | Streamlit |
-
-### API Services
-
-| API | Description | Type |
-|-----|-------------|------|
-| [SERP Clustering API](./api-services/serp-clustering-api) | FastAPI service for clustering keywords via REST endpoint | FastAPI |
+| [Entity Extractor](./content-analysis/entity-extractor) | Extract entities from SERPs, CSV files, or YouTube transcripts | Streamlit |
 
 ---
 

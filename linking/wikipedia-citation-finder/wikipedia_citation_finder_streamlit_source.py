@@ -25,6 +25,11 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.enum.dml import MSO_THEME_COLOR_INDEX
 
+# Wikipedia requires a User-Agent header
+HEADERS = {
+    "User-Agent": "WikipediaCitationFinder/0.2 (https://www.leefoot.com; hello@leefoot.com)"
+}
+
 
 def setup_streamlit():
     st.set_page_config(page_title='Wikipedia Citation Finder V0.2',
@@ -125,7 +130,7 @@ def get_wikipedia_urls(keyword):
         "format": "json"
     }
     try:
-        response = requests.get(api_url, params=params, timeout=10)
+        response = requests.get(api_url, params=params, headers=HEADERS, timeout=10)
         response.raise_for_status()
         data = response.json()
         return [f"https://en.wikipedia.org/wiki/{item['title'].replace(' ', '_')}" for item in data["query"]["search"]]
@@ -156,7 +161,7 @@ def search_citations_needed(urls):
 
 def find_citations(url):
     try:
-        response = requests.get(url, timeout=10)
+        response = requests.get(url, headers=HEADERS, timeout=10)
         response.raise_for_status()
     except requests.exceptions.RequestException:
         return []

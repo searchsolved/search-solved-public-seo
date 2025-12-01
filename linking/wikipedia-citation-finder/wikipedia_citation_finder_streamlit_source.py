@@ -111,7 +111,7 @@ def add_citations_to_document(doc, results):
     for url, citations in sorted(results.items(), key=lambda item: len(item[1]), reverse=True):
         doc.add_heading(url, level=2)
         for citation, section_url in citations:
-            para = doc.add_paragraph(citation, style='ListBullet')  # Temporarily remove hyperlink to test
+            para = doc.add_paragraph(citation, style='ListBullet')
 
 
 # Data Fetching and Processing
@@ -124,10 +124,17 @@ def get_wikipedia_urls(keyword):
         "srsearch": keyword,
         "format": "json"
     }
-    response = requests.get(api_url, params=params)
-    data = response.json()
-    urls = [f"https://en.wikipedia.org/wiki/{item['title'].replace(' ', '_')}" for item in data["query"]["search"]]
-    return urls
+    try:
+        response = requests.get(api_url, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        return [f"https://en.wikipedia.org/wiki/{item['title'].replace(' ', '_')}" for item in data["query"]["search"]]
+    except requests.exceptions.RequestException as e:
+        st.error(f"Failed to fetch from Wikipedia API: {e}")
+        return []
+    except (KeyError, ValueError) as e:
+        st.error(f"Unexpected API response format: {e}")
+        return []
 
 
 def extract_sentence(text, citation_tag):
@@ -148,7 +155,11 @@ def search_citations_needed(urls):
 
 
 def find_citations(url):
-    response = requests.get(url)
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+    except requests.exceptions.RequestException:
+        return []
     soup = BeautifulSoup(response.text, 'html.parser')
     citations = soup.find_all(class_="noprint Inline-Template Template-Fact")
     return [extract_sentence(citation.find_parent('p').text if citation.find_parent('p') else '', citation.text) for
@@ -187,6 +198,7 @@ def display_citation_report(citations_needed):
 
 def main():
     setup_streamlit()
+    help_section()
     default_keyword = "Cheese"
     keyword = st.text_input("Enter a keyword to search on Wikipedia:", value=default_keyword)
     if st.button('Search'):
@@ -199,6 +211,7 @@ def main():
                 st.error("No URLs found. Try a different keyword.")
         else:
             st.error("Please enter a keyword to search.")
+
 
 if __name__ == "__main__":
     main()

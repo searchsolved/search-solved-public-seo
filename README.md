@@ -33,7 +33,7 @@ Try these tools directly in your browser — no installation required:
 | **BERT Semantic Interlinker** | Find internal linking opportunities using BERT | [![Open App](https://img.shields.io/badge/Open_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://bertlinker.streamlit.app/) |
 | **Wayback URL Extractor** | Extract historical URLs from archive.org | [![Open App](https://img.shields.io/badge/Open_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://wayback.streamlit.app/) |
 | **Category Generator** | Auto-suggest new category pages from product inventory using n-grams | [![Open App](https://img.shields.io/badge/Open_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://category-generator.streamlit.app/) |
-| **PredictClicks** | SEO forecasting tool for traffic predictions | [![Open App](https://img.shields.io/badge/Open_App-FF4B4B?style=for-the-badge&logoColor=white)](https://www.predictclicks.com) |
+| **PredictClicks** | SEO forecasting tool. Login with your Search Console account to start forecasting | [![Visit Site](https://img.shields.io/badge/Visit_Site-007EC6?style=for-the-badge&logoColor=white)](https://www.predictclicks.com) |
 
 ---
 

@@ -5,7 +5,7 @@ from io import BytesIO
 st.set_page_config(page_title="Share of Voice Calculator", page_icon="📊", layout="wide")
 
 st.title("Share of Voice Calculator")
-st.markdown("*Created by [Lee Foot](https://leefoot.co.uk)*")
+st.markdown("*Created by [Lee Foot](https://leefoot.com)*")
 st.warning("**Experimental Tool** - This is a proof of concept and may have limitations.")
 
 with st.expander("How to use this tool"):

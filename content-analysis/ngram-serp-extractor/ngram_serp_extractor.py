@@ -20,7 +20,7 @@ newconfig.set("DEFAULT", "EXTRACTION_TIMEOUT", "0")
 
 st.title("SERP N-gram & Title Extractor")
 
-st.markdown("*Created by [Lee Foot](https://leefoot.co.uk)*")
+st.markdown("*Created by [Lee Foot](https://leefoot.com)*")
 
 with st.expander("How do I use this app?"):
     st.write("""

@@ -9,7 +9,7 @@ from io import BytesIO
 st.set_page_config(page_title="Category Keyword Finder", page_icon="🏷️", layout="wide")
 
 st.title("Category Keyword Finder")
-st.markdown("*Created by [Lee Foot](https://leefoot.co.uk)*")
+st.markdown("*Created by [Lee Foot](https://leefoot.com)*")
 
 with st.expander("How to use this tool"):
     st.markdown("""

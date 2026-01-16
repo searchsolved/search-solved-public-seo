@@ -9,7 +9,7 @@ from random import randint
 st.set_page_config(page_title="Keyword Trends Analyzer", page_icon="📈", layout="wide")
 
 st.title("Keyword Trends Analyzer")
-st.markdown("*Created by [Lee Foot](https://leefoot.co.uk)*")
+st.markdown("*Created by [Lee Foot](https://leefoot.com)*")
 
 with st.expander("How to use this tool"):
     st.markdown("""

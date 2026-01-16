@@ -1,7 +1,7 @@
 ####################################################################################
 # Author   : Lee Foot                                                              #
-# Website  : https://leefoot.co.uk                                               #
-# Contact  : https://leefoot.co.uk/contact                                       #
+# Website  : https://leefoot.com                                               #
+# Contact  : https://leefoot.com/contact                                       #
 # Email    : hello@leefoot.com                                                     #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
 # Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                                              #
@@ -250,9 +250,9 @@ st.markdown("""
 <div style="margin-bottom: 20px;">
     <h6>
         Built with Streamlit & OpenCV | 
-        <a href="https://leefoot.co.uk" target="_blank">By Lee Foot</a> |
+        <a href="https://leefoot.com" target="_blank">By Lee Foot</a> |
         <a href="https://www.linkedin.com/in/lee-foot/" target="_blank">LinkedIn</a> |
-        <a href="https://leefoot.co.uk/contact">Hire Me</a>
+        <a href="https://leefoot.com/contact">Hire Me</a>
     </h6>
 </div>
 """, unsafe_allow_html=True)
@@ -445,4 +445,4 @@ else:
 # Footer
 st.markdown("---")
 st.markdown(
-    "eCommerce Image Centering Tool | By [Lee Foot](https://leefoot.co.uk) | [Bluesky](https://bsky.app/profile/leefootseo.bsky.social) | [LinkedIn](https://www.linkedin.com/in/lee-foot/) | [Contact](https://leefoot.co.uk/contact)")
+    "eCommerce Image Centering Tool | By [Lee Foot](https://leefoot.com) | [Bluesky](https://bsky.app/profile/leefootseo.bsky.social) | [LinkedIn](https://www.linkedin.com/in/lee-foot/) | [Contact](https://leefoot.com/contact)")

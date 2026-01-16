@@ -1,7 +1,7 @@
 ####################################################################################
 # Author   : Lee Foot                                                              #
-# Website  : https://leefoot.co.uk                                               #
-# Contact  : https://leefoot.co.uk/contact                                       #
+# Website  : https://leefoot.com                                               #
+# Contact  : https://leefoot.com/contact                                       #
 # Email    : hello@leefoot.com                                                     #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
 # Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                                              #
@@ -28,7 +28,7 @@ nid_cookie = cookies_map['NID']
 set_random_seed(0)
 
 st.write(
-    "Made by [@leefootseo](https://bsky.app/profile/leefootseo.bsky.social) | [Website](https://leefoot.co.uk) | [Contact](https://leefoot.co.uk/contact)")
+    "Made by [@leefootseo](https://bsky.app/profile/leefootseo.bsky.social) | [Website](https://leefoot.com) | [Contact](https://leefoot.com/contact)")
 st.title("Google Trends & NeuralProphet - Explainable Trends at Scale")
 
 # streamlit variables

@@ -7,8 +7,8 @@
 #                                                                                  #
 ####################################################################################
 # Author   : Lee Foot                                                              #
-# Website  : https://leefoot.co.uk                                               #
-# Contact  : https://leefoot.co.uk/contact                                       #
+# Website  : https://leefoot.com                                               #
+# Contact  : https://leefoot.com/contact                                       #
 # Email    : hello@leefoot.com                                                     #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
 # Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                                              #

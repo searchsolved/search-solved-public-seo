@@ -1,5 +1,5 @@
 # Simple GSC Connector for Streamlit by Lee Foot
-# More scripts and apps like this at https://leefoot.co.uk
+# More scripts and apps like this at https://leefoot.com
 
 # Standard library imports
 import datetime
@@ -44,7 +44,7 @@ def setup_streamlit():
     st.markdown(
         """
         <p>
-            Created by <a href="https://leefoot.co.uk" target="_blank">Lee Foot</a> |
+            Created by <a href="https://leefoot.com" target="_blank">Lee Foot</a> |
             <a href="https://github.com/searchsolved/search-solved-public-seo" target="_blank">More Tools on GitHub</a>
         """,
         unsafe_allow_html=True

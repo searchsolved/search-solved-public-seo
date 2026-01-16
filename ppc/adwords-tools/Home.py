@@ -18,6 +18,6 @@ st.markdown(
     - **Bid Calculator**: Calculate optimal bid adjustments for device, location and time of day
 
     ---
-    *Created by [Lee Foot](https://leefoot.co.uk)*
+    *Created by [Lee Foot](https://leefoot.com)*
     """
 )

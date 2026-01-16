@@ -7,7 +7,7 @@ import re
 st.set_page_config(page_title="Anchor Text Interlinker", page_icon="🔗", layout="wide")
 
 st.title("Anchor Text Interlinker")
-st.markdown("*Created by [Lee Foot](https://leefoot.co.uk)*")
+st.markdown("*Created by [Lee Foot](https://leefoot.com)*")
 
 with st.expander("How to use this tool"):
     st.markdown("""

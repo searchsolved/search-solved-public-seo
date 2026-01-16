@@ -1,7 +1,7 @@
 ####################################################################################
 # Author   : Lee Foot                                                              #
-# Website  : https://leefoot.co.uk                                               #
-# Contact  : https://leefoot.co.uk/contact                                       #
+# Website  : https://leefoot.com                                               #
+# Contact  : https://leefoot.com/contact                                       #
 # Email    : hello@leefoot.com                                                     #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
 # Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                                              #
@@ -38,7 +38,7 @@ st.subheader("Get Related Searches from Ebay")
 st.write(
     "An app which visualises related searches from eBay")
 st.write(
-"Made by [@leefootseo](https://bsky.app/profile/leefootseo.bsky.social) | [Website](https://leefoot.co.uk) | [Contact](https://leefoot.co.uk/contact)")
+"Made by [@leefootseo](https://bsky.app/profile/leefootseo.bsky.social) | [Website](https://leefoot.com) | [Contact](https://leefoot.com/contact)")
 st.write("")
 
 with st.form(key='columns_in_form_2'):

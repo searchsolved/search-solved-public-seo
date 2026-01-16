@@ -15,7 +15,7 @@ except:
     stop = stopwords.words('english')
 
 st.title("SERP Title Generator")
-st.markdown("*Created by [Lee Foot](https://leefoot.co.uk)*")
+st.markdown("*Created by [Lee Foot](https://leefoot.com)*")
 
 with st.expander("How to use this tool"):
     st.markdown("""

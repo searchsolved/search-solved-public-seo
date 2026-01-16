@@ -1,7 +1,7 @@
 ####################################################################################
 # Author   : Lee Foot                                                              #
-# Website  : https://leefoot.co.uk                                               #
-# Contact  : https://leefoot.co.uk/contact                                       #
+# Website  : https://leefoot.com                                               #
+# Contact  : https://leefoot.com/contact                                       #
 # Email    : hello@leefoot.com                                                     #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
 # Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                                              #
@@ -27,7 +27,7 @@ from docx.enum.dml import MSO_THEME_COLOR_INDEX
 
 # Wikipedia requires a User-Agent header
 HEADERS = {
-    "User-Agent": "WikipediaCitationFinder/0.2 (https://leefoot.co.uk; hello@leefoot.com)"
+    "User-Agent": "WikipediaCitationFinder/0.2 (https://leefoot.com; hello@leefoot.com)"
 }
 
 
@@ -42,10 +42,10 @@ def setup_streamlit():
     """, unsafe_allow_html=True)
     st.caption("Find Wikipedia Pages Requiring Citations")
     st.markdown("""
-        App by <a href="https://leefoot.co.uk" target="_blank">Lee Foot</a> |
+        App by <a href="https://leefoot.com" target="_blank">Lee Foot</a> |
         <a href="https://bsky.app/profile/leefootseo.bsky.social" target="_blank">Bluesky</a> |
         <a href="https://www.linkedin.com/in/lee-foot/" target="_blank">LinkedIn</a> |
-        <a href="https://leefoot.co.uk/contact">Contact</a>
+        <a href="https://leefoot.com/contact">Contact</a>
     """, unsafe_allow_html=True)
 
 

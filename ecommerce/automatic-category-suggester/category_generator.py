@@ -6,8 +6,8 @@
 #                                                                                  #
 ####################################################################################
 # Author   : Lee Foot                                                              #
-# Website  : https://leefoot.co.uk                                               #
-# Contact  : https://leefoot.co.uk/contact                                       #
+# Website  : https://leefoot.com                                               #
+# Contact  : https://leefoot.com/contact                                       #
 # Email    : hello@leefoot.com                                                     #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
 # Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                                              #
@@ -75,13 +75,13 @@ enable_fuzzy_product_match = st.sidebar.checkbox('Enable Fuzzy Matching (Slower)
 
 # Author info in sidebar
 st.sidebar.markdown("---")
-st.sidebar.markdown("**Author:** [Lee Foot](https://leefoot.co.uk)")
+st.sidebar.markdown("**Author:** [Lee Foot](https://leefoot.com)")
 st.sidebar.markdown("[Bluesky](https://bsky.app/profile/leefootseo.bsky.social) · [LinkedIn](https://www.linkedin.com/in/lee-foot/)")
 
 # -------------------------------- Main Content --------------------------------
 st.title("Automatic Category Page Suggester")
 st.markdown("*Discover new category page opportunities based on your product inventory and real search demand.*")
-st.markdown("**By [Lee Foot](https://leefoot.co.uk)** · [Bluesky](https://bsky.app/profile/leefootseo.bsky.social) · [LinkedIn](https://www.linkedin.com/in/lee-foot/) · [Contact](https://leefoot.co.uk/contact)")
+st.markdown("**By [Lee Foot](https://leefoot.com)** · [Bluesky](https://bsky.app/profile/leefootseo.bsky.social) · [LinkedIn](https://www.linkedin.com/in/lee-foot/) · [Contact](https://leefoot.com/contact)")
 st.markdown("")
 
 # Instructions in an expander (expanded by default)

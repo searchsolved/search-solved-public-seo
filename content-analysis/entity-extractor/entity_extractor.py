@@ -358,4 +358,4 @@ if input_method == "Text Area" and not text_input:
     """)
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("Built by [Lee Foot](https://leefoot.co.uk) · [Bluesky](https://bsky.app/profile/leefootseo.bsky.social) · [LinkedIn](https://www.linkedin.com/in/lee-foot/)")
+st.sidebar.markdown("Built by [Lee Foot](https://leefoot.com) · [Bluesky](https://bsky.app/profile/leefootseo.bsky.social) · [LinkedIn](https://www.linkedin.com/in/lee-foot/)")

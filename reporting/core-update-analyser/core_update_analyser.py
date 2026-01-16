@@ -5,7 +5,7 @@ from io import BytesIO
 st.set_page_config(page_title="Core Update Analyser", page_icon="📊", layout="wide")
 
 st.title("Core Update Analyser")
-st.markdown("*Created by [Lee Foot](https://leefoot.co.uk)*")
+st.markdown("*Created by [Lee Foot](https://leefoot.com)*")
 
 with st.expander("How to use this tool"):
     st.markdown("""

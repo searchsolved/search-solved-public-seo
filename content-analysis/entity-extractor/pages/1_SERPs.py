@@ -1,7 +1,7 @@
 ####################################################################################
 # Author   : Lee Foot                                                              #
-# Website  : https://www.leefoot.com                                               #
-# Twitter  : https://x.com/LeeFootSEO                                              #
+# Website  : https://leefoot.co.uk                                               #
+# Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                                              #
 ####################################################################################
 
 import streamlit as st
@@ -21,7 +21,7 @@ from stqdm import stqdm
 newconfig = use_config()
 newconfig.set("DEFAULT", "EXTRACTION_TIMEOUT", "0")
 
-st.write("Made in [![this is an image link](https://i.imgur.com/iIOA6kU.png)](https://www.streamlit.io/) by [@LeeFootSEO](https://x.com/LeeFootSEO)")
+st.write("Made in [![this is an image link](https://i.imgur.com/iIOA6kU.png)](https://www.streamlit.io/) by [@leefootseo](https://bsky.app/profile/leefootseo.bsky.social)")
 
 with st.expander("How do I use this app?"):
     st.write("""

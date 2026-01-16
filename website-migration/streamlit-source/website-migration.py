@@ -1,10 +1,10 @@
 ####################################################################################
 # Author   : Lee Foot                                                              #
-# Website  : https://www.leefoot.com                                               #
-# Contact  : https://www.leefoot.com/contact                                       #
+# Website  : https://leefoot.co.uk                                               #
+# Contact  : https://leefoot.co.uk/contact                                       #
 # Email    : hello@leefoot.com                                                     #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
-# Twitter  : https://x.com/LeeFootSEO                                              #
+# Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                                              #
 ####################################################################################
 
 import base64
@@ -32,8 +32,10 @@ def setup_streamlit_interface():
     st.markdown(
         """
         <p style="font-style: italic;">
-            Created by <a href="https://x.com/LeeFootSEO" target="_blank">LeeFootSEO</a> |
-            <a href="https://www.leefoot.com" target="_blank">More Apps & Scripts on my Website</a>
+            Created by <a href="https://leefoot.co.uk" target="_blank">Lee Foot</a> |
+            <a href="https://bsky.app/profile/leefootseo.bsky.social" target="_blank">Bluesky</a> |
+            <a href="https://www.linkedin.com/in/lee-foot/" target="_blank">LinkedIn</a> |
+            <a href="https://leefoot.co.uk/contact" target="_blank">Contact</a>
         </p>
         """,
         unsafe_allow_html=True
@@ -112,7 +114,7 @@ def create_page_footer_with_contact_info():
     footer_html = (
         "<hr style='height:2px;border-width:0;color:gray;background-color:gray'>"
         "<p style='font-style: italic;'>Need an app? Need this run as a managed service? "
-        "<a href='https://www.leefoot.com/contact'>Hire Me!</a></p>"
+        "<a href='https://leefoot.co.uk/contact'>Hire Me!</a></p>"
     )
     st.markdown(footer_html, unsafe_allow_html=True)
 

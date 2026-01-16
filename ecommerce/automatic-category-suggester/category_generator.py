@@ -6,11 +6,11 @@
 #                                                                                  #
 ####################################################################################
 # Author   : Lee Foot                                                              #
-# Website  : https://www.leefoot.com                                               #
-# Contact  : https://www.leefoot.com/contact                                       #
+# Website  : https://leefoot.co.uk                                               #
+# Contact  : https://leefoot.co.uk/contact                                       #
 # Email    : hello@leefoot.com                                                     #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
-# Twitter  : https://x.com/LeeFootSEO                                              #
+# Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                                              #
 ####################################################################################
 
 import streamlit as st
@@ -75,13 +75,13 @@ enable_fuzzy_product_match = st.sidebar.checkbox('Enable Fuzzy Matching (Slower)
 
 # Author info in sidebar
 st.sidebar.markdown("---")
-st.sidebar.markdown("**Author:** [Lee Foot](https://www.leefoot.com)")
-st.sidebar.markdown("[@LeeFootSEO](https://x.com/LeeFootSEO) · [LinkedIn](https://www.linkedin.com/in/lee-foot/)")
+st.sidebar.markdown("**Author:** [Lee Foot](https://leefoot.co.uk)")
+st.sidebar.markdown("[Bluesky](https://bsky.app/profile/leefootseo.bsky.social) · [LinkedIn](https://www.linkedin.com/in/lee-foot/)")
 
 # -------------------------------- Main Content --------------------------------
 st.title("Automatic Category Page Suggester")
 st.markdown("*Discover new category page opportunities based on your product inventory and real search demand.*")
-st.markdown("**By [Lee Foot](https://www.leefoot.com)** · [@LeeFootSEO](https://x.com/LeeFootSEO) · [LinkedIn](https://www.linkedin.com/in/lee-foot/) · [Contact](https://www.leefoot.com/contact)")
+st.markdown("**By [Lee Foot](https://leefoot.co.uk)** · [Bluesky](https://bsky.app/profile/leefootseo.bsky.social) · [LinkedIn](https://www.linkedin.com/in/lee-foot/) · [Contact](https://leefoot.co.uk/contact)")
 st.markdown("")
 
 # Instructions in an expander (expanded by default)

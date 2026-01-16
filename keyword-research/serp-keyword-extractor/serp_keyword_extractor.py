@@ -1,10 +1,10 @@
 ####################################################################################
 # Author   : Lee Foot                                                              #
-# Website  : https://www.leefoot.com                                               #
-# Contact  : https://www.leefoot.com/contact                                       #
+# Website  : https://leefoot.co.uk                                               #
+# Contact  : https://leefoot.co.uk/contact                                       #
 # Email    : hello@leefoot.com                                                     #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
-# Twitter  : https://x.com/LeeFootSEO                                              #
+# Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                                              #
 ####################################################################################
 
 import streamlit as st
@@ -18,7 +18,7 @@ from fuzzywuzzy import fuzz
 import altair as alt
 
 st.write(
-    "Made by [@LeeFootSEO](https://x.com/LeeFootSEO) | [Website](https://www.leefoot.com) | [Contact](https://www.leefoot.com/contact)")
+    "Made by [@leefootseo](https://bsky.app/profile/leefootseo.bsky.social) | [Website](https://leefoot.co.uk) | [Contact](https://leefoot.co.uk/contact)")
 
 with st.expander("How do I use this app?"):
     st.write("""

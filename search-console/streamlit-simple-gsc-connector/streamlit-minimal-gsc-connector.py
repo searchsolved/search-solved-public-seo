@@ -1,10 +1,10 @@
 ####################################################################################
 # Author   : Lee Foot                                                              #
-# Website  : https://www.leefoot.com                                               #
-# Contact  : https://www.leefoot.com/contact                                       #
+# Website  : https://leefoot.co.uk                                               #
+# Contact  : https://leefoot.co.uk/contact                                       #
 # Email    : hello@leefoot.com                                                     #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
-# Twitter  : https://x.com/LeeFootSEO                                              #
+# Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                                              #
 ####################################################################################
 
 # Simple GSC Connector for Streamlit
@@ -73,10 +73,11 @@ def setup_streamlit():
         }
         </style>
         <div class="social-links">
-            Created by <strong>Lee Foot</strong> • 
-            <a href="https://x.com/LeeFootSEO" target="_blank">Follow me on 𝕏</a> •
-            <a href="https://www.linkedin.com/in/lee-foot/" target="_blank">Connect on LinkedIn</a> •
-            <a href="https://www.leefoot.com" target="_blank">🌐 More Tools on my Website</a>
+            Created by <strong>Lee Foot</strong> •
+            <a href="https://bsky.app/profile/leefootseo.bsky.social" target="_blank">Bluesky</a> •
+            <a href="https://www.linkedin.com/in/lee-foot/" target="_blank">LinkedIn</a> •
+            <a href="https://leefoot.co.uk" target="_blank">🌐 Website</a> •
+            <a href="https://leefoot.co.uk/contact" target="_blank">Contact</a>
         </div>
         """,
         unsafe_allow_html=True

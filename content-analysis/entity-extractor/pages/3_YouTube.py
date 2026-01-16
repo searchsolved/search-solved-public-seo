@@ -1,7 +1,7 @@
 ####################################################################################
 # Author   : Lee Foot                                                              #
-# Website  : https://www.leefoot.com                                               #
-# Twitter  : https://x.com/LeeFootSEO                                              #
+# Website  : https://leefoot.co.uk                                               #
+# Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                                              #
 ####################################################################################
 
 import streamlit as st
@@ -14,7 +14,7 @@ import pandas as pd
 from dandelion import DataTXT
 from youtube_transcript_api import YouTubeTranscriptApi
 
-st.write("Made in [![this is an image link](https://i.imgur.com/iIOA6kU.png)](https://www.streamlit.io/) by [@LeeFootSEO](https://x.com/LeeFootSEO)")
+st.write("Made in [![this is an image link](https://i.imgur.com/iIOA6kU.png)](https://www.streamlit.io/) by [@leefootseo](https://bsky.app/profile/leefootseo.bsky.social)")
 
 st.title("YouTube Entity Extractor")
 

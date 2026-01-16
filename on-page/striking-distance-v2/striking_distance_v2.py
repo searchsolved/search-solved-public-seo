@@ -6,11 +6,11 @@
 #                                                                                  #
 ####################################################################################
 # Author   : Lee Foot                                                              #
-# Website  : https://www.leefoot.com                                               #
-# Contact  : https://www.leefoot.com/contact                                       #
+# Website  : https://leefoot.co.uk                                               #
+# Contact  : https://leefoot.co.uk/contact                                       #
 # Email    : hello@leefoot.com                                                     #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
-# Twitter  : https://x.com/LeeFootSEO                                              #
+# Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                                              #
 ####################################################################################
 
 from typing import Union
@@ -36,7 +36,7 @@ st.set_page_config(
 st.title("Striking Distance Creator V2")
 st.subheader("Automatic On-page Checker for Keywords Close to Ranking")
 st.write("An app which blends keyword data and crawl data to provide actionable insights for keywords close to ranking.")
-st.write("Made in [![this is an image link](https://i.imgur.com/iIOA6kU.png)](https://www.streamlit.io/) by [@LeeFootSEO](https://x.com/LeeFootSEO)")
+st.write("Made in [![this is an image link](https://i.imgur.com/iIOA6kU.png)](https://www.streamlit.io/) by [@leefootseo](https://bsky.app/profile/leefootseo.bsky.social)")
 st.write("")
 
 # set fake agent

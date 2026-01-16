@@ -6,11 +6,11 @@
 #                                                                                  #
 ####################################################################################
 # Author   : Lee Foot                                                              #
-# Website  : https://www.leefoot.com                                               #
-# Contact  : https://www.leefoot.com/contact                                       #
+# Website  : https://leefoot.co.uk                                               #
+# Contact  : https://leefoot.co.uk/contact                                       #
 # Email    : hello@leefoot.com                                                     #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
-# Twitter  : https://x.com/LeeFootSEO                                              #
+# Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                                              #
 ####################################################################################
 
 """
@@ -48,7 +48,7 @@ async def root():
         "name": "SERP Clustering API",
         "version": "1.0.0",
         "author": "Lee Foot",
-        "website": "https://www.leefoot.com",
+        "website": "https://leefoot.co.uk",
         "endpoints": {
             "/cluster-serps": "POST - Upload ValueSERP CSV for clustering"
         }

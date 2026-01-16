@@ -1,10 +1,10 @@
 ####################################################################################
 # Author   : Lee Foot                                                              #
-# Website  : https://www.leefoot.com                                               #
-# Contact  : https://www.leefoot.com/contact                                       #
+# Website  : https://leefoot.co.uk                                               #
+# Contact  : https://leefoot.co.uk/contact                                       #
 # Email    : hello@leefoot.com                                                     #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
-# Twitter  : https://x.com/LeeFootSEO                                              #
+# Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                                              #
 ####################################################################################
 
 import streamlit as st
@@ -250,9 +250,9 @@ st.markdown("""
 <div style="margin-bottom: 20px;">
     <h6>
         Built with Streamlit & OpenCV | 
-        <a href="https://www.leefoot.com" target="_blank">By Lee Foot</a> |
+        <a href="https://leefoot.co.uk" target="_blank">By Lee Foot</a> |
         <a href="https://www.linkedin.com/in/lee-foot/" target="_blank">LinkedIn</a> |
-        <a href="https://www.leefoot.com/contact">Hire Me</a>
+        <a href="https://leefoot.co.uk/contact">Hire Me</a>
     </h6>
 </div>
 """, unsafe_allow_html=True)
@@ -445,4 +445,4 @@ else:
 # Footer
 st.markdown("---")
 st.markdown(
-    "eCommerce Image Centering Tool | By [Lee Foot](https://www.leefoot.com) | [Twitter/X](https://x.com/LeeFootSEO/) | [Contact](https://www.leefoot.com/contact)")
+    "eCommerce Image Centering Tool | By [Lee Foot](https://leefoot.co.uk) | [Bluesky](https://bsky.app/profile/leefootseo.bsky.social) | [LinkedIn](https://www.linkedin.com/in/lee-foot/) | [Contact](https://leefoot.co.uk/contact)")

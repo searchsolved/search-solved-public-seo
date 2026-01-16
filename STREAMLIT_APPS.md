@@ -1,0 +1,30 @@
+# Streamlit Apps - Deployment Tracker
+
+This file tracks all Streamlit apps in this repository that need deployment.
+
+## Apps Needing Deployment
+
+| App Name | Path | Status | App URL |
+|----------|------|--------|---------|
+| URL Breadcrumb Extractor | `technical-seo/url-breadcrumb-extractor/url_breadcrumb_extractor.py` | Pending | - |
+| Backlink Intersector | `link-building/backlink-intersector/backlink_intersector.py` | Pending | - |
+| Anchor Text Interlinker | `internal-linking/anchor-text-interlinker/anchor_text_interlinker.py` | Pending | - |
+| Category Keyword Finder | `keyword-research/category-keyword-finder/category_keyword_finder.py` | Pending | - |
+| Keyword Trends Analyzer | `keyword-research/keyword-trends-analyzer/keyword_trends_analyzer.py` | Pending | - |
+| E-commerce Page Title Optimizer | `ecommerce/ecom-page-title-optimizer/ecom_page_title_optimizer.py` | Pending | - |
+
+## Already Deployed Apps
+
+| App Name | Path | App URL |
+|----------|------|---------|
+| BERT Semantic Interlinker | `internal-linker/` | https://bertlinker.streamlit.app/ |
+| GSC Data Exporter | `search-console/` | https://gscdata.streamlit.app/ |
+| Internet Archive Analyser | `wayback-url-tool/` | https://wayback.streamlit.app/ |
+| Wikipedia Citation Finder | `linking/wikipedia-citation-finder/` | https://wikicite.streamlit.app/ |
+| Category Page Suggester | `ecommerce/automatic-category-suggester/` | https://category-generator.streamlit.app/ |
+| eBay Related Searches | `keyword-research/ebay-related-searches/` | https://searchebay.streamlit.app/ |
+
+## Notes
+
+- After deployment, update this file with the app URL
+- Also update `tools.ts` in the website repo with the `appUrl` field

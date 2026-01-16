@@ -3,6 +3,7 @@
 #  SERP Clustering at Scale                                                        #
 #                                                                                  #
 #  Clusters keywords based on common SERP URLs from ValueSERP batch exports.       #
+#  Supports multiple clustering strategies with consolidation scoring.              #
 #                                                                                  #
 ####################################################################################
 # Author   : Lee Foot                                                              #
@@ -14,10 +15,17 @@
 ####################################################################################
 
 """
-SERP Clustering Script
-Version: 2.0
+SERP Clustering Script - Improved Version
+Version: 3.0
 
-Reads batch file exports from www.valueserp.com and clusters keywords based on common URLs.
+A script to identify content consolidation opportunities based on shared URLs in search results.
+Supports overlapping clusters and multiple clustering strategies.
+
+Features:
+- Multi-strategy clustering (connected components, cliques, core-based)
+- Consolidation scoring (0-100) to prioritize opportunities
+- Overlap detection between clusters
+- Detailed cluster metrics
 
 Usage:
     1. Export SERP data from ValueSERP in CSV format
@@ -32,9 +40,16 @@ Requirements:
 import glob
 import os
 import time
+import logging
+from collections import defaultdict
+from itertools import combinations
 
 import pandas as pd
 from tqdm import tqdm
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 start_time = time.time()
 
@@ -42,8 +57,9 @@ start_time = time.time()
 # Configuration Variables
 # ----------------
 
-CONSOLIDATE_QUERIES = True
 COMMON_URLS = 4  # minimum number of common URLs to match on. Default = 4
+CLUSTERING_STRATEGY = 'all'  # Options: 'connected', 'cliques', 'core', 'all'
+CORE_THRESHOLD = 0.7  # For core clustering: minimum connectivity percentage
 FOLDER_LOCATION = os.path.join(os.getcwd(), 'valueserp_exports')  # folder containing exported CSV files
 FILE_PREFIX = "/Batch_Results_*.csv"  # file prefix for ValueSERP exports
 EXPORT_CSV_FILE_PATH = os.path.join(os.getcwd(), 'serp_cluster_results.csv')  # output file path
@@ -53,334 +69,456 @@ EXPORT_CSV_FILE_PATH = os.path.join(os.getcwd(), 'serp_cluster_results.csv')  # 
 # Read and Clean Data
 # ----------------
 
-def get_csv_file_paths(folder_location, file_prefix):
-    """
-    Retrieves paths for CSV files from a specified folder location with a given file prefix.
+def validate_folder_and_files(folder_location, file_prefix):
+    """Validates folder exists and contains required files."""
+    if not os.path.exists(folder_location):
+        raise ValueError(f"Folder not found: {folder_location}")
 
-    Args:
-    folder_location (str): The directory path where the CSV files are stored.
-    file_prefix (str): The prefix for the CSV files to be matched.
-
-    Returns:
-    list: A list of file paths matching the given file prefix in the specified folder location.
-    """
     file_pattern = f"{folder_location}{file_prefix}"
-    return glob.glob(file_pattern)
+    files = glob.glob(file_pattern)
+
+    if not files:
+        raise ValueError(
+            f"No CSV files found matching pattern '{file_prefix}' in folder: {folder_location}\n"
+            f"Please ensure CSV files are present and match the pattern: Batch_Results_*.csv"
+        )
+
+    logger.info(f"Found {len(files)} CSV files to process")
+    return files
 
 
 def read_csv_files(file_paths):
-    """
-    Reads multiple CSV files from the provided file paths and concatenates them into a single DataFrame.
+    """Reads and concatenates multiple CSV files."""
+    dataframes = []
 
-    Args:
-    file_paths (list): List of file paths of the CSV files to be read.
+    for file in tqdm(file_paths, desc="Reading CSV files"):
+        try:
+            df = pd.read_csv(file, usecols=["search.q", "result.organic_results.link"],
+                             dtype="str", index_col=None, header=0)
+            if not df.empty:
+                dataframes.append(df)
+            else:
+                logger.warning(f"Empty CSV file: {file}")
+        except Exception as e:
+            logger.error(f"Error reading file {file}: {str(e)}")
+            continue
 
-    Returns:
-    pandas.DataFrame: A DataFrame containing concatenated data from the read CSV files.
-    """
-    df = pd.concat((pd.read_csv(file, usecols=["search.q", "result.organic_results.link"],
-                                dtype="str", index_col=None, header=0)
-                    for file in tqdm(file_paths, desc="Reading in CSV files...")),
-                   axis=0, ignore_index=True)
+    if not dataframes:
+        raise ValueError("No valid data found in any of the CSV files")
 
-    return df
-
-
-def rename_columns(df):
-    """
-    Renames specific columns of a DataFrame to more descriptive names.
-
-    Args:
-    df (pandas.DataFrame): The DataFrame whose columns are to be renamed.
-
-    Returns:
-    pandas.DataFrame: The DataFrame with renamed columns.
-    """
-    return df.rename(columns={"search.q": "query", "result.organic_results.link": "link"})
+    return pd.concat(dataframes, axis=0, ignore_index=True)
 
 
-def normalize_query_strings(df):
-    """
-    Converts all query strings in the DataFrame to lowercase for normalization.
+def prepare_data(df):
+    """Prepares and cleans the data for clustering."""
+    # Rename columns
+    df = df.rename(columns={"search.q": "query", "result.organic_results.link": "link"})
 
-    Args:
-    df (pandas.DataFrame): DataFrame containing the query strings.
+    # Convert queries to lowercase
+    df['query'] = df['query'].str.lower()
 
-    Returns:
-    pandas.DataFrame: DataFrame with query strings normalized to lowercase.
-    """
-    return df.assign(query=lambda x: x['query'].str.lower())
+    # Remove duplicates but keep all queries even if they don't share links
+    return df.drop_duplicates(subset=["query", "link"])
 
-
-def filter_data(df):
-    """
-    Filters the DataFrame to only include rows where the link appears more than once and removes duplicates.
-
-    Args:
-    df (pandas.DataFrame): DataFrame to be filtered.
-
-    Returns:
-    pandas.DataFrame: Filtered DataFrame with duplicate entries removed.
-    """
-    mask = df['link'].map(df['link'].value_counts()) > 1
-    return df[mask].drop_duplicates(subset=["query", "link"])
-
-
-# ----------------
-# Data Mapping and Transformation
-# ----------------
 
 def create_query_map(df):
-    """
-    Creates a mapping of queries to sets of links from the DataFrame.
-
-    Args:
-    df (pandas.DataFrame): DataFrame containing query and link data.
-
-    Returns:
-    dict: A dictionary mapping each query to a set of associated links.
-    """
+    """Creates a mapping of queries to their sets of URLs."""
     return df.groupby('query')['link'].apply(set).to_dict()
 
 
-def invert_query_map(query_map):
-    """
-    Inverts a query map to a link map, where each link maps to a set of queries.
+# ----------------
+# Clustering Strategies
+# ----------------
 
-    Args:
-    query_map (dict): A dictionary mapping queries to sets of links.
+def build_similarity_matrix(query_map, common_urls_threshold):
+    """Build similarity matrix between queries based on shared URLs."""
+    similarity_matrix = defaultdict(dict)
+    queries = list(query_map.keys())
 
-    Returns:
-    dict: A dictionary mapping each link to a set of associated queries.
-    """
-    link_map = {}
-    for query, links in query_map.items():
-        for link in links:
-            if link in link_map:
-                link_map[link].add(query)
-            else:
-                link_map[link] = {query}
-    return link_map
+    for i in range(len(queries)):
+        for j in range(i + 1, len(queries)):
+            query1, query2 = queries[i], queries[j]
+            shared_urls = len(query_map[query1] & query_map[query2])
+            if shared_urls >= common_urls_threshold:
+                similarity_matrix[query1][query2] = shared_urls
+                similarity_matrix[query2][query1] = shared_urls
+
+    return similarity_matrix, queries
+
+
+def find_connected_components(similarity_matrix, queries):
+    """Strategy 1: Find connected components (non-overlapping base clusters)."""
+    visited = set()
+    components = []
+
+    def dfs(query, component):
+        if query in visited:
+            return
+        visited.add(query)
+        component.add(query)
+        for neighbor in similarity_matrix[query]:
+            dfs(neighbor, component)
+
+    for query in queries:
+        if query not in visited and query in similarity_matrix:
+            component = set()
+            dfs(query, component)
+            if len(component) > 1:
+                components.append(component)
+
+    return components
+
+
+def find_cliques(similarity_matrix, queries, min_clique_size=2):
+    """Strategy 2: Find cliques (all queries must be connected to each other)."""
+    cliques = []
+
+    def is_clique(candidate_set):
+        candidate_list = list(candidate_set)
+        for i in range(len(candidate_list)):
+            for j in range(i + 1, len(candidate_list)):
+                if candidate_list[j] not in similarity_matrix[candidate_list[i]]:
+                    return False
+        return True
+
+    # Find maximal cliques using a simplified approach
+    for query in queries:
+        if query not in similarity_matrix:
+            continue
+
+        candidates = {query}
+        candidates.update(similarity_matrix[query].keys())
+
+        # Try to build maximal clique
+        for size in range(len(candidates), min_clique_size - 1, -1):
+            for subset in combinations(candidates, size):
+                if is_clique(set(subset)):
+                    clique = set(subset)
+                    # Check if this clique is already found or is a subset
+                    is_new = True
+                    for existing_clique in cliques:
+                        if clique.issubset(existing_clique):
+                            is_new = False
+                            break
+                    if is_new:
+                        cliques.append(clique)
+                    break
+
+    # Remove subsets
+    final_cliques = []
+    for clique in cliques:
+        is_subset = False
+        for other_clique in cliques:
+            if clique != other_clique and clique.issubset(other_clique):
+                is_subset = True
+                break
+        if not is_subset:
+            final_cliques.append(clique)
+
+    return final_cliques
+
+
+def find_core_clusters(similarity_matrix, queries, core_threshold=0.7):
+    """Strategy 3: Core-based clustering (queries must share URLs with core set)."""
+    core_clusters = []
+
+    for seed_query in queries:
+        if seed_query not in similarity_matrix:
+            continue
+
+        cluster = {seed_query}
+        candidates = set(similarity_matrix[seed_query].keys())
+
+        for candidate in candidates:
+            # Check if candidate is connected to enough existing cluster members
+            connections = sum(1 for member in cluster if candidate in similarity_matrix[member])
+            if connections >= len(cluster) * core_threshold:
+                cluster.add(candidate)
+
+        if len(cluster) > 1 and cluster not in core_clusters:
+            core_clusters.append(cluster)
+
+    return core_clusters
 
 
 # ----------------
-# Clustering and Analysis
+# Cluster Analysis
 # ----------------
 
-def find_common_links(query_map, common_urls):
+def get_shortest_query_in_cluster(queries):
+    """Returns the shortest query from a list of queries."""
+    return min(queries, key=len)
+
+
+def analyze_cluster_details(cluster_queries, query_map, similarity_matrix):
+    """Analyze detailed metrics for a cluster."""
+    queries = list(cluster_queries)
+
+    # Find URLs shared by all queries
+    if queries:
+        shared_urls = set(query_map[queries[0]])
+        for query in queries[1:]:
+            shared_urls &= query_map[query]
+    else:
+        shared_urls = set()
+
+    # Calculate pairwise metrics
+    metrics = {
+        'min_shared_urls': float('inf'),
+        'max_shared_urls': 0,
+        'avg_shared_urls': 0,
+        'total_comparisons': 0,
+        'connectivity_score': 0
+    }
+
+    possible_connections = len(queries) * (len(queries) - 1) / 2
+    actual_connections = 0
+
+    for i in range(len(queries)):
+        for j in range(i + 1, len(queries)):
+            if queries[j] in similarity_matrix[queries[i]]:
+                shared = similarity_matrix[queries[i]][queries[j]]
+                metrics['min_shared_urls'] = min(metrics['min_shared_urls'], shared)
+                metrics['max_shared_urls'] = max(metrics['max_shared_urls'], shared)
+                metrics['avg_shared_urls'] += shared
+                metrics['total_comparisons'] += 1
+                actual_connections += 1
+
+    if metrics['total_comparisons'] > 0:
+        metrics['avg_shared_urls'] /= metrics['total_comparisons']
+    else:
+        metrics['min_shared_urls'] = 0
+
+    if possible_connections > 0:
+        metrics['connectivity_score'] = actual_connections / possible_connections
+
+    return {
+        'queries': queries,
+        'shared_urls': list(shared_urls),
+        'shared_url_count': len(shared_urls),
+        'cluster_metrics': metrics,
+        'cluster_size': len(queries)
+    }
+
+
+def calculate_consolidation_score(metrics, cluster_size, overlapping_count):
     """
-    Identifies common links shared between pairs of queries from a query map.
-
-    Args:
-    query_map (dict): A dictionary mapping queries to sets of links.
-    common_urls (int): Minimum number of common URLs to consider a pair for inclusion.
-
-    Returns:
-    pandas.DataFrame: DataFrame of query pairs with their common links and respective counts.
+    Calculate a score (0-100) indicating how strong the consolidation opportunity is.
+    Higher scores mean stronger consolidation candidates.
     """
-    link_map = invert_query_map(query_map)
-    common_link_pairs = {}
+    # Base score from average shared URLs (normalize to 0-40 range)
+    base_score = min(40, metrics['avg_shared_urls'] * 4)
 
-    for link, queries in tqdm(link_map.items(), desc='Processing links...'):
-        for query1 in queries:
-            for query2 in queries:
-                if query1 != query2:
-                    pair = tuple(sorted([query1, query2]))
-                    if pair not in common_link_pairs:
-                        common_link_pairs[pair] = set()
-                    common_link_pairs[pair].add(link)
+    # Connectivity bonus (0-30 range)
+    connectivity_bonus = metrics['connectivity_score'] * 30
 
-    # Filter pairs by the number of common URLs
-    common_pairs = [(pair, len(links), links) for pair, links in common_link_pairs.items() if
-                    len(links) >= common_urls]
-    return pd.DataFrame(common_pairs, columns=['query', '#_common_urls', 'common_urls'])
+    # Cluster size bonus (0-20 range)
+    size_bonus = min(20, (cluster_size - 2) * 5)
 
+    # Overlap penalty (0-10 range)
+    overlap_penalty = min(10, overlapping_count * 5)
 
-def assign_cluster_names(df):
-    """
-    Assigns unique cluster names to each row in the DataFrame.
+    total_score = base_score + connectivity_bonus + size_bonus - overlap_penalty
 
-    Args:
-    df (pandas.DataFrame): DataFrame containing queries and related data.
-
-    Returns:
-    pandas.DataFrame: DataFrame with an added column for cluster names.
-    """
-    df['serp_cluster'] = [f'group {i + 1}' for i in range(df.shape[0])]
-    return df.explode("query")
+    return max(0, min(100, round(total_score)))
 
 
-def group_queries_by_cluster(df):
-    """
-    Groups queries by their assigned cluster names and consolidates them.
-
-    Args:
-    df (pandas.DataFrame): DataFrame containing queries and their assigned clusters.
-
-    Returns:
-    pandas.DataFrame: DataFrame with consolidated cluster information.
-    """
-    tqdm.pandas(desc="Consolidating Clusters")
-    grouped_data = df.groupby('query')['serp_cluster'] \
-        .progress_apply('|'.join) \
-        .reset_index(name='serp_clusters')
-    return grouped_data
-
-
-def merge_cluster_data(original_df, grouped_data):
-    """
-    Merges cluster data with the original DataFrame to provide a comprehensive view.
-
-    Args:
-    original_df (pandas.DataFrame): The original DataFrame before clustering.
-    grouped_data (pandas.DataFrame): DataFrame containing consolidated cluster information.
-
-    Returns:
-    pandas.DataFrame: Merged DataFrame with both original data and cluster information.
-    """
-    tqdm.pandas(desc="Merging Cluster Data")
-    expanded_data = grouped_data.assign(serp_cluster=grouped_data['serp_clusters'].str.split('|')) \
-        .explode('serp_cluster')[['serp_cluster', 'query']]
-
-    # Mapping cluster names
-    cluster_names = expanded_data.groupby('serp_cluster').first()['query'].to_dict()
-    expanded_data['serp_cluster'] = expanded_data['serp_cluster'].map(cluster_names)
-    expanded_data.drop_duplicates(subset=["serp_cluster", "query"], inplace=True)
-
-    return pd.merge(original_df, expanded_data, on='query', suffixes=('_left', '_right'))
-
-
-def rename_clusters_shortest_kw(df):
-    """
-    Renames clusters based on the shortest keyword in each cluster.
-
-    Args:
-    df (pandas.DataFrame): DataFrame containing queries and their respective clusters.
-
-    Returns:
-    pandas.DataFrame: DataFrame with clusters renamed based on the shortest keyword.
-    """
-    df['query_len'] = df['query'].str.len()
-    idx = df.groupby('serp_cluster_right')['query_len'].idxmin()
-    shortest_query_map = df.loc[idx, ['serp_cluster_right', 'query']].set_index('serp_cluster_right')['query']
-    df['serp_cluster'] = df['serp_cluster_right'].map(shortest_query_map)
-    df.drop(columns=['serp_cluster_right', 'query_len'], inplace=True)
-
-    return df
+def get_consolidation_recommendation(score):
+    """Get a recommendation based on the consolidation score."""
+    if score >= 80:
+        return "Strong consolidation candidate"
+    elif score >= 60:
+        return "Good consolidation candidate"
+    elif score >= 40:
+        return "Possible consolidation"
+    elif score >= 20:
+        return "Weak consolidation candidate"
+    else:
+        return "Keep separate"
 
 
 # ----------------
-# Data Post-Processing
+# Main Clustering Function
 # ----------------
 
-def count_cluster_sizes(df):
+def find_consolidation_clusters(query_map, common_urls_threshold, strategy='all', core_threshold=0.7):
     """
-    Counts the number of keywords in each cluster and adds this information to the DataFrame.
-
-    Args:
-    df (pandas.DataFrame): DataFrame containing queries and their clusters.
-
-    Returns:
-    pandas.DataFrame: Updated DataFrame with the count of keywords in each cluster.
+    Main clustering function supporting multiple strategies.
+    Returns clusters with metadata and consolidation scores.
     """
-    df.drop_duplicates(subset=["serp_cluster", "query"], inplace=True)
-    df.loc[:, '#_kws_in_cluster'] = df.groupby('serp_cluster')['serp_cluster'].transform('count')
+    similarity_matrix, queries = build_similarity_matrix(query_map, common_urls_threshold)
 
-    return df
+    all_clusters = []
+
+    # Get clusters based on selected strategy
+    if strategy in ['connected', 'all']:
+        components = find_connected_components(similarity_matrix, queries)
+        for comp in components:
+            cluster_data = analyze_cluster_details(comp, query_map, similarity_matrix)
+            cluster_data['cluster_type'] = 'connected_component'
+            all_clusters.append(cluster_data)
+
+    if strategy in ['cliques', 'all']:
+        cliques = find_cliques(similarity_matrix, queries)
+        for clique in cliques:
+            cluster_data = analyze_cluster_details(clique, query_map, similarity_matrix)
+            cluster_data['cluster_type'] = 'clique'
+            all_clusters.append(cluster_data)
+
+    if strategy in ['core', 'all']:
+        core_clusters = find_core_clusters(similarity_matrix, queries, core_threshold)
+        for core_cluster in core_clusters:
+            cluster_data = analyze_cluster_details(core_cluster, query_map, similarity_matrix)
+            cluster_data['cluster_type'] = 'core_cluster'
+            all_clusters.append(cluster_data)
+
+    # Mark which queries appear in multiple clusters
+    query_cluster_count = defaultdict(int)
+    for cluster in all_clusters:
+        for query in cluster['queries']:
+            query_cluster_count[query] += 1
+
+    # Add overlap information
+    for cluster in all_clusters:
+        cluster['overlapping_queries'] = [q for q in cluster['queries'] if query_cluster_count[q] > 1]
+
+    return all_clusters, similarity_matrix
 
 
-def sort_for_export(df):
+def create_cluster_dataframe(clusters, query_map):
     """
-    Prepares the DataFrame for export by sorting and filtering the data.
-
-    Args:
-    df (pandas.DataFrame): DataFrame to be prepared for export.
-
-    Returns:
-    pandas.DataFrame: Sorted and filtered DataFrame ready for export.
+    Creates a dataframe with cluster results including consolidation scores.
     """
-    df = df[['serp_cluster', 'query', '#_kws_in_cluster', '#_common_urls', 'common_urls']].drop_duplicates(
-        subset=["query"])
-    df['#_kws_in_cluster'] = df.groupby('serp_cluster')['serp_cluster'].transform('count')
-    df = df[df['#_kws_in_cluster'] != 1]
-    return df.sort_values(["serp_cluster", "query", "#_kws_in_cluster"], ascending=[True, True, False])
+    rows = []
+    processed_queries = set()
+
+    # Process each cluster
+    for cluster_idx, cluster in enumerate(clusters):
+        cluster_name = get_shortest_query_in_cluster(cluster['queries'])
+
+        for query in cluster['queries']:
+            processed_queries.add(query)
+
+            # Calculate consolidation score
+            consolidation_score = calculate_consolidation_score(
+                cluster['cluster_metrics'],
+                cluster['cluster_size'],
+                len(cluster['overlapping_queries'])
+            )
+
+            rows.append({
+                'serp_cluster': cluster_name,
+                'cluster_type': cluster['cluster_type'],
+                'query': query,
+                'total_urls': len(query_map[query]),
+                'shared_url_count': cluster['shared_url_count'],
+                'shared_urls': ', '.join(cluster['shared_urls'][:5]),
+                'min_shared_urls': cluster['cluster_metrics']['min_shared_urls'],
+                'max_shared_urls': cluster['cluster_metrics']['max_shared_urls'],
+                'avg_shared_urls': round(cluster['cluster_metrics']['avg_shared_urls'], 2),
+                'connectivity_score': round(cluster['cluster_metrics']['connectivity_score'], 2),
+                '#_kws_in_cluster': cluster['cluster_size'],
+                'is_in_multiple_clusters': query in cluster['overlapping_queries'],
+                'consolidation_score': consolidation_score,
+                'consolidation_recommendation': get_consolidation_recommendation(consolidation_score)
+            })
+
+    # Add unclustered queries
+    for query in query_map.keys():
+        if query not in processed_queries:
+            rows.append({
+                'serp_cluster': 'NO_CLUSTER',
+                'cluster_type': 'none',
+                'query': query,
+                'total_urls': len(query_map[query]),
+                'shared_url_count': 0,
+                'shared_urls': '',
+                'min_shared_urls': 0,
+                'max_shared_urls': 0,
+                'avg_shared_urls': 0,
+                'connectivity_score': 0,
+                '#_kws_in_cluster': 1,
+                'is_in_multiple_clusters': False,
+                'consolidation_score': 0,
+                'consolidation_recommendation': 'Keep separate'
+            })
+
+    return pd.DataFrame(rows)
 
 
-# ----------------
-# Export the Data
-# ----------------
-
-def export_to_csv(df, file_path):
-    """
-    Exports the given DataFrame to a CSV file at the specified file path.
-
-    Args:
-    df (pandas.DataFrame): DataFrame to be exported.
-    file_path (str): Path where the CSV file will be saved.
-
-    Returns:
-    None
-    """
-    df.to_csv(file_path, index=False)
+def export_results(df, file_path):
+    """Exports the clustering results to a CSV file."""
+    # Sort by consolidation score (descending), then by cluster and query
+    df = df.sort_values(['consolidation_score', 'serp_cluster', 'query'],
+                        ascending=[False, True, True])
+    df.to_csv(file_path, index=False, encoding='utf-8-sig')
+    logger.info(f"Results exported successfully to {file_path}")
 
 
 # ----------------
 # Main Processing Function
 # ----------------
 
-def process_serps(consolidate=CONSOLIDATE_QUERIES):
-    """
-    Main function to process Search Engine Result Pages (SERPs).
+def process_serps():
+    """Main function to process Search Engine Result Pages and identify consolidation opportunities."""
+    try:
+        # Validate folder and get file paths
+        logger.info(f"Looking for CSV files in: {FOLDER_LOCATION}")
+        file_paths = validate_folder_and_files(FOLDER_LOCATION, FILE_PREFIX)
 
-    Args:
-    consolidate (bool): Flag to determine whether to consolidate query clusters.
+        # Read CSV files
+        df = read_csv_files(file_paths)
+        logger.info(f"Successfully read {len(df)} rows from CSV files")
 
-    Returns:
-    None
-    """
+        # Prepare data
+        df = prepare_data(df)
+        logger.info(f"After preparation: {len(df)} unique query-URL pairs")
 
-    # Step 1: Get CSV file paths
-    file_paths = get_csv_file_paths(FOLDER_LOCATION, FILE_PREFIX)
+        # Create query to URL mapping
+        query_map = create_query_map(df)
+        logger.info(f"Processing {len(query_map)} unique queries")
 
-    if not file_paths:
-        print(f"No CSV files found in {FOLDER_LOCATION}")
-        print("Please ensure your ValueSERP exports are in the correct folder.")
-        return
+        # Find consolidation clusters
+        clusters, similarity_matrix = find_consolidation_clusters(
+            query_map,
+            COMMON_URLS,
+            strategy=CLUSTERING_STRATEGY,
+            core_threshold=CORE_THRESHOLD
+        )
 
-    # Step 2: Read CSV files into a DataFrame
-    df = read_csv_files(file_paths)
+        # Create results DataFrame
+        results_df = create_cluster_dataframe(clusters, query_map)
 
-    # Step 3: Clean the data
-    df = rename_columns(df)
-    df = normalize_query_strings(df)
-    df = filter_data(df)
+        # Export results
+        export_results(results_df, EXPORT_CSV_FILE_PATH)
 
-    # Step 4: Create a map of queries
-    query_map = create_query_map(df)
+        # Calculate statistics
+        total_queries = len(query_map)
+        clustered_queries = len(results_df[results_df['serp_cluster'] != 'NO_CLUSTER']['query'].unique())
+        clique_count = len([c for c in clusters if c['cluster_type'] == 'clique'])
+        component_count = len([c for c in clusters if c['cluster_type'] == 'connected_component'])
+        core_count = len([c for c in clusters if c['cluster_type'] == 'core_cluster'])
 
-    # Step 5: Find common links
-    df = find_common_links(query_map, COMMON_URLS)
+        logger.info(f'Script completed in {time.time() - start_time:.2f} seconds')
+        logger.info(f'Found {len(clusters)} total clusters:')
+        logger.info(f'  - {component_count} connected components')
+        logger.info(f'  - {clique_count} cliques')
+        logger.info(f'  - {core_count} core clusters')
+        logger.info(f'{clustered_queries} out of {total_queries} queries are in clusters')
+        logger.info(f'Results exported to: {EXPORT_CSV_FILE_PATH}')
 
-    # Step 6: Assign cluster names
-    df = assign_cluster_names(df)
+        # Show top consolidation opportunities
+        top_opportunities = results_df[results_df['consolidation_score'] >= 60].groupby('serp_cluster').first()
+        if not top_opportunities.empty:
+            logger.info(f"\nTop consolidation opportunities:")
+            for idx, row in top_opportunities.head(5).iterrows():
+                logger.info(f"  - {idx}: Score {row['consolidation_score']} ({row['#_kws_in_cluster']} keywords)")
 
-    # Step 7: Optionally consolidate clusters
-    if consolidate:
-        grouped_data = group_queries_by_cluster(df)
-        df = merge_cluster_data(df, grouped_data)
+        return results_df
 
-    # Step 8: Rename clusters based on shortest keyword
-    df = rename_clusters_shortest_kw(df)
-
-    # Step 9: Count cluster sizes
-    df = count_cluster_sizes(df)
-
-    # Step 10: Sort data for export
-    df = sort_for_export(df)
-
-    # Step 11: Export the processed DataFrame to a CSV file
-    export_to_csv(df, EXPORT_CSV_FILE_PATH)
-    print(f"Results exported to: {EXPORT_CSV_FILE_PATH}")
+    except Exception as e:
+        logger.error(f"Error processing SERPs: {str(e)}")
+        raise
 
 
 # ----------------
@@ -389,4 +527,4 @@ def process_serps(consolidate=CONSOLIDATE_QUERIES):
 
 if __name__ == "__main__":
     process_serps()
-    print('The script took {0} seconds!'.format(time.time() - start_time))
+    print(f'The script took {time.time() - start_time:.2f} seconds!')

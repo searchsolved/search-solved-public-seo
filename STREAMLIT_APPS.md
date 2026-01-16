@@ -6,6 +6,9 @@ This file tracks all Streamlit apps in this repository that need deployment.
 
 | App Name | Path | Status | App URL |
 |----------|------|--------|---------|
+| GSC Folder Analyzer | `search-console/gsc-folder-analyzer/gsc_folder_analyzer.py` | Pending | - |
+| Breadcrumb Relevancy Checker | `ecommerce/breadcrumb-relevancy-checker/breadcrumb_relevancy_checker.py` | Pending | - |
+| Striking Distance CSV | `on-page/striking-distance-csv/striking_distance_csv.py` | Pending | - |
 | URL Breadcrumb Extractor | `technical-seo/url-breadcrumb-extractor/url_breadcrumb_extractor.py` | Pending | - |
 | Backlink Intersector | `link-building/backlink-intersector/backlink_intersector.py` | Pending | - |
 | Anchor Text Interlinker | `internal-linking/anchor-text-interlinker/anchor_text_interlinker.py` | Pending | - |

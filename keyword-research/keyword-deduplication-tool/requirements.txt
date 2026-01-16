@@ -1,0 +1,7 @@
+pandas
+streamlit
+rapidfuzz
+chardet
+stqdm
+openpyxl
+xlsxwriter

@@ -1,0 +1,6 @@
+streamlit
+pandas
+jinja2
+openai
+tiktoken
+stqdm

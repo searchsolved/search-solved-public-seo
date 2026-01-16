@@ -1,0 +1,5 @@
+pandas
+streamlit
+chardet
+rakun2
+xlsxwriter

@@ -6,6 +6,10 @@ This file tracks all Streamlit apps in this repository that need deployment.
 
 | App Name | Path | Status | App URL |
 |----------|------|--------|---------|
+| Delta Audit Tool | `reporting/delta-audit/delta_audit.py` | Pending | - |
+| Content Extractor | `content-analysis/content-extractor/content_extractor.py` | Pending | - |
+| Entity Extractor (SpaCy) | `content-analysis/entity-extractor/entity_extractor.py` | Pending | - |
+| Topical Map Generator | `keyword-research/topical-map-generator/topical_map_generator.py` | Pending | - |
 | Keyword Cannibalization Finder | `search-console/keyword-cannibalization/keyword_cannibalization.py` | Pending | - |
 | Non-White Background Detector | `ecommerce/non-white-background-detector/non_white_background_detector.py` | Pending | - |
 | GSC Folder Analyzer | `search-console/gsc-folder-analyzer/gsc_folder_analyzer.py` | Pending | - |

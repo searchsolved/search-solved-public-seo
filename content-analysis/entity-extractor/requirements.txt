@@ -7,3 +7,6 @@ trafilatura>=1.3.0
 youtube-transcript-api>=0.4.4
 requests>=2.26.0
 altair>=4.2.0
+spacy>=3.0.0
+beautifulsoup4>=4.9.0
+openpyxl>=3.0.0

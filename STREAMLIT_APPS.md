@@ -7,6 +7,7 @@ This file tracks all Streamlit apps in this repository that need deployment.
 | App Name | Path | Status | App URL |
 |----------|------|--------|---------|
 | Keyword Cannibalization Finder | `search-console/keyword-cannibalization/keyword_cannibalization.py` | Pending | - |
+| Non-White Background Detector | `ecommerce/non-white-background-detector/non_white_background_detector.py` | Pending | - |
 | GSC Folder Analyzer | `search-console/gsc-folder-analyzer/gsc_folder_analyzer.py` | Pending | - |
 | Breadcrumb Relevancy Checker | `ecommerce/breadcrumb-relevancy-checker/breadcrumb_relevancy_checker.py` | Pending | - |
 | Striking Distance CSV | `on-page/striking-distance-csv/striking_distance_csv.py` | Pending | - |

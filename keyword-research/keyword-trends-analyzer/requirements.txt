@@ -1,0 +1,5 @@
+streamlit
+pandas
+pytrends
+xlsxwriter
+python-dateutil

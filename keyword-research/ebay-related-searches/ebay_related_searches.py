@@ -60,6 +60,18 @@ with st.form(key='columns_in_form_2'):
     submitted = st.form_submit_button('Submit')
 
 
+def extract_keyword_from_url(href):
+    """Extract and decode keyword from eBay URL parameter."""
+    match = re.search(r'_nkw=([^&]+)', href)
+    if match:
+        kw = match.group(1)
+        # Decode URL encoding - replace + and %20 with spaces
+        kw = kw.replace('+', ' ')
+        kw = requests.utils.unquote(kw)
+        return kw.strip()
+    return None
+
+
 def extract_related_searches(soup):
     """
     Try multiple methods to extract related searches from eBay.
@@ -67,37 +79,33 @@ def extract_related_searches(soup):
     """
     related_kws = []
     
-    # Method 1: Try CSS selectors
+    # Method 1: Try CSS selectors - but extract keyword from URL, not link text
+    # Link text often has spaces stripped, but URL preserves them
     for selector in RELATED_SELECTORS:
         elements = soup.select(selector)
         if elements:
             for el in elements:
-                text = el.get_text(strip=True)
                 href = el.get('href', '')
                 # Only include if it looks like a search link
-                if text and ('_nkw=' in href or 'sch/i.html' in href):
-                    # Clean up the keyword
-                    text = text.strip()
-                    if text and len(text) > 1 and text not in related_kws:
-                        related_kws.append(text)
+                if '_nkw=' in href or 'sch/i.html' in href:
+                    # Extract keyword from URL (more reliable for spaces)
+                    kw = extract_keyword_from_url(href)
+                    if kw and len(kw) > 1 and kw not in related_kws:
+                        related_kws.append(kw)
             if related_kws:
                 return related_kws
     
-    # Method 2: Extract from URL parameters in links
+    # Method 2: Extract from URL parameters in all links
     all_links = soup.find_all('a', href=True)
     for link in all_links:
         href = link.get('href', '')
         if '_nkw=' in href and 'sch/' in href:
-            # Extract keyword from URL
-            match = re.search(r'_nkw=([^&]+)', href)
-            if match:
-                kw = match.group(1).replace('+', ' ').replace('%20', ' ')
-                kw = requests.utils.unquote(kw)
-                if kw and len(kw) > 1 and kw not in related_kws:
-                    # Check if link text suggests it's a related search
-                    link_text = link.get_text(strip=True)
-                    if link_text and link_text.lower() != 'shop by category':
-                        related_kws.append(kw)
+            kw = extract_keyword_from_url(href)
+            if kw and len(kw) > 1 and kw not in related_kws:
+                # Skip navigation links
+                link_text = link.get_text(strip=True).lower()
+                if link_text not in ['shop by category', 'home', 'ebay']:
+                    related_kws.append(kw)
     
     # Method 3: Look for JSON data in script tags (eBay sometimes embeds data this way)
     scripts = soup.find_all('script', type='application/json')

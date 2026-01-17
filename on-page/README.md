@@ -180,14 +180,9 @@ Detailed implementation guides and troubleshooting information are available in 
 
 ## Author
 
-**Lee Foot** - SEO Consultant specializing in data-driven on-page optimization and keyword strategy.
+**Lee Foot** - eCommerce SEO Consultant
 
-- 🌐 [Website](https://www.leefoot.com)
-- 🐦 [Twitter/X](https://x.com/LeeFootSEO)
-- 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social)
-- [LinkedIn](https://www.linkedin.com/in/lee-foot/)
-- ✉️ [Contact](https://www.leefoot.com/contact)
-
+[![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)
 ---
 
 *Part of the Search Solved Public SEO toolkit - Data-driven on-page optimization solutions.*

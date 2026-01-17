@@ -1,4 +1,4 @@
-Internal Search Report Mapper V2 by Lee Foot 11/01/2021 @LeeFootSEO
+Internal Search Report Mapper V2 by Lee Foot 11/01/2021
 Takes the Google Analytics search terms report and merges with a Screaming Frog crawl file to find opportunities to map
 internal searches to.
 

@@ -29,6 +29,18 @@ from user_agent2 import generate_user_agent
 
 
 # ============================================================================
+# INITIALIZE SESSION STATE
+# ============================================================================
+
+if 'df' not in st.session_state:
+    st.session_state.df = None
+if 'seed_keyword' not in st.session_state:
+    st.session_state.seed_keyword = None
+if 'scraping_complete' not in st.session_state:
+    st.session_state.scraping_complete = False
+
+
+# ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
 
@@ -227,7 +239,7 @@ col1, col2 = st.columns([1, 2])
 
 with col1:
     with st.form(key='search_form'):
-        seed_keyword = st.text_input(
+        seed_keyword_input = st.text_input(
             '🔎 Seed Keyword',
             placeholder='e.g., running shoes',
             help='Enter the keyword you want to explore'
@@ -236,7 +248,7 @@ with col1:
         submitted = st.form_submit_button('🚀 Start Scraping', use_container_width=True)
 
 with col2:
-    if not submitted:
+    if not submitted and not st.session_state.scraping_complete:
         st.info("👈 Enter a keyword and click **Start Scraping** to begin")
 
 
@@ -245,9 +257,13 @@ with col2:
 # ============================================================================
 
 if submitted:
-    if not seed_keyword.strip():
+    if not seed_keyword_input.strip():
         st.error("⚠️ Please enter a keyword to search")
         st.stop()
+    
+    # Store the seed keyword in session state
+    st.session_state.seed_keyword = seed_keyword_input.strip()
+    seed_keyword = st.session_state.seed_keyword
     
     # Progress section
     progress_container = st.container()
@@ -345,6 +361,19 @@ if submitted:
     
     df = df.drop_duplicates().reset_index(drop=True)
     
+    # Store in session state
+    st.session_state.df = df
+    st.session_state.scraping_complete = True
+
+
+# ============================================================================
+# DISPLAY RESULTS (from session state)
+# ============================================================================
+
+if st.session_state.scraping_complete and st.session_state.df is not None:
+    df = st.session_state.df
+    seed_keyword = st.session_state.seed_keyword
+    
     # Results section
     st.markdown("---")
     st.subheader(f"📊 Results for: {seed_keyword}")
@@ -408,9 +437,9 @@ if submitted:
         help="Choose how to visualize the keyword relationships"
     )
     
-    st.caption("Click nodes to expand/collapse. Right-click to save as image.")
-    
     if view_type == "🔵 Radial Tree":
+        st.caption("Click nodes to expand/collapse. Right-click to save as image.")
+        
         opts = {
             "tooltip": {
                 "trigger": "item",
@@ -421,11 +450,11 @@ if submitted:
                     "type": "tree",
                     "data": [tree],
                     "layout": "radial",
-                    "top": "5%",
-                    "left": "15%",
-                    "bottom": "5%",
-                    "right": "15%",
-                    "symbolSize": 12,
+                    "top": "2%",
+                    "left": "2%",
+                    "bottom": "2%",
+                    "right": "2%",
+                    "symbolSize": 10,
                     "symbol": "circle",
                     "itemStyle": {
                         "color": "#10B981",
@@ -438,7 +467,7 @@ if submitted:
                         "curveness": 0.5,
                     },
                     "label": {
-                        "fontSize": 12,
+                        "fontSize": 11,
                     },
                     "emphasis": {
                         "itemStyle": {
@@ -458,9 +487,11 @@ if submitted:
             ],
         }
         
-        st_echarts(opts, key=f"radial_tree_{seed_keyword}", height=700)
+        st_echarts(opts, key=f"radial_tree_{seed_keyword}", height=800)
     
     elif view_type == "📊 Vertical Tree":
+        st.caption("Click nodes to expand/collapse. Right-click to save as image.")
+        
         opts = {
             "tooltip": {
                 "trigger": "item",
@@ -471,12 +502,12 @@ if submitted:
                     "type": "tree",
                     "data": [tree],
                     "layout": "orthogonal",
-                    "orient": "TB",
+                    "orient": "LR",
                     "top": "5%",
                     "left": "10%",
                     "bottom": "5%",
-                    "right": "10%",
-                    "symbolSize": 10,
+                    "right": "20%",
+                    "symbolSize": 8,
                     "symbol": "circle",
                     "itemStyle": {
                         "color": "#3B82F6",
@@ -488,17 +519,13 @@ if submitted:
                         "width": 1.5,
                     },
                     "label": {
-                        "position": "top",
+                        "position": "right",
                         "fontSize": 11,
-                        "rotate": -45,
-                        "align": "right",
                         "verticalAlign": "middle",
                     },
                     "leaves": {
                         "label": {
-                            "position": "bottom",
-                            "rotate": -45,
-                            "align": "left",
+                            "position": "right",
                             "verticalAlign": "middle",
                         }
                     },
@@ -521,10 +548,11 @@ if submitted:
         }
         
         # Calculate height based on number of nodes
-        tree_height = max(700, len(df) * 8)
+        tree_height = max(600, unique_l1 * 50 + unique_l2 * 15)
         st_echarts(opts, key=f"vertical_tree_{seed_keyword}", height=tree_height)
     
     else:  # Text Tree
+        st.caption("Click on folders to expand/collapse.")
         st.markdown("")
         
         # Build text tree with expanders
@@ -535,7 +563,15 @@ if submitted:
             
             with st.expander(f"📂 {l1_keyword} ({len(l2_keywords)} keywords)"):
                 for l2_kw in l2_keywords:
-                    st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;📄 {l2_kw}")
+                    st.write(f"└── 📄 {l2_kw}")
+    
+    # Clear results button
+    st.markdown("---")
+    if st.button("🔄 Start New Search", use_container_width=False):
+        st.session_state.df = None
+        st.session_state.seed_keyword = None
+        st.session_state.scraping_complete = False
+        st.rerun()
 
 # Footer
 st.markdown("---")

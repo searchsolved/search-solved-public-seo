@@ -21,6 +21,16 @@ This file tracks all Streamlit apps in this repository that need deployment.
 | Category Keyword Finder | `keyword-research/category-keyword-finder/category_keyword_finder.py` | Pending | - |
 | Keyword Trends Analyzer | `keyword-research/keyword-trends-analyzer/keyword_trends_analyzer.py` | Pending | - |
 | E-commerce Page Title Optimizer | `ecommerce/ecom-page-title-optimizer/ecom_page_title_optimizer.py` | Pending | - |
+| Product Title Gap Analyzer | `ecommerce/product-title-gap/product_title_gap.py` | Pending | - |
+| Title Keyword Gap Finder | `search-console/title-keyword-gap/title_keyword_gap.py` | Pending | - |
+| Product Spec Extractor | `ecommerce/product-spec-extractor/product_spec_extractor.py` | Pending | - |
+| DataForSEO Keyword Suggestions | `keyword-research/dataforseo-suggestions/dataforseo_suggestions.py` | Pending | - |
+| Reading Score Analyzer | `content-analysis/reading-score-analyzer/reading_score_analyzer.py` | Pending | - |
+| Share of Voice Calculator (CTR) | `reporting/share-of-voice/share_of_voice.py` | Pending | - |
+| Link Quality Analyzer | `link-building/link-quality-analyzer/link_quality_analyzer.py` | Pending | - |
+| Product Q&A Extractor | `ecommerce/product-qa-extractor/product_qa_extractor.py` | Pending | - |
+| Page Intent Classifier | `content-analysis/page-intent-classifier/page_intent_classifier.py` | Pending | - |
+| Review Sentiment Extractor | `content-analysis/review-sentiment-extractor/review_sentiment_extractor.py` | Pending | - |
 
 ## Already Deployed Apps
 

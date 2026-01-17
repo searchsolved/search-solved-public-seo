@@ -1,0 +1,6 @@
+streamlit
+pandas
+requests
+beautifulsoup4
+openai
+html2text

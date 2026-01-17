@@ -1,7 +1,7 @@
 stqdm==0.0.5
-pandas==2.2.3
-streamlit==1.41.0
-streamlit-echarts==0.4.0
-beautifulsoup4==4.12.3
-requests==2.32.3
-user-agent2==1.0.0
+pandas>=2.0.0
+streamlit>=1.30.0
+streamlit-echarts>=0.4.0
+beautifulsoup4>=4.12.0
+requests>=2.31.0
+user-agent2>=1.0.0

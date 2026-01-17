@@ -54,6 +54,8 @@ This file tracks all Streamlit apps in this repository that need deployment.
 | Content Reviewer (LLM) | `content-analysis/content-reviewer-llm/content_reviewer_llm.py` | Pending | - |
 | Keyword Extractor (LLM) | `content-analysis/keyword-extractor-llm/keyword_extractor_llm.py` | Pending | - |
 | Firecrawl Markdown Scraper | `technical-seo/firecrawl-markdown-scraper/firecrawl_markdown_scraper.py` | Pending | - |
+| Gist Summary Generator | `content-analysis/gist-summary-generator/gist_summary_generator.py` | Pending | - |
+| Keyword to Questions | `keyword-research/keyword-to-questions/keyword_to_questions.py` | Pending | - |
 
 ## Already Deployed Apps
 

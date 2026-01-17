@@ -40,6 +40,11 @@ This file tracks all Streamlit apps in this repository that need deployment.
 | Keyword-to-Page Mapper | `content-analysis/keyword-to-page-mapper/keyword_to_page_mapper.py` | Pending | - |
 | Category Title Suggester | `content-analysis/category-title-suggester/category_title_suggester.py` | Pending | - |
 | Micro-Moments Classifier | `keyword-research/micro-moments-classifier/micro_moments_classifier.py` | Pending | - |
+| Sitemap URL Extractor | `technical-seo/sitemap-url-extractor/sitemap_url_extractor.py` | Pending | - |
+| People Also Ask Scraper | `keyword-research/paa-scraper/paa_scraper.py` | Pending | - |
+| Redirect Validator | `technical-seo/redirect-validator/redirect_validator.py` | Pending | - |
+| Hreflang Checker | `technical-seo/hreflang-checker/hreflang_checker.py` | Pending | - |
+| OnCrawl Data Extractor | `technical-seo/oncrawl-extractor/oncrawl_extractor.py` | Pending | - |
 
 ## Already Deployed Apps
 

@@ -27,7 +27,7 @@ keyword_detector = RakunKeyphraseDetector(hyperparameters)
 
 st.title("Search Term Report MPN & Key Phrase Extractor")
 
-st.markdown("*Created by 🌐 [Lee Foot](https://leefoot.com) · [LinkedIn](https://www.linkedin.com/in/lee-foot/) · 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social)*")
+st.markdown("*Created by 🌐 [Lee Foot](https://www.leefoot.com) · [LinkedIn](https://www.linkedin.com/in/lee-foot/) · 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social)*")
 
 with st.expander("How to use this tool"):
     st.markdown("""

@@ -1,7 +1,7 @@
 ####################################################################################
 # Author   : Lee Foot                                                              #
-# Website  : https://leefoot.com                                               #
-# Contact  : https://leefoot.com/contact                                       #
+# Website  : https://www.leefoot.com                                               #
+# Contact  : https://www.leefoot.com/contact                                       #
 # Email    : hello@leefoot.com                                                     #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
 # Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                                              #
@@ -18,7 +18,7 @@ from fuzzywuzzy import fuzz
 import altair as alt
 
 st.write(
-    "Made by [@leefootseo](https://bsky.app/profile/leefootseo.bsky.social) | [Website](https://leefoot.com) | [Contact](https://leefoot.com/contact)")
+    "Made by [@leefootseo](https://bsky.app/profile/leefootseo.bsky.social) | [Website](https://www.leefoot.com) | [Contact](https://www.leefoot.com/contact)")
 
 with st.expander("How do I use this app?"):
     st.write("""

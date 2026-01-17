@@ -52,4 +52,4 @@ As a last resort, Selenium, which mimics human browser interaction, is employed 
 A basic knowledge of Python is necessary to effectively use this script, including how to install and run scripts.
 
 ## Full Code and Article
-Access the full script and a detailed write-up [here](https://leefoot.com/portfolio/automate-higher-resolution-images-ecom/).
+Access the full script and a detailed write-up [here](https://www.leefoot.com/portfolio/automate-higher-resolution-images-ecom/).

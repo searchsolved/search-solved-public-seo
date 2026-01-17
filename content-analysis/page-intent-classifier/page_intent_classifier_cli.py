@@ -8,7 +8,7 @@ Usage:
     python page_intent_classifier_cli.py --api-key YOUR_KEY --urls urls.txt
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

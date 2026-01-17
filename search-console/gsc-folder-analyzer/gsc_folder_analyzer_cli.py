@@ -8,7 +8,7 @@ Usage:
     python gsc_folder_analyzer_cli.py --input gsc_data.csv --domain https://example.com/
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

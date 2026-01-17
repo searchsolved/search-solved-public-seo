@@ -8,7 +8,7 @@ Usage:
     python anchor_text_interlinker_cli.py --crawl crawl.csv --keywords keywords.csv
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

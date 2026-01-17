@@ -4,7 +4,7 @@ Sitemap URL Extractor - CLI Version
 Extracts all URLs from sitemap indexes and child sitemaps.
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 
 Usage:
     python sitemap_url_extractor_cli.py https://example.com/sitemap.xml -o urls.csv
@@ -184,7 +184,7 @@ Examples:
     %(prog)s https://example.com/sitemap.xml --format txt -o urls.txt
     %(prog)s https://example.com/sitemap.xml --no-metadata
 
-Author: Lee Foot (https://leefoot.com)
+Author: Lee Foot (https://www.leefoot.com)
         """
     )
 

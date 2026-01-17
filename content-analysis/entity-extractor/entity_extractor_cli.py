@@ -8,7 +8,7 @@ Usage:
     python entity_extractor_cli.py --input content.csv --output entities.csv
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

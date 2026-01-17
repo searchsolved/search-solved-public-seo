@@ -8,7 +8,7 @@ Usage:
     python dataforseo_suggestions_cli.py --login your@email.com --password yourpassword --keywords "seo tools"
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

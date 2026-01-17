@@ -8,7 +8,7 @@ Usage:
     python micro_moments_classifier_cli.py --input keywords.csv --api-key YOUR_KEY
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

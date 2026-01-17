@@ -8,7 +8,7 @@ Usage:
     python non_white_background_detector_cli.py --input images.csv --output results.csv
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

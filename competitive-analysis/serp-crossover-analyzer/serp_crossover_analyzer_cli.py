@@ -8,7 +8,7 @@ Usage:
     python serp_crossover_analyzer_cli.py --keywords "seo tools" "keyword research" --api-key YOUR_KEY
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

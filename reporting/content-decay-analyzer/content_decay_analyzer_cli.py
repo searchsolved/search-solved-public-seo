@@ -8,7 +8,7 @@ Usage:
     python content_decay_analyzer_cli.py --input gsc_data.csv
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

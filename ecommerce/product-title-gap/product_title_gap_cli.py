@@ -9,7 +9,7 @@ Usage:
     python product_title_gap_cli.py --your-crawl your_crawl.csv --competitor-crawls comp1.csv comp2.csv
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

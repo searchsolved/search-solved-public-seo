@@ -8,7 +8,7 @@ Usage:
     python product_qa_extractor_cli.py --urls urls.txt
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

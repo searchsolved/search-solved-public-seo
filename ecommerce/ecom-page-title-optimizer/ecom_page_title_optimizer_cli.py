@@ -8,7 +8,7 @@ Usage:
     python ecom_page_title_optimizer_cli.py --crawl crawl.csv --gsc gsc.csv
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

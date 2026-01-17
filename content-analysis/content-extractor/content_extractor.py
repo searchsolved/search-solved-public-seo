@@ -310,4 +310,4 @@ else:
     """)
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("Built by 🌐 [Lee Foot](https://leefoot.com) · [LinkedIn](https://www.linkedin.com/in/lee-foot/) · 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social)")
+st.sidebar.markdown("Built by 🌐 [Lee Foot](https://www.leefoot.com) · [LinkedIn](https://www.linkedin.com/in/lee-foot/) · 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social)")

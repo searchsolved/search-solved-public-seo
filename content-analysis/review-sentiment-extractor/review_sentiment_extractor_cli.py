@@ -8,7 +8,7 @@ Usage:
     python review_sentiment_extractor_cli.py --api-key YOUR_KEY --input reviews.csv
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

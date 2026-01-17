@@ -8,7 +8,7 @@ Usage:
     python category_keyword_finder_cli.py --input crawl.csv --output keywords.csv
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

@@ -8,7 +8,7 @@ Usage:
     python related_searches_tree_cli.py --keyword "seo tools" --api-key YOUR_KEY
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

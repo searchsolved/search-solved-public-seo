@@ -8,7 +8,7 @@ Usage:
     python link_quality_analyzer_cli.py --urls urls.txt --selector "article"
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

@@ -8,7 +8,7 @@ Usage:
     python title_keyword_gap_cli.py --crawl crawl.csv --gsc gsc_data.csv
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

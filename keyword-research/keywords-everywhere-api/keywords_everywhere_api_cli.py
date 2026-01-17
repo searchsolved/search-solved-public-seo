@@ -8,7 +8,7 @@ Usage:
     python keywords_everywhere_api_cli.py --input keywords.csv --api-key YOUR_KEY --country uk
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

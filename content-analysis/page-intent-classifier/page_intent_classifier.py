@@ -6,8 +6,8 @@
 #                                                                                  #
 ####################################################################################
 # Author   : Lee Foot                                                              #
-# Website  : https://leefoot.com                                                   #
-# Contact  : https://leefoot.com/contact                                           #
+# Website  : https://www.leefoot.com                                                   #
+# Contact  : https://www.leefoot.com/contact                                           #
 # Email    : hello@leefoot.com                                                     #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
 # Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                       #
@@ -45,7 +45,7 @@ except ImportError:
     PACKAGES_AVAILABLE = False
 
 st.title("Page Intent Classifier")
-st.markdown("*Created by 🌐 [Lee Foot](https://leefoot.com) · [LinkedIn](https://www.linkedin.com/in/lee-foot/) · 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social)*")
+st.markdown("*Created by 🌐 [Lee Foot](https://www.leefoot.com) · [LinkedIn](https://www.linkedin.com/in/lee-foot/) · 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social)*")
 
 if not PACKAGES_AVAILABLE:
     st.error("""

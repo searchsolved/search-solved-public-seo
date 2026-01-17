@@ -8,7 +8,7 @@ Usage:
     python content_extractor_cli.py --input urls.csv --output extracted.csv
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

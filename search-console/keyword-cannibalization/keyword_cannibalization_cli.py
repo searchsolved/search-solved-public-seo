@@ -8,7 +8,7 @@ Usage:
     python keyword_cannibalization_cli.py --input gsc_data.csv --output cannibalization.csv
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

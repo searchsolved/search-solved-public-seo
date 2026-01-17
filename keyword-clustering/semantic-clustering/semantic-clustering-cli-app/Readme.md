@@ -1,5 +1,5 @@
 # Semantic Keyword Clustering with Python
-## By LeeFoot | https://leefoot.com for more like this
+## By LeeFoot | https://www.leefoot.com for more like this
 
 This collection of Python scripts harnesses the power of the SentenceTransformers library and HDBScan to semantically cluster keywords. It employs sentence embeddings to group semantically similar keywords, streamlining the analysis of extensive keyword lists. This suite offers both CLI versions and an HDBScan version to accommodate various clustering needs and dataset sizes.
 

@@ -3,7 +3,7 @@ Schema Markup Generator - Streamlit App
 Generate valid JSON-LD schema markup for common schema types.
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import streamlit as st
@@ -601,4 +601,4 @@ with st.expander("About Schema Markup"):
 
 # Footer
 st.markdown("---")
-st.markdown("Built by 🌐 [Lee Foot](https://leefoot.com) · [LinkedIn](https://www.linkedin.com/in/lee-foot/) · 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social)")
+st.markdown("Built by 🌐 [Lee Foot](https://www.leefoot.com) · [LinkedIn](https://www.linkedin.com/in/lee-foot/) · 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social)")

@@ -8,7 +8,7 @@ Usage:
     python striking_distance_csv_cli.py --gsc gsc.csv --crawl crawl.csv --output results.csv
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

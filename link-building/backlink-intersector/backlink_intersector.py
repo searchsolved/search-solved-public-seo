@@ -6,7 +6,7 @@ import re
 st.set_page_config(page_title="Backlink Intersector", page_icon="🔗", layout="wide")
 
 st.title("Backlink Intersector")
-st.markdown("*Created by 🌐 [Lee Foot](https://leefoot.com) · [LinkedIn](https://www.linkedin.com/in/lee-foot/) · 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social)*")
+st.markdown("*Created by 🌐 [Lee Foot](https://www.leefoot.com) · [LinkedIn](https://www.linkedin.com/in/lee-foot/) · 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social)*")
 
 with st.expander("How to use this tool"):
     st.markdown("""

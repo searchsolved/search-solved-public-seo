@@ -8,7 +8,7 @@ Usage:
     python keyword_to_page_mapper_cli.py --pages crawl.csv --keywords keywords.csv
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

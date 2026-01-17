@@ -8,7 +8,7 @@ Usage:
     python backlink_intersector_cli.py --yours backlinks.csv --competitors comp1.csv comp2.csv
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

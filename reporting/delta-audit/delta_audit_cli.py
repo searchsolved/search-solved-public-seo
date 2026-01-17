@@ -8,7 +8,7 @@ Usage:
     python delta_audit_cli.py --input gsc_data.csv --output report.csv
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

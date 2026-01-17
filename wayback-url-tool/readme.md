@@ -17,4 +17,4 @@ The Internet Archive Data Analyser is a powerful Streamlit-based web application
 ## Online App
 - https://wayback.streamlit.app/ 
 
-[![Website](https://img.shields.io/website?url=https%3A%2F%2Fleefoot.com&up_message=online&down_message=offline&style=for-the-badge)](https://leefoot.com)
+[![Website](https://img.shields.io/website?url=https%3A%2F%2Fleefoot.com&up_message=online&down_message=offline&style=for-the-badge)](https://www.leefoot.com)

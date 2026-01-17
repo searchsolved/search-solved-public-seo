@@ -6,8 +6,8 @@
 #                                                                                  #
 ####################################################################################
 # Author   : Lee Foot                                                              #
-# Website  : https://leefoot.com                                                   #
-# Contact  : https://leefoot.com/contact                                           #
+# Website  : https://www.leefoot.com                                                   #
+# Contact  : https://www.leefoot.com/contact                                           #
 # Email    : hello@leefoot.com                                                     #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
 # Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                       #
@@ -37,7 +37,7 @@ from urllib.parse import urlparse
 st.set_page_config(page_title="SERP Crossover Analyzer", page_icon="🔀", layout="wide")
 
 st.title("SERP Crossover Analyzer")
-st.markdown("*Created by 🌐 [Lee Foot](https://leefoot.com) · [LinkedIn](https://www.linkedin.com/in/lee-foot/) · 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social)*")
+st.markdown("*Created by 🌐 [Lee Foot](https://www.leefoot.com) · [LinkedIn](https://www.linkedin.com/in/lee-foot/) · 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social)*")
 
 with st.expander("How to use this tool"):
     st.markdown("""

@@ -1,7 +1,7 @@
 ####################################################################################
 # Author   : Lee Foot                                                              #
-# Website  : https://leefoot.com                                               #
-# Contact  : https://leefoot.com/contact                                       #
+# Website  : https://www.leefoot.com                                               #
+# Contact  : https://www.leefoot.com/contact                                       #
 # Email    : hello@leefoot.com                                                     #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
 # Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                                              #
@@ -27,7 +27,7 @@ import time
 set_random_seed(0)
 
 st.write(
-    "Made by [@leefootseo](https://bsky.app/profile/leefootseo.bsky.social) | [Website](https://leefoot.com) | [Contact](https://leefoot.com/contact)")
+    "Made by [@leefootseo](https://bsky.app/profile/leefootseo.bsky.social) | [Website](https://www.leefoot.com) | [Contact](https://www.leefoot.com/contact)")
 
 st.title("Google Trends & Facebook Prophet Tool")
 

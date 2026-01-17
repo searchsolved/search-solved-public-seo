@@ -8,7 +8,7 @@ Usage:
     python product_spec_extractor_cli.py --urls urls.txt --dt-selector "dt" --dd-selector "dd"
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

@@ -1,7 +1,7 @@
 ####################################################################################
 # Author   : Lee Foot                                                              #
-# Website  : https://leefoot.com                                               #
-# Contact  : https://leefoot.com/contact                                       #
+# Website  : https://www.leefoot.com                                               #
+# Contact  : https://www.leefoot.com/contact                                       #
 # Email    : hello@leefoot.com                                                     #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
 # Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                                              #
@@ -250,9 +250,9 @@ st.markdown("""
 <div style="margin-bottom: 20px;">
     <h6>
         Built with Streamlit & OpenCV | 
-        <a href="https://leefoot.com" target="_blank">By Lee Foot</a> |
+        <a href="https://www.leefoot.com" target="_blank">By Lee Foot</a> |
         <a href="https://www.linkedin.com/in/lee-foot/" target="_blank">LinkedIn</a> |
-        <a href="https://leefoot.com/contact">Hire Me</a>
+        <a href="https://www.leefoot.com/contact">Hire Me</a>
     </h6>
 </div>
 """, unsafe_allow_html=True)
@@ -445,4 +445,4 @@ else:
 # Footer
 st.markdown("---")
 st.markdown(
-    "eCommerce Image Centering Tool | By [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://leefoot.com) | [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) | 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social) | [Contact](https://leefoot.com/contact)")
+    "eCommerce Image Centering Tool | By [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) | [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) | 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social) | [Contact](https://www.leefoot.com/contact)")

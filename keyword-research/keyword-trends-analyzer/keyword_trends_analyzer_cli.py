@@ -8,7 +8,7 @@ Usage:
     python keyword_trends_analyzer_cli.py --input keywords.csv --output trends.csv
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

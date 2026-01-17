@@ -8,7 +8,7 @@ Usage:
     python google_algorithm_tracker_cli.py --output updates.csv
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

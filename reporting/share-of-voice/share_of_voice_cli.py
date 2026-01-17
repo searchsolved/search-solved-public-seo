@@ -8,7 +8,7 @@ Usage:
     python share_of_voice_cli.py --input rankings.csv
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

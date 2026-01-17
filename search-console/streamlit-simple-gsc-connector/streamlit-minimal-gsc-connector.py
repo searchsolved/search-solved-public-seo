@@ -1,7 +1,7 @@
 ####################################################################################
 # Author   : Lee Foot                                                              #
-# Website  : https://leefoot.com                                               #
-# Contact  : https://leefoot.com/contact                                       #
+# Website  : https://www.leefoot.com                                               #
+# Contact  : https://www.leefoot.com/contact                                       #
 # Email    : hello@leefoot.com                                                     #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
 # Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                                              #
@@ -76,8 +76,8 @@ def setup_streamlit():
             Created by <strong>Lee Foot</strong> •
             <a href="https://bsky.app/profile/leefootseo.bsky.social" target="_blank">Bluesky</a> •
             <a href="https://www.linkedin.com/in/lee-foot/" target="_blank">LinkedIn</a> •
-            <a href="https://leefoot.com" target="_blank">🌐 Website</a> •
-            <a href="https://leefoot.com/contact" target="_blank">Contact</a>
+            <a href="https://www.leefoot.com" target="_blank">🌐 Website</a> •
+            <a href="https://www.leefoot.com/contact" target="_blank">Contact</a>
         </div>
         """,
         unsafe_allow_html=True

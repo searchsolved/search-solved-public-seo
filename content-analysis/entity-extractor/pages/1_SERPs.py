@@ -1,6 +1,6 @@
 ####################################################################################
 # Author   : Lee Foot                                                              #
-# Website  : https://leefoot.com                                               #
+# Website  : https://www.leefoot.com                                               #
 # Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                                              #
 ####################################################################################
 

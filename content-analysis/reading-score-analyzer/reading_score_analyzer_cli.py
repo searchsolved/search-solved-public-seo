@@ -9,7 +9,7 @@ Usage:
     python reading_score_analyzer_cli.py --urls urls.txt
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

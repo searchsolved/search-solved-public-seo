@@ -8,7 +8,7 @@ Usage:
     python breadcrumb_relevancy_checker_cli.py --input crawl.csv --output results.csv
 
 Author: Lee Foot
-Website: https://leefoot.com
+Website: https://www.leefoot.com
 """
 
 import argparse

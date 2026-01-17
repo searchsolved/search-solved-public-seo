@@ -70,7 +70,7 @@ Format each tweet on its own line, numbered 1/, 2/, etc."""
     },
     "linkedin_post": {
         "name": "LinkedIn Post",
-        "icon": "💼",
+        "icon": "🔗",
         "description": "Professional post with hook and formatting",
         "prompt": """Create a LinkedIn post from this content.
 
@@ -474,4 +474,4 @@ with st.expander("Tips for Best Results"):
 
 # Footer
 st.markdown("---")
-st.markdown("Built by [Lee Foot](https://leefoot.com)")
+st.markdown("Built by 🌐 [Lee Foot](https://leefoot.com) · [LinkedIn](https://www.linkedin.com/in/lee-foot/) · 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social)")

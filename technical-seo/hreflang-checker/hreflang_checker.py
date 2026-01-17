@@ -402,4 +402,4 @@ with st.expander("How to use this tool"):
 
 # Footer
 st.markdown("---")
-st.markdown("Built by [Lee Foot](https://leefoot.com) | [GitHub](https://github.com/searchsolved/search-solved-public-seo)")
+st.markdown("Built by 🌐 [Lee Foot](https://leefoot.com) · [LinkedIn](https://www.linkedin.com/in/lee-foot/) · 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social)")

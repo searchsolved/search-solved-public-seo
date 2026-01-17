@@ -445,4 +445,4 @@ else:
 # Footer
 st.markdown("---")
 st.markdown(
-    "eCommerce Image Centering Tool | By [Lee Foot](https://leefoot.com) | [Bluesky](https://bsky.app/profile/leefootseo.bsky.social) | [LinkedIn](https://www.linkedin.com/in/lee-foot/) | [Contact](https://leefoot.com/contact)")
+    "eCommerce Image Centering Tool | By [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://leefoot.com) | [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) | 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social) | [Contact](https://leefoot.com/contact)")

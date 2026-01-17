@@ -35,7 +35,7 @@ import json
 st.set_page_config(page_title="DataForSEO Keyword Suggestions", page_icon="🔑", layout="wide")
 
 st.title("DataForSEO Keyword Suggestions")
-st.markdown("*Created by [Lee Foot](https://leefoot.com)*")
+st.markdown("*Created by 🌐 [Lee Foot](https://leefoot.com) · [LinkedIn](https://www.linkedin.com/in/lee-foot/) · 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social)*")
 
 with st.expander("How to use this tool"):
     st.markdown("""

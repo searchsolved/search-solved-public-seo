@@ -34,7 +34,7 @@ from io import BytesIO
 st.set_page_config(page_title="Hreflang Generator", page_icon="🌍", layout="wide")
 
 st.title("Hreflang Generator")
-st.markdown("*Created by [Lee Foot](https://leefoot.com)*")
+st.markdown("*Created by 🌐 [Lee Foot](https://leefoot.com) · [LinkedIn](https://www.linkedin.com/in/lee-foot/) · 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social)*")
 
 with st.expander("How to use this tool"):
     st.markdown("""

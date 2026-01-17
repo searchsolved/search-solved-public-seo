@@ -46,7 +46,7 @@ except ImportError:
     PACKAGES_AVAILABLE = False
 
 st.title("Reading Score Analyzer")
-st.markdown("*Created by [Lee Foot](https://leefoot.com)*")
+st.markdown("*Created by 🌐 [Lee Foot](https://leefoot.com) · [LinkedIn](https://www.linkedin.com/in/lee-foot/) · 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social)*")
 
 if not PACKAGES_AVAILABLE:
     st.error("""

@@ -228,9 +228,9 @@ with st.sidebar:
     st.markdown("---")
     
     st.markdown("""
-    **Built by [Lee Foot](https://leefoot.com)**
+    **Built by 🌐 [Lee Foot](https://leefoot.com)**
     
-    [🦋 Bluesky](https://bsky.app/profile/leefootseo.bsky.social) · [💼 LinkedIn](https://www.linkedin.com/in/lee-foot/) · [📧 Contact](https://leefoot.com/contact)
+    [LinkedIn](https://www.linkedin.com/in/lee-foot/) · [🦋 Bluesky](https://bsky.app/profile/leefootseo.bsky.social) · [📧 Contact](https://leefoot.com/contact)
     """)
 
 
@@ -576,8 +576,8 @@ if st.session_state.scraping_complete and st.session_state.df is not None:
 # Footer
 st.markdown("---")
 st.markdown(
-    "Made by [Lee Foot](https://leefoot.com) · "
+    "Made by 🌐 [Lee Foot](https://leefoot.com) · "
     "[🦋 Bluesky](https://bsky.app/profile/leefootseo.bsky.social) · "
-    "[💼 LinkedIn](https://www.linkedin.com/in/lee-foot/) · "
+    "[LinkedIn](https://www.linkedin.com/in/lee-foot/) · "
     "[📧 Contact](https://leefoot.com/contact)"
 )

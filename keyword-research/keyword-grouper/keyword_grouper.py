@@ -6,7 +6,7 @@ from io import BytesIO
 st.set_page_config(page_title="Keyword Grouper", page_icon="🔗", layout="wide")
 
 st.title("Keyword Grouper")
-st.markdown("*Created by [Lee Foot](https://leefoot.com)*")
+st.markdown("*Created by 🌐 [Lee Foot](https://leefoot.com) · [LinkedIn](https://www.linkedin.com/in/lee-foot/) · 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social)*")
 st.warning("**Experimental Tool** - This is a proof of concept and may have limitations.")
 
 with st.expander("How to use this tool"):

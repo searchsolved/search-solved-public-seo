@@ -1,10 +1,10 @@
 ####################################################################################
 # Author   : Lee Foot                                                              #
-# Website  : https://leefoot.com                                               #
-# Contact  : https://leefoot.com/contact                                       #
+# Website  : https://leefoot.com                                                   #
+# Contact  : https://leefoot.com/contact                                           #
 # Email    : hello@leefoot.com                                                     #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
-# Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                                              #
+# Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                       #
 ####################################################################################
 
 import streamlit as st
@@ -19,7 +19,7 @@ from stqdm import stqdm
 import pandas as pd
 from bs4 import BeautifulSoup
 import requests
-from user_agent2 import (generate_user_agent)
+from user_agent2 import generate_user_agent
 
 # set fake agent
 ua = generate_user_agent(navigator="chrome")
@@ -35,21 +35,19 @@ final_kws = []
 
 st.title("eBay Related Search Scraper")
 st.subheader("Get Related Searches from Ebay")
+st.write("An app which visualises related searches from eBay")
 st.write(
-    "An app which visualises related searches from eBay")
-st.write(
-"Made by [@leefootseo](https://bsky.app/profile/leefootseo.bsky.social) | [Website](https://leefoot.com) | [Contact](https://leefoot.com/contact)")
+    "Made by [@leefootseo](https://bsky.app/profile/leefootseo.bsky.social) | [Website](https://leefoot.com) | [Contact](https://leefoot.com/contact)")
 st.write("")
 
 with st.form(key='columns_in_form_2'):
     seed_keyword = st.text_input('Enter the Keyword to Search eBay')
-    submitted = st.form_submit_button('Submit')
     ccTLD = st.selectbox(
         'Select Which ccTLD to Search',
         ('.com', '.co.uk', '.de', '.es', '.fr', '.nl'))
+    submitted = st.form_submit_button('Submit')
 
 if submitted:
-
     response = requests.get("http://www.ebay" + ccTLD + url + seed_keyword, headers=header)
     soup = BeautifulSoup(response.text, "html.parser")
     for related in soup.select(css):
@@ -58,15 +56,15 @@ if submitted:
         result_str = result_str.replace(" ", ",")
         result_str = result_str.replace("@", " ")
         result_str = result_str.replace("Related:,", "")
-        related_search_kws = result_str.split(",")  # list of keywords to iterate over
+        related_search_kws = result_str.split(",")
 
     # second loop
     st.write("Searching eBay for Related keywords")
     for kw in stqdm(related_search_kws):
         response = requests.get("http://www.ebay" + ccTLD + url + kw, headers=header)
-        soup_lv2 = BeautifulSoup(response.text, "html.parser")  # Create a new soup object for each iteration
+        soup_lv2 = BeautifulSoup(response.text, "html.parser")
 
-        for lv2_kw in soup_lv2.select(css):  # Use the new soup object
+        for lv2_kw in soup_lv2.select(css):
             result_str_lv2 = lv2_kw.get_text(separator=' ')
             result_str_lv2 = result_str_lv2.replace("  ", "@")
             result_str_lv2 = result_str_lv2.replace(" ", ",")
@@ -79,7 +77,6 @@ if submitted:
     df = pd.DataFrame(None)
     df['seed_keyword'] = source_kws
     df['related_searches'] = final_kws
-    df.to_csv("/python_scripts/test.csv")
 
     try:
         df['related_searches'] = df['related_searches'].str.split(',')
@@ -88,6 +85,7 @@ if submitted:
         st.stop()
 
     df = df.explode('related_searches').reset_index(drop=True)
+
 
     def visualize_autocomplete(df_autocomplete_full):
         df_autocomplete_full['Keyword'] = seed_keyword
@@ -99,7 +97,7 @@ if submitted:
 
             for int_word in df_autocomplete_full['seed_keyword']:
                 q_lv1_line = {"name": int_word}
-                if not q_lv1_line in children_list_level_1:
+                if q_lv1_line not in children_list_level_1:
                     children_list_level_1.append(q_lv1_line)
 
                 children_list_level_2 = []
@@ -111,30 +109,25 @@ if submitted:
 
                 level2_tree = {'name': int_word, 'children': children_list_level_2}
 
-                if not level2_tree in children_list:
+                if level2_tree not in children_list:
                     children_list.append(level2_tree)
 
                 tree = {'name': query, 'children': children_list}
 
                 opts = {
                     "backgroundColor": "#F0F2F6",
-
                     "title": {
                         "x": 'center',
                         "y": 'top',
                         "top": "5%",
-
                         "textStyle": {
                             "fontSize": 22,
-
                         },
                         "subtextStyle": {
                             "fontSize": 15,
                             "color": '#2ec4b6',
-
                         },
                     },
-
                     "series": [
                         {
                             "type": "tree",
@@ -151,7 +144,6 @@ if submitted:
                             "label": {
                                 "fontSize": 14,
                             },
-
                             "expandAndCollapse": True,
                             "animationDuration": 550,
                             "animationDurationUpdate": 750,
@@ -163,9 +155,8 @@ if submitted:
             st_echarts(opts, key=query, height=1700)
 
 
-    # add download button
-    def convert_df(df):  # IMPORTANT: Cache the conversion to prevent computation on every rerun
-        return df.to_csv().encode('utf-8')
+    def convert_df(df):
+        return df.to_csv(index=False).encode('utf-8')
 
 
     csv = convert_df(df)
@@ -174,7 +165,8 @@ if submitted:
         label="📥 Download your report!",
         data=csv,
         file_name='ebay_related_searches.csv',
-        mime='text/csv', )
+        mime='text/csv',
+    )
 
     # visualisation
     visualize_autocomplete(df)

@@ -14,5 +14,5 @@ Automatically inject custom branding (text, logos, colors) into PDF files. Perfe
 
 - 🌐 [Website](https://www.leefoot.com)
 - 🐦 [Twitter/X](https://x.com/LeeFootSEO)
-- 💼 [LinkedIn](https://www.linkedin.com/in/lee-foot/)
+- [LinkedIn](https://www.linkedin.com/in/lee-foot/)
 - ✉️ [Contact](https://www.leefoot.com/contact)

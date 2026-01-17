@@ -15,5 +15,5 @@ Google Colab notebook version of the automatic website migration mapping tool. M
 
 - 🌐 [Website](https://www.leefoot.com)
 - 🐦 [Twitter/X](https://x.com/LeeFootSEO)
-- 💼 [LinkedIn](https://www.linkedin.com/in/lee-foot/)
+- [LinkedIn](https://www.linkedin.com/in/lee-foot/)
 - ✉️ [Contact](https://www.leefoot.com/contact)

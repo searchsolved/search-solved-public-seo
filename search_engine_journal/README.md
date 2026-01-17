@@ -191,7 +191,7 @@ jupyter notebook Top_Traffic_Pages_Search_Console_API_V1.ipynb
 - 🌐 [Website](https://www.leefoot.com)
 - 🐦 [Twitter/X](https://x.com/LeeFootSEO)
 - 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social)
-- 💼 [LinkedIn](https://www.linkedin.com/in/lee-foot/)
+- [LinkedIn](https://www.linkedin.com/in/lee-foot/)
 - 📚 [Publications](https://www.leefoot.com/publications/)
 - ✉️ [Contact](https://www.leefoot.com/contact)
 

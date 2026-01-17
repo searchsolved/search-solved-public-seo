@@ -14,5 +14,5 @@ Standalone Python script version of the semantic keyword clustering tool. Run lo
 
 - 🌐 [Website](https://www.leefoot.com)
 - 🐦 [Twitter/X](https://x.com/LeeFootSEO)
-- 💼 [LinkedIn](https://www.linkedin.com/in/lee-foot/)
+- [LinkedIn](https://www.linkedin.com/in/lee-foot/)
 - ✉️ [Contact](https://www.leefoot.com/contact)

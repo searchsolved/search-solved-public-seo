@@ -56,6 +56,9 @@ This file tracks all Streamlit apps in this repository that need deployment.
 | Firecrawl Markdown Scraper | `technical-seo/firecrawl-markdown-scraper/firecrawl_markdown_scraper.py` | Pending | - |
 | Gist Summary Generator | `content-analysis/gist-summary-generator/gist_summary_generator.py` | Pending | - |
 | Keyword to Questions | `keyword-research/keyword-to-questions/keyword_to_questions.py` | Pending | - |
+| Schema Markup Generator | `technical-seo/schema-markup-generator/schema_markup_generator.py` | Pending | - |
+| Regex Generator for SEO | `technical-seo/regex-generator/regex_generator.py` | Pending | - |
+| Content Repurposer | `content-analysis/content-repurposer/content_repurposer.py` | Pending | - |
 
 ## Already Deployed Apps
 

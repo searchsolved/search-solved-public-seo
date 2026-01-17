@@ -386,7 +386,6 @@ if submitted:
     # Visualization
     st.markdown("---")
     st.subheader("🌳 Keyword Relationship Tree")
-    st.caption("Click nodes to expand/collapse. Right-click to save as image.")
     
     # Build tree data
     children_list = []
@@ -401,55 +400,142 @@ if submitted:
     
     tree = {'name': seed_keyword, 'children': children_list}
     
-    opts = {
-        "tooltip": {
-            "trigger": "item",
-            "triggerOn": "mousemove",
-        },
-        "series": [
-            {
-                "type": "tree",
-                "data": [tree],
-                "layout": "radial",
-                "top": "5%",
-                "left": "15%",
-                "bottom": "5%",
-                "right": "15%",
-                "symbolSize": 12,
-                "symbol": "circle",
-                "itemStyle": {
-                    "color": "#10B981",
-                    "borderColor": "#059669",
-                    "borderWidth": 2,
-                },
-                "lineStyle": {
-                    "color": "#94A3B8",
-                    "width": 1.5,
-                    "curveness": 0.5,
-                },
-                "label": {
-                    "fontSize": 12,
-                    "color": "#475569",
-                },
-                "emphasis": {
+    # View selector
+    view_type = st.radio(
+        "Select view",
+        ["🔵 Radial Tree", "📊 Vertical Tree", "📁 Text Tree"],
+        horizontal=True,
+        help="Choose how to visualize the keyword relationships"
+    )
+    
+    st.caption("Click nodes to expand/collapse. Right-click to save as image.")
+    
+    if view_type == "🔵 Radial Tree":
+        opts = {
+            "tooltip": {
+                "trigger": "item",
+                "triggerOn": "mousemove",
+            },
+            "series": [
+                {
+                    "type": "tree",
+                    "data": [tree],
+                    "layout": "radial",
+                    "top": "5%",
+                    "left": "15%",
+                    "bottom": "5%",
+                    "right": "15%",
+                    "symbolSize": 12,
+                    "symbol": "circle",
                     "itemStyle": {
-                        "color": "#F59E0B",
-                        "borderColor": "#D97706",
+                        "color": "#10B981",
+                        "borderColor": "#059669",
+                        "borderWidth": 2,
                     },
                     "lineStyle": {
-                        "color": "#F59E0B",
-                        "width": 2,
+                        "color": "#94A3B8",
+                        "width": 1.5,
+                        "curveness": 0.5,
                     },
-                },
-                "expandAndCollapse": True,
-                "initialTreeDepth": 2,
-                "animationDuration": 550,
-                "animationDurationUpdate": 750,
-            }
-        ],
-    }
+                    "label": {
+                        "fontSize": 12,
+                    },
+                    "emphasis": {
+                        "itemStyle": {
+                            "color": "#F59E0B",
+                            "borderColor": "#D97706",
+                        },
+                        "lineStyle": {
+                            "color": "#F59E0B",
+                            "width": 2,
+                        },
+                    },
+                    "expandAndCollapse": True,
+                    "initialTreeDepth": 2,
+                    "animationDuration": 550,
+                    "animationDurationUpdate": 750,
+                }
+            ],
+        }
+        
+        st_echarts(opts, key=f"radial_tree_{seed_keyword}", height=700)
     
-    st_echarts(opts, key=f"tree_{seed_keyword}", height=700)
+    elif view_type == "📊 Vertical Tree":
+        opts = {
+            "tooltip": {
+                "trigger": "item",
+                "triggerOn": "mousemove",
+            },
+            "series": [
+                {
+                    "type": "tree",
+                    "data": [tree],
+                    "layout": "orthogonal",
+                    "orient": "TB",
+                    "top": "5%",
+                    "left": "10%",
+                    "bottom": "5%",
+                    "right": "10%",
+                    "symbolSize": 10,
+                    "symbol": "circle",
+                    "itemStyle": {
+                        "color": "#3B82F6",
+                        "borderColor": "#2563EB",
+                        "borderWidth": 2,
+                    },
+                    "lineStyle": {
+                        "color": "#94A3B8",
+                        "width": 1.5,
+                    },
+                    "label": {
+                        "position": "top",
+                        "fontSize": 11,
+                        "rotate": -45,
+                        "align": "right",
+                        "verticalAlign": "middle",
+                    },
+                    "leaves": {
+                        "label": {
+                            "position": "bottom",
+                            "rotate": -45,
+                            "align": "left",
+                            "verticalAlign": "middle",
+                        }
+                    },
+                    "emphasis": {
+                        "itemStyle": {
+                            "color": "#F59E0B",
+                            "borderColor": "#D97706",
+                        },
+                        "lineStyle": {
+                            "color": "#F59E0B",
+                            "width": 2,
+                        },
+                    },
+                    "expandAndCollapse": True,
+                    "initialTreeDepth": 2,
+                    "animationDuration": 550,
+                    "animationDurationUpdate": 750,
+                }
+            ],
+        }
+        
+        # Calculate height based on number of nodes
+        tree_height = max(700, len(df) * 8)
+        st_echarts(opts, key=f"vertical_tree_{seed_keyword}", height=tree_height)
+    
+    else:  # Text Tree
+        st.markdown("")
+        
+        # Build text tree with expanders
+        st.markdown(f"**🌱 {seed_keyword}**")
+        
+        for l1_keyword in df['seed_keyword'].unique():
+            l2_keywords = df[df['seed_keyword'] == l1_keyword]['related_searches'].unique().tolist()
+            
+            with st.expander(f"📂 {l1_keyword} ({len(l2_keywords)} keywords)"):
+                for l2_kw in l2_keywords:
+                    st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;📄 {l2_kw}")
 
 # Footer
 st.markdown("---")

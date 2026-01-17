@@ -31,6 +31,15 @@ This file tracks all Streamlit apps in this repository that need deployment.
 | Product Q&A Extractor | `ecommerce/product-qa-extractor/product_qa_extractor.py` | Pending | - |
 | Page Intent Classifier | `content-analysis/page-intent-classifier/page_intent_classifier.py` | Pending | - |
 | Review Sentiment Extractor | `content-analysis/review-sentiment-extractor/review_sentiment_extractor.py` | Pending | - |
+| Content Decay Analyzer | `reporting/content-decay-analyzer/content_decay_analyzer.py` | Pending | - |
+| Google Algorithm Tracker | `reporting/google-algorithm-tracker/google_algorithm_tracker.py` | Pending | - |
+| Keywords Everywhere API | `keyword-research/keywords-everywhere-api/keywords_everywhere_api.py` | Pending | - |
+| Related Searches Tree | `keyword-research/related-searches-tree/related_searches_tree.py` | Pending | - |
+| SERP Crossover Analyzer | `competitive-analysis/serp-crossover-analyzer/serp_crossover_analyzer.py` | Pending | - |
+| LLM Sitemap Creator | `technical-seo/llm-sitemap-creator/llm_sitemap_creator.py` | Pending | - |
+| Keyword-to-Page Mapper | `content-analysis/keyword-to-page-mapper/keyword_to_page_mapper.py` | Pending | - |
+| Category Title Suggester | `content-analysis/category-title-suggester/category_title_suggester.py` | Pending | - |
+| Micro-Moments Classifier | `keyword-research/micro-moments-classifier/micro_moments_classifier.py` | Pending | - |
 
 ## Already Deployed Apps
 

@@ -3,7 +3,7 @@ Hreflang Checker - Streamlit App
 Extracts and validates hreflang tags from web pages.
 
 Author: Lee Foot
-Website: https://leefoot.co.uk
+Website: https://leefoot.com
 """
 
 import streamlit as st
@@ -402,4 +402,4 @@ with st.expander("How to use this tool"):
 
 # Footer
 st.markdown("---")
-st.markdown("Built by [Lee Foot](https://leefoot.co.uk) | [GitHub](https://github.com/searchsolved/search-solved-public-seo)")
+st.markdown("Built by [Lee Foot](https://leefoot.com) | [GitHub](https://github.com/searchsolved/search-solved-public-seo)")

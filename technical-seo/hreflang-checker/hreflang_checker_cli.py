@@ -4,7 +4,7 @@ Hreflang Checker - CLI Version
 Extracts and validates hreflang tags from web pages.
 
 Author: Lee Foot
-Website: https://leefoot.co.uk
+Website: https://leefoot.com
 
 Usage:
     python hreflang_checker_cli.py https://example.com
@@ -152,7 +152,7 @@ Examples:
     %(prog)s -f urls.txt -o hreflang_report.csv
     %(prog)s https://example.com --no-headers --no-validate
 
-Author: Lee Foot (https://leefoot.co.uk)
+Author: Lee Foot (https://leefoot.com)
         """
     )
 

@@ -4,7 +4,7 @@ OnCrawl API Suite - Comprehensive CLI Version
 Full-featured OnCrawl API client for data extraction, crawl management, and analysis.
 
 Author: Lee Foot
-Website: https://leefoot.co.uk
+Website: https://leefoot.com
 
 Usage:
     # List resources
@@ -768,7 +768,7 @@ Examples:
     %(prog)s --token TOKEN --project PROJ_ID --create-schedule --config-id CFG_ID --frequency daily --hour 2
     %(prog)s --token TOKEN --schedule SCHED_ID --delete-schedule
 
-Author: Lee Foot (https://leefoot.co.uk)
+Author: Lee Foot (https://leefoot.com)
         """
     )
 

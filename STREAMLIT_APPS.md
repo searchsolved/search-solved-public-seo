@@ -45,6 +45,15 @@ This file tracks all Streamlit apps in this repository that need deployment.
 | Redirect Validator | `technical-seo/redirect-validator/redirect_validator.py` | Pending | - |
 | Hreflang Checker | `technical-seo/hreflang-checker/hreflang_checker.py` | Pending | - |
 | OnCrawl Data Extractor | `technical-seo/oncrawl-extractor/oncrawl_extractor.py` | Pending | - |
+| Meta Description Grader | `content-analysis/meta-description-grader/meta_description_grader.py` | Pending | - |
+| Meta Description Rewriter | `content-analysis/meta-description-rewriter/meta_description_rewriter.py` | Pending | - |
+| Anchor Text Relevance Checker | `internal-linking/anchor-text-relevance-checker/anchor_text_relevance_checker.py` | Pending | - |
+| Q&A Schema Extractor | `technical-seo/qa-schema-extractor/qa_schema_extractor.py` | Pending | - |
+| Keyword Topic Classifier | `keyword-research/keyword-topic-classifier/keyword_topic_classifier.py` | Pending | - |
+| Keyword Gap Analyzer | `competitive-analysis/keyword-gap-analyzer/keyword_gap_analyzer.py` | Pending | - |
+| Content Reviewer (LLM) | `content-analysis/content-reviewer-llm/content_reviewer_llm.py` | Pending | - |
+| Keyword Extractor (LLM) | `content-analysis/keyword-extractor-llm/keyword_extractor_llm.py` | Pending | - |
+| Firecrawl Markdown Scraper | `technical-seo/firecrawl-markdown-scraper/firecrawl_markdown_scraper.py` | Pending | - |
 
 ## Already Deployed Apps
 

@@ -3,7 +3,7 @@ OnCrawl API Suite - Comprehensive Streamlit App
 Full-featured OnCrawl API client for data extraction, crawl management, and analysis.
 
 Author: Lee Foot
-Website: https://leefoot.co.uk
+Website: https://leefoot.com
 """
 
 import streamlit as st
@@ -1644,4 +1644,4 @@ else:
 
 # Footer
 st.markdown("---")
-st.markdown("Built by [Lee Foot](https://leefoot.co.uk) | [GitHub](https://github.com/searchsolved/search-solved-public-seo)")
+st.markdown("Built by [Lee Foot](https://leefoot.com) | [GitHub](https://github.com/searchsolved/search-solved-public-seo)")

@@ -4,7 +4,7 @@ People Also Ask (PAA) Scraper - CLI Version
 Recursively extracts PAA questions from search results using ValueSERP API.
 
 Author: Lee Foot
-Website: https://leefoot.co.uk
+Website: https://leefoot.com
 
 Usage:
     python paa_scraper_cli.py "what is SEO" --api-key YOUR_KEY
@@ -133,7 +133,7 @@ Examples:
 
 Country codes: us, uk, ca, au, de, fr, es, it, nl, br, mx, in, jp
 
-Author: Lee Foot (https://leefoot.co.uk)
+Author: Lee Foot (https://leefoot.com)
         """
     )
 

@@ -4,7 +4,7 @@ Redirect/URL Mapping Validator - CLI Version
 Validates that implemented redirects match your redirect mapping specification.
 
 Author: Lee Foot
-Website: https://leefoot.co.uk
+Website: https://leefoot.com
 
 Usage:
     python redirect_validator_cli.py crawled.csv mapping.xlsx -o report.csv
@@ -201,7 +201,7 @@ Examples:
     %(prog)s crawled.csv mapping.csv --crawled-cols "Address,Redirect URL"
     %(prog)s crawled.xlsx mapping.xlsx --source-cols "old_url,new_url"
 
-Author: Lee Foot (https://leefoot.co.uk)
+Author: Lee Foot (https://leefoot.com)
         """
     )
 

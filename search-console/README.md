@@ -202,6 +202,7 @@ Detailed setup guides, troubleshooting information, and advanced configuration o
 
 - 🌐 [Website](https://www.leefoot.com)
 - 🐦 [Twitter/X](https://x.com/LeeFootSEO)
+- 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social)
 - 💼 [LinkedIn](https://www.linkedin.com/in/lee-foot/)
 - ✉️ [Contact](https://www.leefoot.com/contact)
 

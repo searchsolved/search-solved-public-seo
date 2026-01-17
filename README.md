@@ -15,6 +15,7 @@ A comprehensive collection of **40+ SEO tools**, Streamlit applications, APIs, a
 
 [![Website](https://img.shields.io/badge/Website-leefoot.com-blue)](https://www.leefoot.com)
 [![X](https://img.shields.io/badge/@LeeFootSEO-000000?logo=x&logoColor=white)](https://x.com/LeeFootSEO)
+[![Bluesky](https://img.shields.io/badge/Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/)
 [![Contact](https://img.shields.io/badge/Contact-Get_in_touch-green)](https://www.leefoot.com/contact)
 
@@ -218,5 +219,6 @@ This project is open source and available under the [MIT License](LICENSE).
   <strong>Built for the SEO community</strong><br><br>
   <a href="https://www.leefoot.com">leefoot.com</a> ·
   <a href="https://x.com/LeeFootSEO">𝕏 @LeeFootSEO</a> ·
+  <a href="https://bsky.app/profile/leefootseo.bsky.social">Bluesky</a> ·
   <a href="https://www.linkedin.com/in/lee-foot/">LinkedIn</a>
 </p>

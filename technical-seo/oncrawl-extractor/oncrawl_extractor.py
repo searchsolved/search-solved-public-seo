@@ -1,6 +1,6 @@
 """
-OnCrawl Data Extractor - Streamlit App
-Extract data from OnCrawl crawls using the API.
+OnCrawl API Suite - Comprehensive Streamlit App
+Full-featured OnCrawl API client for data extraction, crawl management, and analysis.
 
 Author: Lee Foot
 Website: https://leefoot.co.uk
@@ -9,202 +9,298 @@ Website: https://leefoot.co.uk
 import streamlit as st
 import pandas as pd
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import StringIO
 import io
 import json
+import time
 
 st.set_page_config(
-    page_title="OnCrawl Data Extractor",
+    page_title="OnCrawl API Suite",
     page_icon="🕷️",
     layout="wide"
 )
 
-st.title("🕷️ OnCrawl Data Extractor")
-st.markdown("Extract and analyze data from your OnCrawl crawls.")
+st.title("🕷️ OnCrawl API Suite")
+st.markdown("Comprehensive OnCrawl API client for data extraction, crawl management, and analysis.")
 
 # Constants
 BASE_URL = "https://app.oncrawl.com/api/v2"
 
-# Preset queries
+# Comprehensive field list based on API documentation
+AVAILABLE_FIELDS = {
+    "Core": [
+        "url", "urlpath", "urlsegment1", "urlsegment2", "urlsegment3", "urlsegment4",
+        "status_code", "content_type", "fetched", "fetch_date"
+    ],
+    "SEO Metadata": [
+        "title", "title_length", "title_duplicates_count",
+        "meta_description", "meta_description_length", "meta_description_duplicates_count",
+        "h1", "h1_count", "h2_count", "h3_count",
+        "canonical", "canonical_evaluation", "canonical_is_http", "canonical_is_relative"
+    ],
+    "Indexability": [
+        "meta_robots_index", "meta_robots_follow", "meta_robots_noarchive", "meta_robots_nosnippet",
+        "robots_txt_denied", "x_robots_tag_index", "x_robots_tag_follow",
+        "in_sitemap", "in_sitemap_count"
+    ],
+    "Redirects": [
+        "redirect_location", "final_redirect_location", "redirect_count",
+        "is_redirect_loop", "redirect_status_code"
+    ],
+    "Links": [
+        "nb_inlinks", "nb_outlinks", "nb_external_outlinks", "nb_internal_outlinks",
+        "nb_follow_inlinks", "nb_nofollow_inlinks",
+        "nb_follow_outlinks", "nb_nofollow_outlinks",
+        "inrank", "depth"
+    ],
+    "Performance": [
+        "delay_total", "delay_first_byte", "delay_last_byte",
+        "size_total", "size_html", "size_download"
+    ],
+    "Content": [
+        "word_count", "text_ratio", "lang", "charset",
+        "content_encoding", "content_hash"
+    ],
+    "Structured Data": [
+        "has_microdata", "has_jsonld", "has_opengraph", "has_twitter_card",
+        "has_schema_org", "schema_org_types"
+    ],
+    "Images": [
+        "nb_images", "nb_images_without_alt", "nb_images_with_empty_alt"
+    ],
+    "URL Properties": [
+        "url_length", "url_has_params", "url_params_count",
+        "url_has_uppercase", "url_has_underscores"
+    ],
+    "Hreflang": [
+        "hreflang_keys", "hreflang_values", "has_hreflang", "hreflang_self_referencing"
+    ],
+    "AMP": [
+        "is_amp", "amphtml_url", "amphtml_valid"
+    ],
+    "Mobile": [
+        "is_mobile_friendly", "viewport_meta"
+    ],
+    "Security": [
+        "is_https", "has_mixed_content"
+    ]
+}
+
+# Flatten for multiselect
+ALL_FIELDS = []
+for category, fields in AVAILABLE_FIELDS.items():
+    ALL_FIELDS.extend(fields)
+
+# Preset queries - expanded with more use cases
 PRESET_QUERIES = {
+    # Status Code Issues
     "404 Pages": {
         "description": "All pages returning 404 status code",
         "fields": ["url", "status_code", "depth", "inrank", "nb_inlinks"],
-        "oql": {
-            "and": [
-                {"field": ["fetched", "equals", True]},
-                {"field": ["status_code", "equals", 404]}
-            ]
-        }
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 404]}]}
     },
+    "5xx Server Errors": {
+        "description": "All pages with server errors (500-599)",
+        "fields": ["url", "status_code", "depth", "nb_inlinks"],
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "between", [500, 599]]}]}
+    },
+    "4xx Client Errors": {
+        "description": "All pages with client errors (400-499)",
+        "fields": ["url", "status_code", "depth", "nb_inlinks"],
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "between", [400, 499]]}]}
+    },
+    # Redirects
     "301 Redirects": {
-        "description": "All pages with 301 redirects and their destinations",
+        "description": "All 301 permanent redirects",
         "fields": ["url", "status_code", "redirect_location", "final_redirect_location", "redirect_count"],
-        "oql": {
-            "and": [
-                {"field": ["fetched", "equals", True]},
-                {"field": ["status_code", "equals", 301]}
-            ]
-        }
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 301]}]}
     },
     "302 Redirects": {
-        "description": "All pages with 302 temporary redirects",
+        "description": "All 302 temporary redirects",
         "fields": ["url", "status_code", "redirect_location", "final_redirect_location", "redirect_count"],
-        "oql": {
-            "and": [
-                {"field": ["fetched", "equals", True]},
-                {"field": ["status_code", "equals", 302]}
-            ]
-        }
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 302]}]}
     },
     "Redirect Chains": {
-        "description": "Pages with multiple redirects (redirect count > 1)",
-        "fields": ["url", "status_code", "redirect_count", "redirect_location", "final_redirect_location", "is_redirect_loop"],
-        "oql": {
-            "and": [
-                {"field": ["fetched", "equals", True]},
-                {"field": ["redirect_count", "gt", 1]}
-            ]
-        }
+        "description": "Pages with multiple redirects (>1)",
+        "fields": ["url", "status_code", "redirect_count", "redirect_location", "final_redirect_location"],
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["redirect_count", "gt", 1]}]}
     },
     "Redirect Loops": {
         "description": "Pages caught in redirect loops",
         "fields": ["url", "status_code", "redirect_count", "redirect_location", "final_redirect_location"],
-        "oql": {
-            "and": [
-                {"field": ["fetched", "equals", True]},
-                {"field": ["is_redirect_loop", "equals", True]}
-            ]
-        }
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["is_redirect_loop", "equals", True]}]}
     },
     "Stale Links (3xx with Inlinks)": {
-        "description": "Redirecting pages that still receive internal links",
+        "description": "Redirecting pages still receiving internal links",
         "fields": ["url", "status_code", "redirect_location", "nb_inlinks", "inrank"],
-        "oql": {
-            "and": [
-                {"field": ["fetched", "equals", True]},
-                {"field": ["status_code", "between", [300, 399]]},
-                {"field": ["nb_inlinks", "gt", 0]}
-            ]
-        }
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "between", [300, 399]]}, {"field": ["nb_inlinks", "gt", 0]}]}
     },
+    # Indexability
     "Indexable Pages": {
-        "description": "All indexable pages (200, index, canonical matching)",
+        "description": "All indexable pages",
         "fields": ["url", "status_code", "meta_robots_index", "canonical_evaluation", "title", "h1"],
-        "oql": {
-            "and": [
-                {"field": ["fetched", "equals", True]},
-                {"field": ["status_code", "equals", 200]},
-                {"field": ["meta_robots_index", "equals", True]},
-                {"field": ["robots_txt_denied", "equals", False]},
-                {"field": ["canonical_evaluation", "equals", "matching"]}
-            ]
-        }
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["meta_robots_index", "equals", True]}, {"field": ["robots_txt_denied", "equals", False]}, {"field": ["canonical_evaluation", "equals", "matching"]}]}
     },
     "Non-Indexable Pages": {
         "description": "Pages blocked from indexing",
         "fields": ["url", "status_code", "meta_robots_index", "robots_txt_denied", "canonical_evaluation"],
-        "oql": {
-            "and": [
-                {"field": ["fetched", "equals", True]},
-                {"field": ["status_code", "equals", 200]},
-                {"or": [
-                    {"field": ["meta_robots_index", "equals", False]},
-                    {"field": ["robots_txt_denied", "equals", True]},
-                    {"field": ["canonical_evaluation", "equals", "not_matching"]}
-                ]}
-            ]
-        }
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"or": [{"field": ["meta_robots_index", "equals", False]}, {"field": ["robots_txt_denied", "equals", True]}, {"field": ["canonical_evaluation", "equals", "not_matching"]}]}]}
     },
+    "Noindex Pages": {
+        "description": "Pages with noindex directive",
+        "fields": ["url", "status_code", "meta_robots_index", "x_robots_tag_index", "title"],
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["meta_robots_index", "equals", False]}]}
+    },
+    "Robots.txt Blocked": {
+        "description": "Pages blocked by robots.txt",
+        "fields": ["url", "status_code", "robots_txt_denied", "nb_inlinks"],
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["robots_txt_denied", "equals", True]}]}
+    },
+    # Canonical Issues
+    "Non-Matching Canonicals": {
+        "description": "Pages where canonical doesn't match URL",
+        "fields": ["url", "canonical", "canonical_evaluation", "status_code"],
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["canonical_evaluation", "equals", "not_matching"]}]}
+    },
+    "Missing Canonicals": {
+        "description": "Pages without canonical tags",
+        "fields": ["url", "canonical", "status_code", "title"],
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["canonical", "is_empty", True]}]}
+    },
+    # Content Issues
     "Pages Without Title": {
         "description": "Pages missing title tags",
         "fields": ["url", "status_code", "title", "h1"],
-        "oql": {
-            "and": [
-                {"field": ["fetched", "equals", True]},
-                {"field": ["status_code", "equals", 200]},
-                {"field": ["title", "is_empty", True]}
-            ]
-        }
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["title", "is_empty", True]}]}
     },
     "Pages Without H1": {
         "description": "Pages missing H1 tags",
         "fields": ["url", "status_code", "title", "h1"],
-        "oql": {
-            "and": [
-                {"field": ["fetched", "equals", True]},
-                {"field": ["status_code", "equals", 200]},
-                {"field": ["h1", "is_empty", True]}
-            ]
-        }
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["h1", "is_empty", True]}]}
+    },
+    "Pages Without Description": {
+        "description": "Pages missing meta descriptions",
+        "fields": ["url", "status_code", "title", "meta_description"],
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["meta_description", "is_empty", True]}]}
     },
     "Duplicate Titles": {
-        "description": "Pages with duplicate title tags",
+        "description": "Pages with duplicate titles",
         "fields": ["url", "status_code", "title", "title_duplicates_count"],
-        "oql": {
-            "and": [
-                {"field": ["fetched", "equals", True]},
-                {"field": ["status_code", "equals", 200]},
-                {"field": ["title_duplicates_count", "gt", 1]}
-            ]
-        }
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["title_duplicates_count", "gt", 1]}]}
     },
-    "Slow Pages (>3s)": {
-        "description": "Pages with load time over 3 seconds",
-        "fields": ["url", "status_code", "delay_total", "delay_first_byte"],
-        "oql": {
-            "and": [
-                {"field": ["fetched", "equals", True]},
-                {"field": ["status_code", "equals", 200]},
-                {"field": ["delay_total", "gt", 3000]}
-            ]
-        }
+    "Duplicate Descriptions": {
+        "description": "Pages with duplicate meta descriptions",
+        "fields": ["url", "status_code", "meta_description", "meta_description_duplicates_count"],
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["meta_description_duplicates_count", "gt", 1]}]}
     },
+    "Short Titles (<30 chars)": {
+        "description": "Pages with very short titles",
+        "fields": ["url", "title", "title_length", "status_code"],
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["title_length", "lt", 30]}, {"field": ["title_length", "gt", 0]}]}
+    },
+    "Long Titles (>60 chars)": {
+        "description": "Pages with overly long titles",
+        "fields": ["url", "title", "title_length", "status_code"],
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["title_length", "gt", 60]}]}
+    },
+    "Thin Content (<300 words)": {
+        "description": "Pages with thin content",
+        "fields": ["url", "word_count", "title", "status_code"],
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["word_count", "lt", 300]}]}
+    },
+    # Link Structure
     "Orphan Pages": {
-        "description": "Pages with no internal links pointing to them",
+        "description": "Pages with no internal links",
         "fields": ["url", "status_code", "nb_inlinks", "depth"],
-        "oql": {
-            "and": [
-                {"field": ["fetched", "equals", True]},
-                {"field": ["status_code", "equals", 200]},
-                {"field": ["nb_inlinks", "equals", 0]}
-            ]
-        }
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["nb_inlinks", "equals", 0]}]}
     },
     "Deep Pages (Depth > 5)": {
-        "description": "Pages more than 5 clicks from homepage",
+        "description": "Pages more than 5 clicks deep",
         "fields": ["url", "status_code", "depth", "nb_inlinks"],
-        "oql": {
-            "and": [
-                {"field": ["fetched", "equals", True]},
-                {"field": ["status_code", "equals", 200]},
-                {"field": ["depth", "gt", 5]}
-            ]
-        }
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["depth", "gt", 5]}]}
     },
+    "Low Inrank Pages": {
+        "description": "Important pages with low internal PageRank",
+        "fields": ["url", "inrank", "nb_inlinks", "depth", "status_code"],
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["inrank", "lt", 0.1]}]}
+    },
+    "High Outlink Pages": {
+        "description": "Pages with many outgoing links (>100)",
+        "fields": ["url", "nb_outlinks", "nb_internal_outlinks", "nb_external_outlinks"],
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["nb_outlinks", "gt", 100]}]}
+    },
+    # Performance
+    "Slow Pages (>3s)": {
+        "description": "Pages loading over 3 seconds",
+        "fields": ["url", "status_code", "delay_total", "delay_first_byte", "size_total"],
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["delay_total", "gt", 3000]}]}
+    },
+    "Very Slow Pages (>5s)": {
+        "description": "Pages loading over 5 seconds",
+        "fields": ["url", "status_code", "delay_total", "delay_first_byte", "size_total"],
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["delay_total", "gt", 5000]}]}
+    },
+    "Large Pages (>1MB)": {
+        "description": "Pages over 1MB in size",
+        "fields": ["url", "size_total", "size_html", "delay_total"],
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["size_total", "gt", 1000000]}]}
+    },
+    "Slow TTFB (>1s)": {
+        "description": "Pages with slow Time to First Byte",
+        "fields": ["url", "delay_first_byte", "delay_total", "status_code"],
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["delay_first_byte", "gt", 1000]}]}
+    },
+    # Images
+    "Images Without Alt": {
+        "description": "Pages with images missing alt text",
+        "fields": ["url", "nb_images", "nb_images_without_alt", "status_code"],
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["nb_images_without_alt", "gt", 0]}]}
+    },
+    # Sitemap
+    "Not in Sitemap": {
+        "description": "Indexable pages not in sitemap",
+        "fields": ["url", "in_sitemap", "meta_robots_index", "canonical_evaluation"],
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["meta_robots_index", "equals", True]}, {"field": ["in_sitemap", "equals", False]}]}
+    },
+    "In Sitemap (Non-200)": {
+        "description": "Non-200 pages found in sitemap",
+        "fields": ["url", "status_code", "in_sitemap"],
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["in_sitemap", "equals", True]}, {"field": ["status_code", "not_equals", 200]}]}
+    },
+    # HTTPS/Security
+    "HTTP Pages": {
+        "description": "Non-HTTPS pages",
+        "fields": ["url", "is_https", "status_code"],
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["is_https", "equals", False]}]}
+    },
+    "Mixed Content": {
+        "description": "HTTPS pages with mixed content",
+        "fields": ["url", "is_https", "has_mixed_content", "status_code"],
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["has_mixed_content", "equals", True]}]}
+    },
+    # All Pages
     "All Fetched Pages": {
-        "description": "Complete list of all fetched pages",
+        "description": "Complete list of all crawled pages",
         "fields": ["url", "status_code", "depth", "nb_inlinks", "inrank"],
-        "oql": {
-            "and": [
-                {"field": ["fetched", "equals", True]}
-            ]
-        }
+        "oql": {"and": [{"field": ["fetched", "equals", True]}]}
+    },
+    "All 200 Pages": {
+        "description": "All pages returning 200 OK",
+        "fields": ["url", "title", "h1", "depth", "nb_inlinks", "word_count"],
+        "oql": {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}]}
     }
 }
 
-# Available fields for custom queries
-AVAILABLE_FIELDS = [
-    "url", "urlpath", "status_code", "depth", "nb_inlinks", "nb_outlinks",
-    "inrank", "title", "h1", "meta_description", "canonical", "canonical_evaluation",
-    "meta_robots_index", "meta_robots_follow", "robots_txt_denied",
-    "redirect_location", "final_redirect_location", "redirect_count", "is_redirect_loop",
-    "delay_total", "delay_first_byte", "content_type", "word_count",
-    "title_length", "meta_description_length", "h1_count", "h2_count",
-    "title_duplicates_count", "meta_description_duplicates_count",
-    "url_has_params", "fetched"
+# Aggregate field options for groupBy
+AGGREGATE_FIELDS = [
+    "status_code", "depth", "urlsegment1", "urlsegment2", "urlsegment3",
+    "content_type", "canonical_evaluation", "meta_robots_index", "in_sitemap",
+    "lang", "charset"
 ]
+
+# Crawl status options
+CRAWL_STATUSES = ["pending", "running", "paused", "done", "canceled", "failed", "waiting_validation"]
 
 
 def get_headers(api_token):
@@ -215,9 +311,13 @@ def get_headers(api_token):
     }
 
 
+# =============================================================================
+# API Functions - Account & Workspaces
+# =============================================================================
+
 @st.cache_data(ttl=300)
-def get_workspaces(api_token):
-    """Fetch all workspaces for the account."""
+def get_account(api_token):
+    """Fetch account information."""
     try:
         response = requests.get(
             f"{BASE_URL}/account",
@@ -225,28 +325,45 @@ def get_workspaces(api_token):
             timeout=30
         )
         if response.status_code == 200:
-            data = response.json()
-            workspace_ids = data.get('account', {}).get('workspace_ids', [])
-
-            workspaces = []
-            for ws_id in workspace_ids:
-                ws_response = requests.get(
-                    f"{BASE_URL}/workspaces/{ws_id}",
-                    headers=get_headers(api_token),
-                    timeout=30
-                )
-                if ws_response.status_code == 200:
-                    ws_data = ws_response.json().get('workspace', {})
-                    workspaces.append({
-                        'id': ws_id,
-                        'name': ws_data.get('name', ws_id)
-                    })
-            return workspaces
-        return []
+            return response.json().get('account', {}), None
+        return None, f"Error {response.status_code}: {response.text}"
     except Exception as e:
-        st.error(f"Error fetching workspaces: {str(e)}")
-        return []
+        return None, str(e)
 
+
+@st.cache_data(ttl=300)
+def get_workspaces(api_token):
+    """Fetch all workspaces for the account."""
+    try:
+        account, error = get_account(api_token)
+        if error:
+            return [], error
+
+        workspace_ids = account.get('workspace_ids', [])
+        workspaces = []
+
+        for ws_id in workspace_ids:
+            ws_response = requests.get(
+                f"{BASE_URL}/workspaces/{ws_id}",
+                headers=get_headers(api_token),
+                timeout=30
+            )
+            if ws_response.status_code == 200:
+                ws_data = ws_response.json().get('workspace', {})
+                workspaces.append({
+                    'id': ws_id,
+                    'name': ws_data.get('name', ws_id),
+                    'crawl_pages_limit': ws_data.get('crawl_pages_limit'),
+                    'crawl_pages_used': ws_data.get('crawl_pages_used')
+                })
+        return workspaces, None
+    except Exception as e:
+        return [], str(e)
+
+
+# =============================================================================
+# API Functions - Projects
+# =============================================================================
 
 @st.cache_data(ttl=300)
 def get_projects(api_token, workspace_id):
@@ -276,47 +393,222 @@ def get_projects(api_token, workspace_id):
             else:
                 break
 
-        return all_projects
+        return all_projects, None
     except Exception as e:
-        st.error(f"Error fetching projects: {str(e)}")
-        return []
+        return [], str(e)
 
+
+def create_project(api_token, workspace_id, name, start_url, user_agent="oncrawl"):
+    """Create a new project."""
+    try:
+        data = {
+            "name": name,
+            "start_url": start_url,
+            "user_agent": user_agent
+        }
+        response = requests.post(
+            f"{BASE_URL}/workspaces/{workspace_id}/projects",
+            headers=get_headers(api_token),
+            json=data,
+            timeout=30
+        )
+        if response.status_code in [200, 201]:
+            return response.json().get('project', {}), None
+        return None, f"Error {response.status_code}: {response.text}"
+    except Exception as e:
+        return None, str(e)
+
+
+def delete_project(api_token, project_id):
+    """Delete a project."""
+    try:
+        response = requests.delete(
+            f"{BASE_URL}/projects/{project_id}",
+            headers=get_headers(api_token),
+            timeout=30
+        )
+        if response.status_code in [200, 204]:
+            return True, None
+        return False, f"Error {response.status_code}: {response.text}"
+    except Exception as e:
+        return False, str(e)
+
+
+# =============================================================================
+# API Functions - Crawl Configurations
+# =============================================================================
+
+def get_crawl_configs(api_token, project_id):
+    """Fetch crawl configurations for a project."""
+    try:
+        response = requests.get(
+            f"{BASE_URL}/projects/{project_id}/crawl_configs",
+            headers=get_headers(api_token),
+            timeout=30
+        )
+        if response.status_code == 200:
+            return response.json().get('crawl_configs', []), None
+        return [], f"Error {response.status_code}: {response.text}"
+    except Exception as e:
+        return [], str(e)
+
+
+def get_crawl_config(api_token, config_id):
+    """Get a specific crawl configuration."""
+    try:
+        response = requests.get(
+            f"{BASE_URL}/crawl_configs/{config_id}",
+            headers=get_headers(api_token),
+            timeout=30
+        )
+        if response.status_code == 200:
+            return response.json().get('crawl_config', {}), None
+        return None, f"Error {response.status_code}: {response.text}"
+    except Exception as e:
+        return None, str(e)
+
+
+# =============================================================================
+# API Functions - Crawls
+# =============================================================================
 
 @st.cache_data(ttl=60)
-def get_crawls(api_token, workspace_id, project_id):
-    """Fetch all completed crawls for a project."""
+def get_crawls(api_token, workspace_id, project_id=None, status=None):
+    """Fetch crawls for a workspace, optionally filtered by project and status."""
     try:
+        params = {}
+        if project_id:
+            params['filters[project_id]'] = project_id
+        if status:
+            params['filters[status]'] = status
+
         response = requests.get(
             f"{BASE_URL}/workspaces/{workspace_id}/crawls",
             headers=get_headers(api_token),
-            params={
-                'filters[project_id]': project_id,
-                'filters[status]': 'done'
-            },
+            params=params,
             timeout=30
         )
 
         if response.status_code == 200:
             crawls = response.json().get('crawls', [])
-            # Sort by creation date, newest first
             crawls = sorted(crawls, key=lambda x: x.get('created_at', 0), reverse=True)
-            return crawls
-        return []
+            return crawls, None
+        return [], f"Error {response.status_code}: {response.text}"
     except Exception as e:
-        st.error(f"Error fetching crawls: {str(e)}")
-        return []
+        return [], str(e)
+
+
+def get_crawl(api_token, crawl_id):
+    """Get details of a specific crawl."""
+    try:
+        response = requests.get(
+            f"{BASE_URL}/crawls/{crawl_id}",
+            headers=get_headers(api_token),
+            timeout=30
+        )
+        if response.status_code == 200:
+            return response.json().get('crawl', {}), None
+        return None, f"Error {response.status_code}: {response.text}"
+    except Exception as e:
+        return None, str(e)
+
+
+def launch_crawl(api_token, project_id, crawl_config_id=None):
+    """Launch a new crawl for a project."""
+    try:
+        data = {}
+        if crawl_config_id:
+            data['crawl_config_id'] = crawl_config_id
+
+        response = requests.post(
+            f"{BASE_URL}/projects/{project_id}/crawls",
+            headers=get_headers(api_token),
+            json=data,
+            timeout=30
+        )
+        if response.status_code in [200, 201, 202]:
+            return response.json().get('crawl', {}), None
+        return None, f"Error {response.status_code}: {response.text}"
+    except Exception as e:
+        return None, str(e)
+
+
+def update_crawl_state(api_token, crawl_id, action):
+    """Update crawl state (pause, resume, cancel)."""
+    try:
+        response = requests.put(
+            f"{BASE_URL}/crawls/{crawl_id}",
+            headers=get_headers(api_token),
+            json={"action": action},
+            timeout=30
+        )
+        if response.status_code == 200:
+            return response.json().get('crawl', {}), None
+        return None, f"Error {response.status_code}: {response.text}"
+    except Exception as e:
+        return None, str(e)
+
+
+def delete_crawl(api_token, crawl_id):
+    """Delete a crawl."""
+    try:
+        response = requests.delete(
+            f"{BASE_URL}/crawls/{crawl_id}",
+            headers=get_headers(api_token),
+            timeout=30
+        )
+        if response.status_code in [200, 204]:
+            return True, None
+        return False, f"Error {response.status_code}: {response.text}"
+    except Exception as e:
+        return False, str(e)
+
+
+# =============================================================================
+# API Functions - Data Queries
+# =============================================================================
+
+def search_crawl_data(api_token, crawl_id, fields, oql_query, url_filter=None, limit=1000, offset=0):
+    """Search crawl data with pagination."""
+    try:
+        query = {
+            "fields": fields,
+            "oql": oql_query,
+            "limit": limit,
+            "offset": offset
+        }
+
+        if url_filter:
+            query["oql"] = {
+                "and": [
+                    oql_query,
+                    {"field": ["url", "contains", url_filter]}
+                ]
+            }
+
+        response = requests.post(
+            f"{BASE_URL}/data/crawl/{crawl_id}/pages",
+            headers=get_headers(api_token),
+            json=query,
+            timeout=120
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            return data.get('pages', []), data.get('meta', {}), None
+        return [], {}, f"Error {response.status_code}: {response.text}"
+    except Exception as e:
+        return [], {}, str(e)
 
 
 def export_crawl_data(api_token, crawl_id, fields, oql_query, url_filter=None):
-    """Export data from a crawl using the export API."""
+    """Export full crawl data to CSV."""
     try:
-        # Build the query
         query = {
             "fields": fields,
             "oql": oql_query
         }
 
-        # Add URL filter if provided
         if url_filter:
             query["oql"] = {
                 "and": [
@@ -329,22 +621,195 @@ def export_crawl_data(api_token, crawl_id, fields, oql_query, url_filter=None):
             f"{BASE_URL}/data/crawl/{crawl_id}/pages?export=true",
             headers=get_headers(api_token),
             json=query,
-            timeout=120
+            timeout=300
         )
 
         if response.status_code == 200:
             csv_content = response.content.decode('utf-8')
             df = pd.read_csv(StringIO(csv_content), sep=';', quotechar='"')
             return df, None
-        else:
-            return None, f"Error: {response.status_code} - {response.text}"
+        return None, f"Error {response.status_code}: {response.text}"
     except Exception as e:
-        return None, f"Error: {str(e)}"
+        return None, str(e)
 
 
+def aggregate_crawl_data(api_token, crawl_id, group_by, oql_query=None, agg_type="count"):
+    """Run aggregate query on crawl data."""
+    try:
+        query = {
+            "agg": [
+                {
+                    "groupBy": [{"field": group_by}],
+                    "metric": {"count": {"field": "url"}}
+                }
+            ]
+        }
+
+        if oql_query:
+            query["oql"] = oql_query
+
+        response = requests.post(
+            f"{BASE_URL}/data/crawl/{crawl_id}/pages",
+            headers=get_headers(api_token),
+            json=query,
+            timeout=120
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            return data.get('aggs', []), None
+        return [], f"Error {response.status_code}: {response.text}"
+    except Exception as e:
+        return [], str(e)
+
+
+def export_links(api_token, crawl_id, link_type="internal"):
+    """Export links from crawl."""
+    try:
+        endpoint = "links" if link_type == "internal" else "external_links"
+        response = requests.post(
+            f"{BASE_URL}/data/crawl/{crawl_id}/{endpoint}?export=true",
+            headers=get_headers(api_token),
+            json={"fields": ["source", "target", "anchor", "type", "follow"]},
+            timeout=300
+        )
+
+        if response.status_code == 200:
+            csv_content = response.content.decode('utf-8')
+            df = pd.read_csv(StringIO(csv_content), sep=';', quotechar='"')
+            return df, None
+        return None, f"Error {response.status_code}: {response.text}"
+    except Exception as e:
+        return None, str(e)
+
+
+# =============================================================================
+# API Functions - Crawl Comparison
+# =============================================================================
+
+def compare_crawls(api_token, crawl_id, reference_crawl_id, fields, oql_query=None, change_type=None):
+    """Compare two crawls (Crawl over Crawl)."""
+    try:
+        query = {
+            "reference": reference_crawl_id,
+            "fields": fields
+        }
+
+        if oql_query:
+            query["oql"] = oql_query
+        if change_type:
+            query["change"] = change_type  # "new", "lost", "changed", "unchanged"
+
+        response = requests.post(
+            f"{BASE_URL}/data/crawl/{crawl_id}/pages/coc",
+            headers=get_headers(api_token),
+            json=query,
+            timeout=120
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            return data.get('pages', []), data.get('meta', {}), None
+        return [], {}, f"Error {response.status_code}: {response.text}"
+    except Exception as e:
+        return [], {}, str(e)
+
+
+def export_crawl_comparison(api_token, crawl_id, reference_crawl_id, fields, oql_query=None, change_type=None):
+    """Export crawl comparison data."""
+    try:
+        query = {
+            "reference": reference_crawl_id,
+            "fields": fields
+        }
+
+        if oql_query:
+            query["oql"] = oql_query
+        if change_type:
+            query["change"] = change_type
+
+        response = requests.post(
+            f"{BASE_URL}/data/crawl/{crawl_id}/pages/coc?export=true",
+            headers=get_headers(api_token),
+            json=query,
+            timeout=300
+        )
+
+        if response.status_code == 200:
+            csv_content = response.content.decode('utf-8')
+            df = pd.read_csv(StringIO(csv_content), sep=';', quotechar='"')
+            return df, None
+        return None, f"Error {response.status_code}: {response.text}"
+    except Exception as e:
+        return None, str(e)
+
+
+# =============================================================================
+# API Functions - Scheduling
+# =============================================================================
+
+def get_schedules(api_token, project_id):
+    """Get schedules for a project."""
+    try:
+        response = requests.get(
+            f"{BASE_URL}/projects/{project_id}/schedules",
+            headers=get_headers(api_token),
+            timeout=30
+        )
+        if response.status_code == 200:
+            return response.json().get('schedules', []), None
+        return [], f"Error {response.status_code}: {response.text}"
+    except Exception as e:
+        return [], str(e)
+
+
+def create_schedule(api_token, project_id, crawl_config_id, frequency, day_of_week=None, day_of_month=None, hour=0):
+    """Create a crawl schedule."""
+    try:
+        data = {
+            "crawl_config_id": crawl_config_id,
+            "frequency": frequency,  # "daily", "weekly", "monthly"
+            "hour": hour
+        }
+        if day_of_week is not None:
+            data["day_of_week"] = day_of_week
+        if day_of_month is not None:
+            data["day_of_month"] = day_of_month
+
+        response = requests.post(
+            f"{BASE_URL}/projects/{project_id}/schedules",
+            headers=get_headers(api_token),
+            json=data,
+            timeout=30
+        )
+        if response.status_code in [200, 201]:
+            return response.json().get('schedule', {}), None
+        return None, f"Error {response.status_code}: {response.text}"
+    except Exception as e:
+        return None, str(e)
+
+
+def delete_schedule(api_token, schedule_id):
+    """Delete a schedule."""
+    try:
+        response = requests.delete(
+            f"{BASE_URL}/schedules/{schedule_id}",
+            headers=get_headers(api_token),
+            timeout=30
+        )
+        if response.status_code in [200, 204]:
+            return True, None
+        return False, f"Error {response.status_code}: {response.text}"
+    except Exception as e:
+        return False, str(e)
+
+
+# =============================================================================
 # Sidebar - API Configuration
+# =============================================================================
+
 with st.sidebar:
-    st.header("API Configuration")
+    st.header("🔑 API Configuration")
 
     api_token = st.text_input(
         "OnCrawl API Token",
@@ -353,287 +818,828 @@ with st.sidebar:
     )
 
     if api_token:
-        st.success("API token provided")
+        st.success("Token provided")
 
-        # Workspace selection
-        st.header("Select Data Source")
-
-        workspaces = get_workspaces(api_token)
-
-        if workspaces:
-            workspace_options = {ws['name']: ws['id'] for ws in workspaces}
-            selected_workspace_name = st.selectbox(
-                "Workspace",
-                options=list(workspace_options.keys())
-            )
-            selected_workspace_id = workspace_options[selected_workspace_name]
-
-            # Project selection
-            projects = get_projects(api_token, selected_workspace_id)
-
-            if projects:
-                project_options = {p['name']: p['id'] for p in projects}
-                selected_project_name = st.selectbox(
-                    "Project",
-                    options=list(project_options.keys())
-                )
-                selected_project_id = project_options[selected_project_name]
-
-                # Crawl selection
-                crawls = get_crawls(api_token, selected_workspace_id, selected_project_id)
-
-                if crawls:
-                    crawl_options = {}
-                    for c in crawls:
-                        crawl_date = datetime.fromtimestamp(
-                            c.get('created_at', 0) / 1000
-                        ).strftime('%Y-%m-%d %H:%M')
-                        urls_count = c.get('fetched_urls', 'N/A')
-                        label = f"{crawl_date} ({urls_count} URLs)"
-                        crawl_options[label] = c['id']
-
-                    selected_crawl_label = st.selectbox(
-                        "Crawl",
-                        options=list(crawl_options.keys())
-                    )
-                    selected_crawl_id = crawl_options[selected_crawl_label]
-
-                    st.success(f"Ready to extract data")
-                else:
-                    st.warning("No completed crawls found")
-                    selected_crawl_id = None
-            else:
-                st.warning("No projects found")
-                selected_crawl_id = None
-        else:
-            st.warning("No workspaces found or invalid API token")
-            selected_crawl_id = None
+        # Navigation
+        st.header("📍 Navigation")
+        page = st.radio(
+            "Select Module",
+            options=[
+                "📊 Data Extraction",
+                "🔄 Crawl Management",
+                "📈 Aggregations",
+                "🔀 Crawl Comparison",
+                "📁 Project Management",
+                "⏰ Scheduling",
+                "🔗 Link Export"
+            ]
+        )
     else:
         st.info("Enter your API token to get started")
-        selected_crawl_id = None
+        page = None
 
-# Main content
-if api_token and 'selected_crawl_id' in dir() and selected_crawl_id:
+# =============================================================================
+# Main Content
+# =============================================================================
 
-    # Query type selection
-    st.subheader("Select Query Type")
+if api_token and page:
 
-    query_type = st.radio(
-        "Query Type",
-        options=["Preset Queries", "Custom Query"],
-        horizontal=True
-    )
+    # =========================================================================
+    # DATA EXTRACTION PAGE
+    # =========================================================================
+    if page == "📊 Data Extraction":
+        st.header("📊 Data Extraction")
 
-    if query_type == "Preset Queries":
-        # Preset query selection
-        col1, col2 = st.columns([2, 1])
+        workspaces, ws_error = get_workspaces(api_token)
 
-        with col1:
-            selected_preset = st.selectbox(
-                "Select a preset query",
-                options=list(PRESET_QUERIES.keys())
-            )
-
-        with col2:
-            url_filter = st.text_input(
-                "URL filter (optional)",
-                placeholder="/products/",
-                help="Filter results to URLs containing this text"
-            )
-
-        preset_config = PRESET_QUERIES[selected_preset]
-        st.info(f"**{selected_preset}**: {preset_config['description']}")
-
-        # Show fields that will be extracted
-        with st.expander("Fields to extract"):
-            st.write(preset_config['fields'])
-
-        if st.button("Extract Data", type="primary"):
-            with st.spinner(f"Extracting {selected_preset}..."):
-                df, error = export_crawl_data(
-                    api_token,
-                    selected_crawl_id,
-                    preset_config['fields'],
-                    preset_config['oql'],
-                    url_filter if url_filter else None
-                )
-
-            if error:
-                st.error(error)
-            elif df is not None and not df.empty:
-                st.success(f"Extracted {len(df):,} rows")
-
-                # Display data
-                st.dataframe(df, use_container_width=True, height=400)
-
-                # Download buttons
-                col1, col2 = st.columns(2)
-
-                with col1:
-                    csv = df.to_csv(index=False)
-                    filename = f"oncrawl_{selected_preset.lower().replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-                    st.download_button(
-                        "Download CSV",
-                        csv,
-                        file_name=filename,
-                        mime="text/csv"
-                    )
-
-                with col2:
-                    output = io.BytesIO()
-                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                        df.to_excel(writer, index=False, sheet_name='Data')
-                    excel_data = output.getvalue()
-                    filename = f"oncrawl_{selected_preset.lower().replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-                    st.download_button(
-                        "Download Excel",
-                        excel_data,
-                        file_name=filename,
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    )
-            else:
-                st.warning("No data found matching the query.")
-
-    else:
-        # Custom query builder
-        st.markdown("### Custom Query Builder")
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            selected_fields = st.multiselect(
-                "Select fields to extract",
-                options=AVAILABLE_FIELDS,
-                default=["url", "status_code", "depth"]
-            )
-
-        with col2:
-            url_filter = st.text_input(
-                "URL filter (optional)",
-                placeholder="/products/",
-                help="Filter results to URLs containing this text"
-            )
-
-        # OQL Query builder
-        st.markdown("### OQL Conditions")
-        st.markdown("Build your query by adding conditions:")
-
-        # Simple condition builder
-        conditions = []
-
-        num_conditions = st.number_input("Number of conditions", min_value=1, max_value=10, value=1)
-
-        for i in range(int(num_conditions)):
+        if ws_error:
+            st.error(ws_error)
+        elif workspaces:
+            # Workspace selection
             col1, col2, col3 = st.columns(3)
 
             with col1:
-                field = st.selectbox(f"Field {i+1}", options=AVAILABLE_FIELDS, key=f"field_{i}")
+                workspace_options = {ws['name']: ws['id'] for ws in workspaces}
+                selected_ws_name = st.selectbox("Workspace", list(workspace_options.keys()))
+                selected_ws_id = workspace_options[selected_ws_name]
 
             with col2:
-                operator = st.selectbox(
-                    f"Operator {i+1}",
-                    options=["equals", "not_equals", "contains", "not_contains", "gt", "lt", "gte", "lte", "is_empty", "between"],
-                    key=f"op_{i}"
-                )
+                projects, _ = get_projects(api_token, selected_ws_id)
+                if projects:
+                    project_options = {p['name']: p['id'] for p in projects}
+                    selected_proj_name = st.selectbox("Project", list(project_options.keys()))
+                    selected_proj_id = project_options[selected_proj_name]
+                else:
+                    st.warning("No projects found")
+                    selected_proj_id = None
 
             with col3:
-                if operator == "is_empty":
-                    value = st.selectbox(f"Value {i+1}", options=[True, False], key=f"val_{i}")
-                elif operator == "between":
-                    value = st.text_input(f"Value {i+1} (comma-separated)", placeholder="100,200", key=f"val_{i}")
-                elif operator in ["equals", "not_equals"] and field in ["fetched", "meta_robots_index", "meta_robots_follow", "robots_txt_denied", "is_redirect_loop", "url_has_params"]:
-                    value = st.selectbox(f"Value {i+1}", options=[True, False], key=f"val_{i}")
+                if selected_proj_id:
+                    crawls, _ = get_crawls(api_token, selected_ws_id, selected_proj_id, status="done")
+                    if crawls:
+                        crawl_options = {}
+                        for c in crawls:
+                            crawl_date = datetime.fromtimestamp(c.get('created_at', 0) / 1000).strftime('%Y-%m-%d %H:%M')
+                            urls_count = c.get('fetched_urls', 'N/A')
+                            label = f"{crawl_date} ({urls_count} URLs)"
+                            crawl_options[label] = c['id']
+                        selected_crawl_label = st.selectbox("Crawl", list(crawl_options.keys()))
+                        selected_crawl_id = crawl_options[selected_crawl_label]
+                    else:
+                        st.warning("No completed crawls")
+                        selected_crawl_id = None
                 else:
-                    value = st.text_input(f"Value {i+1}", key=f"val_{i}")
+                    selected_crawl_id = None
 
-            if value is not None and value != "":
-                if operator == "between" and isinstance(value, str):
-                    try:
-                        value = [int(v.strip()) for v in value.split(",")]
-                    except:
-                        pass
-                elif isinstance(value, str) and value.isdigit():
-                    value = int(value)
+            if selected_crawl_id:
+                st.divider()
 
-                conditions.append({"field": [field, operator, value]})
+                # Query type selection
+                query_type = st.radio("Query Type", ["Preset Queries", "Custom Query"], horizontal=True)
 
-        # Build OQL
-        if conditions:
-            custom_oql = {"and": conditions}
+                if query_type == "Preset Queries":
+                    col1, col2 = st.columns([2, 1])
 
-            with st.expander("View OQL Query"):
-                st.json(custom_oql)
+                    with col1:
+                        selected_preset = st.selectbox("Select Preset", list(PRESET_QUERIES.keys()))
 
-            if st.button("Extract Custom Data", type="primary"):
-                if not selected_fields:
-                    st.error("Please select at least one field")
-                else:
-                    with st.spinner("Extracting data..."):
-                        df, error = export_crawl_data(
-                            api_token,
-                            selected_crawl_id,
-                            selected_fields,
-                            custom_oql,
-                            url_filter if url_filter else None
-                        )
+                    with col2:
+                        url_filter = st.text_input("URL Filter (optional)", placeholder="/products/")
 
-                    if error:
-                        st.error(error)
-                    elif df is not None and not df.empty:
-                        st.success(f"Extracted {len(df):,} rows")
+                    preset_config = PRESET_QUERIES[selected_preset]
+                    st.info(f"**{selected_preset}**: {preset_config['description']}")
 
-                        st.dataframe(df, use_container_width=True, height=400)
+                    with st.expander("Fields to extract"):
+                        st.write(preset_config['fields'])
 
-                        col1, col2 = st.columns(2)
+                    if st.button("Extract Data", type="primary"):
+                        with st.spinner(f"Extracting {selected_preset}..."):
+                            df, error = export_crawl_data(
+                                api_token, selected_crawl_id,
+                                preset_config['fields'], preset_config['oql'],
+                                url_filter if url_filter else None
+                            )
+
+                        if error:
+                            st.error(error)
+                        elif df is not None and not df.empty:
+                            st.success(f"Extracted {len(df):,} rows")
+                            st.dataframe(df, use_container_width=True, height=400)
+
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                csv = df.to_csv(index=False)
+                                st.download_button("Download CSV", csv,
+                                    file_name=f"oncrawl_{selected_preset.lower().replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                                    mime="text/csv")
+                            with col2:
+                                output = io.BytesIO()
+                                with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                                    df.to_excel(writer, index=False, sheet_name='Data')
+                                st.download_button("Download Excel", output.getvalue(),
+                                    file_name=f"oncrawl_{selected_preset.lower().replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                        else:
+                            st.warning("No data found matching the query.")
+
+                else:  # Custom Query
+                    st.subheader("Custom Query Builder")
+
+                    # Field selection by category
+                    st.markdown("**Select Fields**")
+                    selected_fields = []
+
+                    cols = st.columns(4)
+                    for idx, (category, fields) in enumerate(AVAILABLE_FIELDS.items()):
+                        with cols[idx % 4]:
+                            with st.expander(category):
+                                for field in fields:
+                                    if st.checkbox(field, key=f"field_{field}"):
+                                        selected_fields.append(field)
+
+                    if selected_fields:
+                        st.write(f"Selected: {', '.join(selected_fields)}")
+
+                    url_filter = st.text_input("URL Filter (optional)", placeholder="/products/", key="custom_url_filter")
+
+                    # OQL Condition builder
+                    st.markdown("**OQL Conditions**")
+                    num_conditions = st.number_input("Number of conditions", 1, 10, 1)
+
+                    conditions = []
+                    for i in range(int(num_conditions)):
+                        col1, col2, col3 = st.columns(3)
 
                         with col1:
-                            csv = df.to_csv(index=False)
-                            st.download_button(
-                                "Download CSV",
-                                csv,
-                                file_name=f"oncrawl_custom_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                                mime="text/csv"
+                            field = st.selectbox(f"Field {i+1}", ALL_FIELDS, key=f"cfield_{i}")
+                        with col2:
+                            operator = st.selectbox(f"Operator {i+1}",
+                                ["equals", "not_equals", "contains", "not_contains", "gt", "lt", "gte", "lte", "is_empty", "between"],
+                                key=f"cop_{i}")
+                        with col3:
+                            if operator == "is_empty":
+                                value = st.selectbox(f"Value {i+1}", [True, False], key=f"cval_{i}")
+                            elif operator == "between":
+                                value = st.text_input(f"Value {i+1} (comma-sep)", placeholder="100,200", key=f"cval_{i}")
+                            else:
+                                value = st.text_input(f"Value {i+1}", key=f"cval_{i}")
+
+                        if value is not None and value != "":
+                            if operator == "between" and isinstance(value, str):
+                                try:
+                                    value = [int(v.strip()) for v in value.split(",")]
+                                except:
+                                    pass
+                            elif isinstance(value, str) and value.isdigit():
+                                value = int(value)
+                            conditions.append({"field": [field, operator, value]})
+
+                    if conditions and selected_fields:
+                        custom_oql = {"and": conditions}
+
+                        with st.expander("View OQL Query"):
+                            st.json(custom_oql)
+
+                        if st.button("Extract Custom Data", type="primary"):
+                            with st.spinner("Extracting data..."):
+                                df, error = export_crawl_data(
+                                    api_token, selected_crawl_id,
+                                    selected_fields, custom_oql,
+                                    url_filter if url_filter else None
+                                )
+
+                            if error:
+                                st.error(error)
+                            elif df is not None and not df.empty:
+                                st.success(f"Extracted {len(df):,} rows")
+                                st.dataframe(df, use_container_width=True, height=400)
+
+                                col1, col2 = st.columns(2)
+                                with col1:
+                                    st.download_button("Download CSV", df.to_csv(index=False),
+                                        file_name=f"oncrawl_custom_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                                        mime="text/csv")
+                                with col2:
+                                    output = io.BytesIO()
+                                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                                        df.to_excel(writer, index=False)
+                                    st.download_button("Download Excel", output.getvalue(),
+                                        file_name=f"oncrawl_custom_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                            else:
+                                st.warning("No data found.")
+        else:
+            st.warning("No workspaces found")
+
+    # =========================================================================
+    # CRAWL MANAGEMENT PAGE
+    # =========================================================================
+    elif page == "🔄 Crawl Management":
+        st.header("🔄 Crawl Management")
+
+        workspaces, ws_error = get_workspaces(api_token)
+
+        if ws_error:
+            st.error(ws_error)
+        elif workspaces:
+            col1, col2 = st.columns(2)
+
+            with col1:
+                workspace_options = {ws['name']: ws['id'] for ws in workspaces}
+                selected_ws_name = st.selectbox("Workspace", list(workspace_options.keys()), key="cm_ws")
+                selected_ws_id = workspace_options[selected_ws_name]
+
+            with col2:
+                projects, _ = get_projects(api_token, selected_ws_id)
+                if projects:
+                    project_options = {p['name']: p['id'] for p in projects}
+                    selected_proj_name = st.selectbox("Project", list(project_options.keys()), key="cm_proj")
+                    selected_proj_id = project_options[selected_proj_name]
+                else:
+                    st.warning("No projects found")
+                    selected_proj_id = None
+
+            if selected_proj_id:
+                st.divider()
+
+                tab1, tab2, tab3 = st.tabs(["📋 View Crawls", "🚀 Launch Crawl", "⚙️ Configurations"])
+
+                with tab1:
+                    status_filter = st.selectbox("Filter by Status", ["All"] + CRAWL_STATUSES)
+
+                    # Clear cache to get fresh data
+                    if st.button("🔄 Refresh"):
+                        get_crawls.clear()
+
+                    crawls, _ = get_crawls(api_token, selected_ws_id, selected_proj_id,
+                                          status=None if status_filter == "All" else status_filter)
+
+                    if crawls:
+                        for crawl in crawls[:20]:  # Show last 20
+                            crawl_date = datetime.fromtimestamp(crawl.get('created_at', 0) / 1000).strftime('%Y-%m-%d %H:%M')
+                            status = crawl.get('status', 'unknown')
+                            urls = crawl.get('fetched_urls', 'N/A')
+                            crawl_id = crawl['id']
+
+                            status_colors = {
+                                'done': '🟢', 'running': '🔵', 'paused': '🟡',
+                                'pending': '⚪', 'canceled': '🔴', 'failed': '🔴'
+                            }
+
+                            with st.expander(f"{status_colors.get(status, '⚪')} {crawl_date} - {status} ({urls} URLs)"):
+                                st.write(f"**Crawl ID:** `{crawl_id}`")
+                                st.write(f"**Status:** {status}")
+                                st.write(f"**URLs Fetched:** {urls}")
+
+                                col1, col2, col3, col4 = st.columns(4)
+
+                                if status == 'running':
+                                    with col1:
+                                        if st.button("⏸️ Pause", key=f"pause_{crawl_id}"):
+                                            _, err = update_crawl_state(api_token, crawl_id, "pause")
+                                            if err:
+                                                st.error(err)
+                                            else:
+                                                st.success("Paused")
+                                                st.rerun()
+                                    with col2:
+                                        if st.button("❌ Cancel", key=f"cancel_{crawl_id}"):
+                                            _, err = update_crawl_state(api_token, crawl_id, "cancel")
+                                            if err:
+                                                st.error(err)
+                                            else:
+                                                st.success("Canceled")
+                                                st.rerun()
+
+                                elif status == 'paused':
+                                    with col1:
+                                        if st.button("▶️ Resume", key=f"resume_{crawl_id}"):
+                                            _, err = update_crawl_state(api_token, crawl_id, "resume")
+                                            if err:
+                                                st.error(err)
+                                            else:
+                                                st.success("Resumed")
+                                                st.rerun()
+                                    with col2:
+                                        if st.button("❌ Cancel", key=f"cancel2_{crawl_id}"):
+                                            _, err = update_crawl_state(api_token, crawl_id, "cancel")
+                                            if err:
+                                                st.error(err)
+                                            else:
+                                                st.success("Canceled")
+                                                st.rerun()
+
+                                if status in ['done', 'canceled', 'failed']:
+                                    with col4:
+                                        if st.button("🗑️ Delete", key=f"del_{crawl_id}"):
+                                            success, err = delete_crawl(api_token, crawl_id)
+                                            if err:
+                                                st.error(err)
+                                            else:
+                                                st.success("Deleted")
+                                                st.rerun()
+                    else:
+                        st.info("No crawls found")
+
+                with tab2:
+                    st.subheader("Launch New Crawl")
+
+                    configs, _ = get_crawl_configs(api_token, selected_proj_id)
+
+                    if configs:
+                        config_options = {c.get('name', c['id']): c['id'] for c in configs}
+                        selected_config = st.selectbox("Crawl Configuration", list(config_options.keys()))
+                        selected_config_id = config_options[selected_config]
+                    else:
+                        st.info("Using default configuration")
+                        selected_config_id = None
+
+                    if st.button("🚀 Launch Crawl", type="primary"):
+                        with st.spinner("Launching crawl..."):
+                            crawl, err = launch_crawl(api_token, selected_proj_id, selected_config_id)
+
+                        if err:
+                            st.error(err)
+                        else:
+                            st.success(f"Crawl launched! ID: {crawl.get('id')}")
+                            get_crawls.clear()
+
+                with tab3:
+                    st.subheader("Crawl Configurations")
+
+                    configs, err = get_crawl_configs(api_token, selected_proj_id)
+
+                    if err:
+                        st.error(err)
+                    elif configs:
+                        for config in configs:
+                            with st.expander(f"📋 {config.get('name', 'Unnamed')}"):
+                                st.json(config)
+                    else:
+                        st.info("No custom configurations found")
+
+    # =========================================================================
+    # AGGREGATIONS PAGE
+    # =========================================================================
+    elif page == "📈 Aggregations":
+        st.header("📈 Aggregate Analysis")
+
+        workspaces, _ = get_workspaces(api_token)
+
+        if workspaces:
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                workspace_options = {ws['name']: ws['id'] for ws in workspaces}
+                selected_ws_name = st.selectbox("Workspace", list(workspace_options.keys()), key="agg_ws")
+                selected_ws_id = workspace_options[selected_ws_name]
+
+            with col2:
+                projects, _ = get_projects(api_token, selected_ws_id)
+                if projects:
+                    project_options = {p['name']: p['id'] for p in projects}
+                    selected_proj_name = st.selectbox("Project", list(project_options.keys()), key="agg_proj")
+                    selected_proj_id = project_options[selected_proj_name]
+                else:
+                    selected_proj_id = None
+
+            with col3:
+                if selected_proj_id:
+                    crawls, _ = get_crawls(api_token, selected_ws_id, selected_proj_id, status="done")
+                    if crawls:
+                        crawl_options = {}
+                        for c in crawls:
+                            crawl_date = datetime.fromtimestamp(c.get('created_at', 0) / 1000).strftime('%Y-%m-%d %H:%M')
+                            crawl_options[crawl_date] = c['id']
+                        selected_crawl_label = st.selectbox("Crawl", list(crawl_options.keys()), key="agg_crawl")
+                        selected_crawl_id = crawl_options[selected_crawl_label]
+                    else:
+                        selected_crawl_id = None
+                else:
+                    selected_crawl_id = None
+
+            if selected_crawl_id:
+                st.divider()
+
+                group_by_field = st.selectbox("Group By", AGGREGATE_FIELDS)
+
+                if st.button("Run Aggregation", type="primary"):
+                    with st.spinner("Running aggregation..."):
+                        aggs, err = aggregate_crawl_data(api_token, selected_crawl_id, group_by_field)
+
+                    if err:
+                        st.error(err)
+                    elif aggs:
+                        # Parse aggregation results
+                        results = []
+                        for agg in aggs:
+                            for bucket in agg.get('buckets', []):
+                                results.append({
+                                    group_by_field: bucket.get('key', 'N/A'),
+                                    'count': bucket.get('metrics', {}).get('count', 0)
+                                })
+
+                        if results:
+                            df = pd.DataFrame(results)
+                            df = df.sort_values('count', ascending=False)
+
+                            col1, col2 = st.columns([2, 1])
+
+                            with col1:
+                                st.dataframe(df, use_container_width=True)
+
+                            with col2:
+                                st.bar_chart(df.set_index(group_by_field)['count'].head(20))
+
+                            st.download_button("Download CSV", df.to_csv(index=False),
+                                file_name=f"oncrawl_agg_{group_by_field}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                                mime="text/csv")
+                        else:
+                            st.warning("No aggregation data returned")
+                    else:
+                        st.warning("No data")
+
+    # =========================================================================
+    # CRAWL COMPARISON PAGE
+    # =========================================================================
+    elif page == "🔀 Crawl Comparison":
+        st.header("🔀 Crawl Comparison (Crawl over Crawl)")
+
+        workspaces, _ = get_workspaces(api_token)
+
+        if workspaces:
+            col1, col2 = st.columns(2)
+
+            with col1:
+                workspace_options = {ws['name']: ws['id'] for ws in workspaces}
+                selected_ws_name = st.selectbox("Workspace", list(workspace_options.keys()), key="coc_ws")
+                selected_ws_id = workspace_options[selected_ws_name]
+
+            with col2:
+                projects, _ = get_projects(api_token, selected_ws_id)
+                if projects:
+                    project_options = {p['name']: p['id'] for p in projects}
+                    selected_proj_name = st.selectbox("Project", list(project_options.keys()), key="coc_proj")
+                    selected_proj_id = project_options[selected_proj_name]
+                else:
+                    selected_proj_id = None
+
+            if selected_proj_id:
+                crawls, _ = get_crawls(api_token, selected_ws_id, selected_proj_id, status="done")
+
+                if crawls and len(crawls) >= 2:
+                    st.divider()
+
+                    crawl_options = {}
+                    for c in crawls:
+                        crawl_date = datetime.fromtimestamp(c.get('created_at', 0) / 1000).strftime('%Y-%m-%d %H:%M')
+                        urls = c.get('fetched_urls', 'N/A')
+                        crawl_options[f"{crawl_date} ({urls} URLs)"] = c['id']
+
+                    col1, col2 = st.columns(2)
+
+                    with col1:
+                        st.subheader("Current Crawl")
+                        current_label = st.selectbox("Select current crawl", list(crawl_options.keys()), key="current_crawl")
+                        current_crawl_id = crawl_options[current_label]
+
+                    with col2:
+                        st.subheader("Reference Crawl")
+                        reference_label = st.selectbox("Select reference crawl", list(crawl_options.keys()), index=1, key="ref_crawl")
+                        reference_crawl_id = crawl_options[reference_label]
+
+                    st.divider()
+
+                    change_type = st.selectbox("Change Type", ["All Changes", "New Pages", "Lost Pages", "Changed Pages", "Unchanged Pages"])
+                    change_map = {
+                        "All Changes": None,
+                        "New Pages": "new",
+                        "Lost Pages": "lost",
+                        "Changed Pages": "changed",
+                        "Unchanged Pages": "unchanged"
+                    }
+
+                    fields = st.multiselect("Fields to compare", ALL_FIELDS, default=["url", "status_code", "title", "depth"])
+
+                    if st.button("Compare Crawls", type="primary"):
+                        with st.spinner("Comparing crawls..."):
+                            df, err = export_crawl_comparison(
+                                api_token, current_crawl_id, reference_crawl_id,
+                                fields, change_type=change_map[change_type]
                             )
 
-                        with col2:
-                            output = io.BytesIO()
-                            with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                                df.to_excel(writer, index=False, sheet_name='Data')
-                            excel_data = output.getvalue()
-                            st.download_button(
-                                "Download Excel",
-                                excel_data,
-                                file_name=f"oncrawl_custom_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                            )
+                        if err:
+                            st.error(err)
+                        elif df is not None and not df.empty:
+                            st.success(f"Found {len(df):,} pages")
+                            st.dataframe(df, use_container_width=True, height=400)
+
+                            st.download_button("Download CSV", df.to_csv(index=False),
+                                file_name=f"oncrawl_comparison_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                                mime="text/csv")
+                        else:
+                            st.warning("No comparison data found")
+                else:
+                    st.warning("Need at least 2 completed crawls to compare")
+
+    # =========================================================================
+    # PROJECT MANAGEMENT PAGE
+    # =========================================================================
+    elif page == "📁 Project Management":
+        st.header("📁 Project Management")
+
+        workspaces, _ = get_workspaces(api_token)
+
+        if workspaces:
+            workspace_options = {ws['name']: ws['id'] for ws in workspaces}
+            selected_ws_name = st.selectbox("Workspace", list(workspace_options.keys()), key="pm_ws")
+            selected_ws_id = workspace_options[selected_ws_name]
+
+            # Show workspace info
+            ws_info = next((ws for ws in workspaces if ws['id'] == selected_ws_id), {})
+            if ws_info.get('crawl_pages_limit'):
+                used = ws_info.get('crawl_pages_used', 0)
+                limit = ws_info.get('crawl_pages_limit', 0)
+                st.progress(used / limit if limit > 0 else 0, f"Pages used: {used:,} / {limit:,}")
+
+            st.divider()
+
+            tab1, tab2 = st.tabs(["📋 View Projects", "➕ Create Project"])
+
+            with tab1:
+                if st.button("🔄 Refresh Projects"):
+                    get_projects.clear()
+
+                projects, _ = get_projects(api_token, selected_ws_id)
+
+                if projects:
+                    for proj in projects:
+                        with st.expander(f"📁 {proj['name']}"):
+                            st.write(f"**ID:** `{proj['id']}`")
+                            st.write(f"**Start URL:** {proj.get('start_url', 'N/A')}")
+                            st.write(f"**Created:** {datetime.fromtimestamp(proj.get('created_at', 0) / 1000).strftime('%Y-%m-%d %H:%M') if proj.get('created_at') else 'N/A'}")
+
+                            if st.button("🗑️ Delete Project", key=f"del_proj_{proj['id']}"):
+                                success, err = delete_project(api_token, proj['id'])
+                                if err:
+                                    st.error(err)
+                                else:
+                                    st.success("Project deleted")
+                                    get_projects.clear()
+                                    st.rerun()
+                else:
+                    st.info("No projects found")
+
+            with tab2:
+                st.subheader("Create New Project")
+
+                project_name = st.text_input("Project Name", placeholder="My Website Audit")
+                start_url = st.text_input("Start URL", placeholder="https://example.com")
+                user_agent = st.selectbox("User Agent", ["oncrawl", "googlebot", "bingbot", "custom"])
+
+                if user_agent == "custom":
+                    user_agent = st.text_input("Custom User Agent")
+
+                if st.button("Create Project", type="primary"):
+                    if project_name and start_url:
+                        with st.spinner("Creating project..."):
+                            proj, err = create_project(api_token, selected_ws_id, project_name, start_url, user_agent)
+
+                        if err:
+                            st.error(err)
+                        else:
+                            st.success(f"Project created! ID: {proj.get('id')}")
+                            get_projects.clear()
                     else:
-                        st.warning("No data found matching the query.")
+                        st.warning("Please provide project name and start URL")
+
+    # =========================================================================
+    # SCHEDULING PAGE
+    # =========================================================================
+    elif page == "⏰ Scheduling":
+        st.header("⏰ Crawl Scheduling")
+
+        workspaces, _ = get_workspaces(api_token)
+
+        if workspaces:
+            col1, col2 = st.columns(2)
+
+            with col1:
+                workspace_options = {ws['name']: ws['id'] for ws in workspaces}
+                selected_ws_name = st.selectbox("Workspace", list(workspace_options.keys()), key="sched_ws")
+                selected_ws_id = workspace_options[selected_ws_name]
+
+            with col2:
+                projects, _ = get_projects(api_token, selected_ws_id)
+                if projects:
+                    project_options = {p['name']: p['id'] for p in projects}
+                    selected_proj_name = st.selectbox("Project", list(project_options.keys()), key="sched_proj")
+                    selected_proj_id = project_options[selected_proj_name]
+                else:
+                    selected_proj_id = None
+
+            if selected_proj_id:
+                st.divider()
+
+                tab1, tab2 = st.tabs(["📋 View Schedules", "➕ Create Schedule"])
+
+                with tab1:
+                    schedules, err = get_schedules(api_token, selected_proj_id)
+
+                    if err:
+                        st.error(err)
+                    elif schedules:
+                        for sched in schedules:
+                            freq = sched.get('frequency', 'unknown')
+                            hour = sched.get('hour', 0)
+
+                            with st.expander(f"⏰ {freq.capitalize()} at {hour}:00"):
+                                st.write(f"**ID:** `{sched['id']}`")
+                                st.write(f"**Frequency:** {freq}")
+                                st.write(f"**Hour:** {hour}:00 UTC")
+
+                                if freq == 'weekly':
+                                    st.write(f"**Day of Week:** {sched.get('day_of_week', 'N/A')}")
+                                elif freq == 'monthly':
+                                    st.write(f"**Day of Month:** {sched.get('day_of_month', 'N/A')}")
+
+                                if st.button("🗑️ Delete Schedule", key=f"del_sched_{sched['id']}"):
+                                    success, err = delete_schedule(api_token, sched['id'])
+                                    if err:
+                                        st.error(err)
+                                    else:
+                                        st.success("Schedule deleted")
+                                        st.rerun()
+                    else:
+                        st.info("No schedules configured")
+
+                with tab2:
+                    st.subheader("Create New Schedule")
+
+                    configs, _ = get_crawl_configs(api_token, selected_proj_id)
+
+                    if configs:
+                        config_options = {c.get('name', c['id']): c['id'] for c in configs}
+                        selected_config = st.selectbox("Crawl Configuration", list(config_options.keys()))
+                        selected_config_id = config_options[selected_config]
+                    else:
+                        st.warning("No crawl configurations found. Using default.")
+                        selected_config_id = None
+
+                    frequency = st.selectbox("Frequency", ["daily", "weekly", "monthly"])
+                    hour = st.slider("Hour (UTC)", 0, 23, 2)
+
+                    day_of_week = None
+                    day_of_month = None
+
+                    if frequency == "weekly":
+                        day_of_week = st.selectbox("Day of Week",
+                            ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+                            index=1)
+                        day_of_week = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].index(day_of_week)
+                    elif frequency == "monthly":
+                        day_of_month = st.number_input("Day of Month", 1, 28, 1)
+
+                    if st.button("Create Schedule", type="primary"):
+                        if selected_config_id:
+                            with st.spinner("Creating schedule..."):
+                                sched, err = create_schedule(
+                                    api_token, selected_proj_id, selected_config_id,
+                                    frequency, day_of_week, day_of_month, hour
+                                )
+
+                            if err:
+                                st.error(err)
+                            else:
+                                st.success("Schedule created!")
+                                st.rerun()
+                        else:
+                            st.warning("Please select a crawl configuration")
+
+    # =========================================================================
+    # LINK EXPORT PAGE
+    # =========================================================================
+    elif page == "🔗 Link Export":
+        st.header("🔗 Link Export")
+
+        workspaces, _ = get_workspaces(api_token)
+
+        if workspaces:
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                workspace_options = {ws['name']: ws['id'] for ws in workspaces}
+                selected_ws_name = st.selectbox("Workspace", list(workspace_options.keys()), key="link_ws")
+                selected_ws_id = workspace_options[selected_ws_name]
+
+            with col2:
+                projects, _ = get_projects(api_token, selected_ws_id)
+                if projects:
+                    project_options = {p['name']: p['id'] for p in projects}
+                    selected_proj_name = st.selectbox("Project", list(project_options.keys()), key="link_proj")
+                    selected_proj_id = project_options[selected_proj_name]
+                else:
+                    selected_proj_id = None
+
+            with col3:
+                if selected_proj_id:
+                    crawls, _ = get_crawls(api_token, selected_ws_id, selected_proj_id, status="done")
+                    if crawls:
+                        crawl_options = {}
+                        for c in crawls:
+                            crawl_date = datetime.fromtimestamp(c.get('created_at', 0) / 1000).strftime('%Y-%m-%d %H:%M')
+                            crawl_options[crawl_date] = c['id']
+                        selected_crawl_label = st.selectbox("Crawl", list(crawl_options.keys()), key="link_crawl")
+                        selected_crawl_id = crawl_options[selected_crawl_label]
+                    else:
+                        selected_crawl_id = None
+                else:
+                    selected_crawl_id = None
+
+            if selected_crawl_id:
+                st.divider()
+
+                link_type = st.radio("Link Type", ["Internal Links", "External Links"], horizontal=True)
+
+                if st.button("Export Links", type="primary"):
+                    with st.spinner("Exporting links..."):
+                        df, err = export_links(
+                            api_token, selected_crawl_id,
+                            "internal" if link_type == "Internal Links" else "external"
+                        )
+
+                    if err:
+                        st.error(err)
+                    elif df is not None and not df.empty:
+                        st.success(f"Exported {len(df):,} links")
+                        st.dataframe(df, use_container_width=True, height=400)
+
+                        st.download_button("Download CSV", df.to_csv(index=False),
+                            file_name=f"oncrawl_links_{link_type.lower().replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                            mime="text/csv")
+                    else:
+                        st.warning("No links found")
 
 else:
     # Welcome screen
     st.info("Configure your OnCrawl API token in the sidebar to get started.")
 
-    with st.expander("Available Preset Queries"):
-        for name, config in PRESET_QUERIES.items():
-            st.markdown(f"**{name}**: {config['description']}")
+    col1, col2 = st.columns(2)
 
-    with st.expander("How to get your API token"):
+    with col1:
+        with st.expander("📊 Data Extraction"):
+            st.markdown("""
+            - **35+ preset queries** for common SEO issues
+            - Custom query builder with OQL
+            - Export to CSV/Excel
+            - URL filtering
+            """)
+
+        with st.expander("🔄 Crawl Management"):
+            st.markdown("""
+            - Launch new crawls
+            - Pause, resume, cancel running crawls
+            - View crawl history
+            - Manage crawl configurations
+            """)
+
+        with st.expander("📈 Aggregations"):
+            st.markdown("""
+            - Group data by status code, depth, segments
+            - Visual charts
+            - Export aggregated data
+            """)
+
+    with col2:
+        with st.expander("🔀 Crawl Comparison"):
+            st.markdown("""
+            - Compare two crawls
+            - Find new, lost, changed pages
+            - Track changes over time
+            """)
+
+        with st.expander("📁 Project Management"):
+            st.markdown("""
+            - Create new projects
+            - View project details
+            - Delete projects
+            """)
+
+        with st.expander("⏰ Scheduling"):
+            st.markdown("""
+            - Set up automated crawls
+            - Daily, weekly, monthly schedules
+            - Manage existing schedules
+            """)
+
+    with st.expander("🔑 How to get your API token"):
         st.markdown("""
         1. Log in to your OnCrawl account
         2. Go to **Account Settings** → **API**
         3. Generate or copy your API access token
         4. Paste it in the sidebar
 
-        Your token is stored only in your browser session and is never saved.
-        """)
-
-    with st.expander("Use Cases"):
-        st.markdown("""
-        - **Technical SEO Audits**: Extract 404s, redirects, orphan pages
-        - **Migration Monitoring**: Track redirect chains and loops
-        - **Content Audits**: Find pages without titles, H1s, or descriptions
-        - **Performance Analysis**: Identify slow-loading pages
-        - **Indexability Checks**: Find non-indexable pages
+        Your token is stored only in your browser session.
         """)
 
 # Footer

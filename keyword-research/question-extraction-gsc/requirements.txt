@@ -1,2 +1,4 @@
-pandas>=1.3.0
-git+https://github.com/joshcarty/google-searchconsole
+streamlit>=1.28.0
+pandas>=2.0.0
+plotly>=5.18.0
+searchconsole

@@ -1,3 +1,4 @@
-Pypdf2==3.0.1
-reportlab==4.0.8
-tqdm==4.66.1
+streamlit>=1.28.0
+PyPDF2>=3.0.0
+reportlab>=4.0.0
+tqdm>=4.66.0

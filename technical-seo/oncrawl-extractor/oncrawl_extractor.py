@@ -27,20 +27,34 @@ st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-
 with st.expander("How to use this tool"):
     st.markdown("""
     **What this tool does:**
-    - Extracts and processes OnCrawl export data
-    - Transforms crawl data for analysis
-    - Creates custom audit reports
+    - Connects directly to OnCrawl via API (no file uploads needed)
+    - Extract crawl data using 35+ preset SEO queries or custom OQL
+    - Launch, pause, resume and manage crawls
+    - Compare crawls to track changes over time
+    - Export internal/external link data
+    - Schedule automated crawls
 
-    **How to use:**
-    1. Export data from OnCrawl
-    2. Upload the export file
-    3. Select analysis options
-    4. Generate processed report
+    **Getting your API token:**
+    1. Log in to [app.oncrawl.com](https://app.oncrawl.com)
+    2. Click your profile icon (top right) → **Account Settings**
+    3. Scroll to **API Access Tokens** section
+    4. Click **Generate new token** (or copy an existing one)
+    5. Paste the token in the sidebar of this app
 
-    **Best for:**
-    - OnCrawl data processing
-    - Technical audit workflows
-    - Custom crawl analysis
+    **Using the app:**
+    1. Enter your API token in the sidebar
+    2. Select your workspace and project from the dropdowns
+    3. Choose a module from the sidebar navigation
+    4. Run queries and export data as CSV/Excel
+
+    **Available modules:**
+    - **Data Extraction**: 35+ preset queries (404s, redirects, thin content, orphan pages, etc.) or custom OQL builder
+    - **Crawl Management**: Launch, pause, resume, cancel crawls and view history
+    - **Aggregations**: Group data by status code, depth, URL segments with charts
+    - **Crawl Comparison**: Find new, lost, and changed pages between crawls
+    - **Project Management**: Create/delete projects, monitor usage quotas
+    - **Scheduling**: Set up daily, weekly, or monthly automated crawls
+    - **Link Export**: Export all internal or external links
     """)
 st.markdown("Comprehensive OnCrawl API client for data extraction, crawl management, and analysis.")
 

@@ -56,8 +56,6 @@ with st.expander("How to use this tool"):
     """)
 st.subheader("Automatic On-page Checker for Keywords Close to Ranking")
 st.write("An app which blends keyword data and crawl data to provide actionable insights for keywords close to ranking.")
-st.write("Made in [![this is an image link](https://i.imgur.com/iIOA6kU.png)](https://www.streamlit.io/) by [@leefootseo](https://bsky.app/profile/leefootseo.bsky.social)")
-st.write("")
 
 # set fake agent
 ua = generate_user_agent(navigator="chrome")

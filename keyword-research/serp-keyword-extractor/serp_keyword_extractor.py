@@ -17,9 +17,6 @@ import json
 from fuzzywuzzy import fuzz
 import altair as alt
 
-st.write(
-    "Made by [@leefootseo](https://bsky.app/profile/leefootseo.bsky.social) | [Website](https://www.leefoot.com) | [Contact](https://www.leefoot.com/contact)")
-
 with st.expander("How do I use this app?"):
     st.write("""
 

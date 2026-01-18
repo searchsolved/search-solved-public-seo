@@ -21,8 +21,6 @@ from stqdm import stqdm
 newconfig = use_config()
 newconfig.set("DEFAULT", "EXTRACTION_TIMEOUT", "0")
 
-st.write("Made in [![this is an image link](https://i.imgur.com/iIOA6kU.png)](https://www.streamlit.io/) by [@leefootseo](https://bsky.app/profile/leefootseo.bsky.social)")
-
 with st.expander("How do I use this app?"):
     st.write("""
         1. You will need an API key from www.ValueSERP.com - they offer 100 searches for free

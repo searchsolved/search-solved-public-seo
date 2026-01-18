@@ -77,6 +77,25 @@ enable_fuzzy_product_match = st.sidebar.checkbox('Enable Fuzzy Matching (Slower)
 # -------------------------------- Main Content --------------------------------
 st.title("Automatic Category Page Suggester")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Suggests new category pages based on product data
+    - Analyzes search demand for category opportunities
+    - Identifies gaps in your category taxonomy
+
+    **How to use:**
+    1. Upload product feed CSV with titles/categories
+    2. Upload search demand data (optional)
+    3. Configure category generation settings
+    4. Review suggested new categories
+
+    **Best for:**
+    - Ecommerce taxonomy optimization
+    - Category page creation strategy
+    - Search demand-driven IA improvements
+    """)
 st.markdown("*Discover new category page opportunities based on your product inventory and real search demand.*")
 st.markdown("")
 

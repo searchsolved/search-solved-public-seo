@@ -29,6 +29,25 @@ st.set_page_config(
 
 st.title("📄 PDF Branding Injector")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Adds branding elements to PDF files
+    - Inserts logos, watermarks, or footers
+    - Batch processes multiple PDFs
+
+    **How to use:**
+    1. Upload PDF files to brand
+    2. Upload logo/branding assets
+    3. Configure placement options
+    4. Download branded PDFs
+
+    **Best for:**
+    - White-label PDF reports
+    - Brand consistency in downloads
+    - Client deliverable preparation
+    """)
 st.markdown("Add branded headers to your PDF files with custom styling.")
 
 

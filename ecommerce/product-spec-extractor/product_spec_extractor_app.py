@@ -21,6 +21,25 @@ st.set_page_config(
 
 st.title("📋 Product Spec Extractor")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Extracts product specifications from pages
+    - Structures spec data into consistent format
+    - Identifies missing specifications
+
+    **How to use:**
+    1. Upload URLs or product page HTML
+    2. Configure extraction settings
+    3. Extract and normalize specs
+    4. Download structured data
+
+    **Best for:**
+    - Product data enrichment
+    - Comparison page creation
+    - Structured data preparation
+    """)
 st.markdown("Scrape product specifications from e-commerce pages.")
 
 

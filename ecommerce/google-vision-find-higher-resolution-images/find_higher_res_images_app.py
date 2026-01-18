@@ -24,6 +24,25 @@ st.set_page_config(
 
 st.title("🖼️ Higher Resolution Image Finder")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Finds higher resolution versions of images
+    - Uses Google Vision API for reverse image search
+    - Helps upgrade product image quality
+
+    **How to use:**
+    1. Enter your Google Cloud API key
+    2. Upload images or provide URLs
+    3. Search for higher resolution versions
+    4. Download improved images
+
+    **Best for:**
+    - Product image quality upgrades
+    - Finding original source images
+    - Image asset improvement
+    """)
 st.markdown("Find higher resolution versions of your product images using Google Cloud Vision API.")
 
 

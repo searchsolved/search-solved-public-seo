@@ -21,6 +21,25 @@ st.set_page_config(
 
 st.title("🔤 Regex Generator for SEO")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Generates regex patterns using AI
+    - Tests patterns against sample data
+    - Explains regex components
+
+    **How to use:**
+    1. Enter your OpenAI API key
+    2. Describe the pattern you need
+    3. Provide example matches
+    4. Generate and test regex
+
+    **Best for:**
+    - GA4/GTM regex creation
+    - URL pattern matching
+    - Data validation rules
+    """)
 st.markdown("Describe what you need in plain English → get regex patterns for redirects, GSC filters, and more.")
 
 # Sidebar configuration

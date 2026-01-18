@@ -32,6 +32,25 @@ st.write(
 st.title("Google Trends & Facebook Prophet Tool")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
 
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Forecasts traffic trends using NeuralProphet
+    - Analyzes seasonal patterns
+    - Projects future performance
+
+    **How to use:**
+    1. Upload historical traffic data
+    2. Configure forecast horizon
+    3. Generate predictions
+    4. Download forecast report
+
+    **Best for:**
+    - Traffic forecasting
+    - Seasonal planning
+    - Budget and resource planning
+    """)
+
 # streamlit variables
 FORECAST_WEEKS = st.sidebar.text_input('Number of weeks to forecast', value=52)
 LANGUAGE = st.sidebar.selectbox(

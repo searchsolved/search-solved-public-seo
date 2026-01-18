@@ -18,6 +18,25 @@ st.set_page_config(
 
 st.title("🏷️ Schema Markup Generator")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Generates structured data markup
+    - Creates JSON-LD for common schemas
+    - Validates generated markup
+
+    **How to use:**
+    1. Select schema type
+    2. Fill in required fields
+    3. Generate JSON-LD markup
+    4. Copy/download the code
+
+    **Best for:**
+    - Structured data implementation
+    - Rich result optimization
+    - Schema creation at scale
+    """)
 st.markdown("Generate valid JSON-LD structured data for your pages.")
 
 

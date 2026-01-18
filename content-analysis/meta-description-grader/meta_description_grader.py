@@ -21,6 +21,26 @@ st.set_page_config(
 
 st.title("📝 Meta Description Grader")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Scores meta descriptions on key SEO criteria using AI
+    - Analyzes emotional hooks, benefits, active voice, and urgency
+    - Provides detailed breakdown with improvement suggestions
+
+    **How to use:**
+    1. Enter your OpenAI API key in the sidebar
+    2. Upload a CSV with URL and Meta Description columns
+    3. Click "Analyze" to score your descriptions
+    4. Review scores and recommendations
+
+    **Scoring criteria (0-10 each):**
+    - Emotional Hook: Power verb in opening
+    - Benefit: Clear outcome stated
+    - Active Voice: Uses active voice
+    - Urgency: Creates interest
+    """)
 st.markdown("Score meta descriptions on key SEO criteria using AI analysis.")
 
 # Sidebar configuration

@@ -28,6 +28,25 @@ st.set_page_config(
 
 st.title("🔍 Template Fingerprinting Tool")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Identifies page templates from crawl data
+    - Groups pages by structural similarity
+    - Detects template patterns automatically
+
+    **How to use:**
+    1. Upload crawl data with HTML
+    2. Configure fingerprinting settings
+    3. Analyze template patterns
+    4. Download template groups
+
+    **Best for:**
+    - Large site audits
+    - Template-based optimization
+    - CMS pattern identification
+    """)
 st.markdown("Automatically classify pages into template types using HTML structure analysis.")
 
 

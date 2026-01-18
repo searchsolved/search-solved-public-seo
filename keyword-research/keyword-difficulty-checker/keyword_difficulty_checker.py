@@ -32,6 +32,25 @@ st.write(
 st.title("Keyword Difficulty Finder")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
 
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Estimates keyword difficulty scores
+    - Analyzes SERP competition signals
+    - Prioritizes keywords by opportunity
+
+    **How to use:**
+    1. Upload keyword list
+    2. Configure difficulty factors
+    3. Calculate difficulty scores
+    4. Export prioritized keywords
+
+    **Best for:**
+    - Keyword prioritization
+    - SEO opportunity assessment
+    - Content planning decisions
+    """)
+
 # streamlit variables
 uploaded_file = st.file_uploader("Upload your keyword report")
 

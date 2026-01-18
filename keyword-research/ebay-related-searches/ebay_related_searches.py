@@ -183,6 +183,25 @@ def get_ebay_url(cctld, keyword):
 
 st.title("🔍 eBay Related Search Scraper")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Extracts related searches from eBay
+    - Discovers product keyword variations
+    - Builds comprehensive keyword lists
+
+    **How to use:**
+    1. Enter seed keywords
+    2. Configure search depth
+    3. Extract related searches
+    4. Download keyword list
+
+    **Best for:**
+    - Ecommerce keyword research
+    - Product title optimization
+    - Long-tail keyword discovery
+    """)
 st.markdown("Discover keyword opportunities by mapping eBay's related search suggestions into an interactive visualization.")
 
 st.markdown("---")

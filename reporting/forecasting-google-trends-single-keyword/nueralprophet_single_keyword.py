@@ -32,6 +32,25 @@ st.write(
 st.title("Google Trends & NeuralProphet - Explainable Trends at Scale")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
 
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Forecasts single keyword trends
+    - Uses NeuralProphet for predictions
+    - Visualizes trend projections
+
+    **How to use:**
+    1. Enter keyword or upload data
+    2. Set forecast timeframe
+    3. Generate prediction
+    4. Review trend visualization
+
+    **Best for:**
+    - Keyword trend forecasting
+    - Content timing decisions
+    - Seasonal keyword planning
+    """)
+
 # streamlit variables
 KW = st.text_input('Input your search keyword')
 KW = [KW]

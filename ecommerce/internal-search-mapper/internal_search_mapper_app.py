@@ -24,6 +24,25 @@ st.set_page_config(
 
 st.title("🔎 Internal Search Mapper")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Maps internal site search queries to pages
+    - Identifies search queries without good results
+    - Suggests content/product opportunities
+
+    **How to use:**
+    1. Upload internal search query data
+    2. Upload page/product inventory
+    3. Configure matching threshold
+    4. Review mapping results
+
+    **Best for:**
+    - Site search optimization
+    - Content gap identification
+    - Zero-result query resolution
+    """)
 st.markdown("Map internal site search queries to existing category pages using fuzzy matching.")
 
 

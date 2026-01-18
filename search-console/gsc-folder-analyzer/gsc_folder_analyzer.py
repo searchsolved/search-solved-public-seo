@@ -37,6 +37,25 @@ st.set_page_config(
 
 st.title("📁 GSC Folder Analyzer")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Analyzes GSC performance by URL folder
+    - Groups metrics by site section
+    - Identifies top/bottom performing areas
+
+    **How to use:**
+    1. Upload GSC data with URLs
+    2. Configure folder depth
+    3. Analyze folder performance
+    4. Export section analysis
+
+    **Best for:**
+    - Site section analysis
+    - Content area prioritization
+    - Resource allocation decisions
+    """)
 st.markdown("""
 Analyze your Google Search Console data by URL folder structure.
 Upload a GSC export to see performance metrics aggregated by path/folder.

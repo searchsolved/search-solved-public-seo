@@ -20,6 +20,25 @@ st.set_page_config(
 
 st.title("❓ Question Extraction from GSC")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Extracts question queries from GSC data
+    - Identifies FAQ opportunities from search data
+    - Filters for question-format queries
+
+    **How to use:**
+    1. Upload GSC query export
+    2. Configure question filters
+    3. Extract question queries
+    4. Download FAQ opportunities
+
+    **Best for:**
+    - FAQ content optimization
+    - Featured snippet targeting
+    - People Also Ask strategy
+    """)
 st.markdown("Extract question-type keywords from your Google Search Console data.")
 
 # Default question patterns

@@ -23,6 +23,25 @@ st.set_page_config(
 
 st.title("🏷️ Keyword Topic Classifier")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Classifies keywords into topic categories
+    - Groups keywords by search intent
+    - Creates topical keyword maps
+
+    **How to use:**
+    1. Upload keyword list
+    2. Configure classification settings
+    3. Run topic classification
+    4. Download categorized keywords
+
+    **Best for:**
+    - Content planning
+    - Keyword organization
+    - Topical authority mapping
+    """)
 st.markdown("Classify keywords into hierarchical themes and subthemes using AI.")
 
 # Sidebar configuration

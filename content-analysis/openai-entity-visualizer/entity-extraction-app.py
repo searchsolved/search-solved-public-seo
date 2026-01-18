@@ -13,6 +13,25 @@ from stqdm import stqdm
 # App title and introduction
 st.title('Entity Extraction & Visualisation App by Lee Foot.')
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Extracts and visualizes entities from text
+    - Creates entity relationship diagrams
+    - Uses OpenAI for intelligent extraction
+
+    **How to use:**
+    1. Enter your OpenAI API key
+    2. Paste text content to analyze
+    3. Click "Extract & Visualize"
+    4. Explore interactive entity visualization
+
+    **Best for:**
+    - Visual entity analysis
+    - Content relationship mapping
+    - Presentation-ready visualizations
+    """)
 st.write("This app extracts named entities from text using OpenAI's API and visualizes them using a D3 circle packing chart.")
 
 # Dropdown for detailed instructions

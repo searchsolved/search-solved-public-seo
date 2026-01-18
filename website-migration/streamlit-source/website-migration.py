@@ -28,6 +28,25 @@ def setup_streamlit_interface():
     st.set_page_config(page_title="Automatic Website Migration Tool | LeeFoot.com", layout="wide")
     st.title("Automatic Website Migration Tool")
     st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Plans and tracks website migrations
+    - Matches old URLs to new destinations
+    - Generates redirect mapping files
+
+    **How to use:**
+    1. Upload old URL list
+    2. Upload new URL list
+    3. Configure matching rules
+    4. Generate redirect map
+
+    **Best for:**
+    - Site migration planning
+    - URL mapping at scale
+    - Redirect implementation
+    """)
     st.markdown("### Effortlessly migrate your website data")
 
     st.markdown(

@@ -22,6 +22,25 @@ st.set_page_config(
 
 st.title("📋 Gist Summary Generator")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Generates concise summaries of long content
+    - Creates "gist" snippets for featured snippet optimization
+    - Uses AI for intelligent summarization
+
+    **How to use:**
+    1. Enter your OpenAI API key
+    2. Paste content or upload URLs
+    3. Set desired summary length
+    4. Generate optimized summaries
+
+    **Best for:**
+    - Featured snippet optimization
+    - Content summarization at scale
+    - Creating meta descriptions from content
+    """)
 st.markdown("Create concise 'At a glance' bullet point summaries from articles and content.")
 
 # Sidebar configuration

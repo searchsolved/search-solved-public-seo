@@ -23,6 +23,25 @@ st.set_page_config(
 
 st.title("🗺️ Sitemap URL Extractor")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Extracts all URLs from XML sitemaps
+    - Handles sitemap indexes recursively
+    - Exports clean URL lists
+
+    **How to use:**
+    1. Enter sitemap URL(s)
+    2. Configure extraction depth
+    3. Extract all URLs
+    4. Download URL list
+
+    **Best for:**
+    - Sitemap audits
+    - URL inventory creation
+    - Crawl scope definition
+    """)
 st.markdown("Extract all URLs from any XML sitemap index and its child sitemaps.")
 
 # Sidebar configuration

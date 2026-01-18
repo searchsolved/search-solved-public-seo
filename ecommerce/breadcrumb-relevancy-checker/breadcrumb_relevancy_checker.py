@@ -39,6 +39,25 @@ st.set_page_config(
 
 st.title("🥖 Breadcrumb Relevancy Checker")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Checks if breadcrumbs align with page content
+    - Identifies mismatched category paths
+    - Scores breadcrumb relevancy using AI
+
+    **How to use:**
+    1. Enter your OpenAI API key
+    2. Upload CSV with URLs and breadcrumb paths
+    3. Click "Check Relevancy"
+    4. Review mismatches and suggestions
+
+    **Best for:**
+    - Ecommerce navigation audits
+    - Product categorization validation
+    - User experience optimization
+    """)
 st.markdown("""
 Check if your products are assigned to the most relevant categories.
 Uses TF-IDF fuzzy matching to compare product titles against breadcrumb paths.

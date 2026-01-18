@@ -42,6 +42,25 @@ def setup_streamlit():
     st.set_page_config(page_title="GSC Chart Visualizer | Lee Foot", layout="wide")
     st.title("GSC Chart Visualizer")
     st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Visualizes GSC data with interactive charts
+    - Creates custom performance dashboards
+    - Exports charts for reporting
+
+    **How to use:**
+    1. Upload GSC export data
+    2. Select metrics to visualize
+    3. Configure chart options
+    4. Export visualizations
+
+    **Best for:**
+    - GSC data visualization
+    - Client reporting
+    - Performance trend analysis
+    """)
     st.markdown(f"### Lightweight GSC Data Extractor with Charts (Max {MAX_ROWS:,} Rows)")
 
     st.markdown(

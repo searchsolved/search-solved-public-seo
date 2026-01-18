@@ -23,6 +23,25 @@ st.set_page_config(
 
 st.title("🕷️ OnCrawl API Suite")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Extracts and processes OnCrawl export data
+    - Transforms crawl data for analysis
+    - Creates custom audit reports
+
+    **How to use:**
+    1. Export data from OnCrawl
+    2. Upload the export file
+    3. Select analysis options
+    4. Generate processed report
+
+    **Best for:**
+    - OnCrawl data processing
+    - Technical audit workflows
+    - Custom crawl analysis
+    """)
 st.markdown("Comprehensive OnCrawl API client for data extraction, crawl management, and analysis.")
 
 # Constants

@@ -247,6 +247,25 @@ def save_image(img, output_format="JPEG"):
 st.set_page_config(page_title="eCommerce Image Centering Tool | By Lee Foot")
 st.title("eCommerce Image Centering Tool")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Automatically centers product images
+    - Detects main subject using computer vision
+    - Standardizes image composition
+
+    **How to use:**
+    1. Upload product images (PNG, JPG)
+    2. Configure centering options
+    3. Preview centered results
+    4. Download processed images
+
+    **Best for:**
+    - Product photography standardization
+    - Catalog image consistency
+    - Marketplace listing preparation
+    """)
 st.write("Upload images to center the main subject for consistent product displays")
 
 # Sidebar settings

@@ -26,6 +26,25 @@ except ImportError:
 
 st.title("🗺️ Topical Map Generator")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Creates hierarchical topic maps using AI
+    - Organizes keywords into content clusters
+    - Generates content strategy frameworks
+
+    **How to use:**
+    1. Enter your OpenAI API key
+    2. Upload keyword list
+    3. Configure hierarchy depth
+    4. Generate topical map
+
+    **Best for:**
+    - Content strategy planning
+    - Topic cluster creation
+    - Editorial calendar development
+    """)
 st.markdown("""
 Use AI (GPT-4o) to organize keywords into hierarchical topical maps.
 Great for content strategy planning and building comprehensive topic coverage.

@@ -23,6 +23,25 @@ st.set_page_config(
 
 st.title("📝 Content Reviewer (LLM)")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Reviews content quality using AI analysis
+    - Checks for readability, SEO best practices
+    - Provides actionable improvement suggestions
+
+    **How to use:**
+    1. Enter your OpenAI API key
+    2. Paste content or upload URLs
+    3. Select review criteria
+    4. Generate detailed content review
+
+    **Best for:**
+    - Content quality assurance
+    - Pre-publish content checks
+    - Editorial workflow automation
+    """)
 st.markdown("Review web content and get AI-powered annotations with improvement suggestions.")
 
 # Sidebar configuration

@@ -32,6 +32,25 @@ newconfig.set("DEFAULT", "EXTRACTION_TIMEOUT", "0")
 st.title("SERP N-gram & Title Extractor")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
 
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Extracts n-grams from SERP content
+    - Analyzes phrase frequency across top results
+    - Identifies common patterns in ranking content
+
+    **How to use:**
+    1. Upload SERP scrape data or enter URLs
+    2. Configure n-gram size (2-5 words)
+    3. Extract and analyze phrases
+    4. Download frequency analysis
+
+    **Best for:**
+    - SERP content analysis
+    - Identifying ranking content patterns
+    - Competitive phrase research
+    """)
+
 
 with st.expander("How do I use this app?"):
     st.write("""

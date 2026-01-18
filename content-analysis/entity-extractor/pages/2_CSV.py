@@ -19,6 +19,25 @@ st.write("Made in [![this is an image link](https://i.imgur.com/iIOA6kU.png)](ht
 st.title("Keyword Entity Extractor")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
 
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Batch entity extraction from CSV data
+    - Processes multiple text entries at once
+    - Exports entity analysis results
+
+    **How to use:**
+    1. Upload a CSV with text content
+    2. Select the text column to analyze
+    3. Click "Extract Entities"
+    4. Download results with entities
+
+    **Best for:**
+    - Bulk content analysis
+    - Large-scale entity audits
+    - Content inventory enrichment
+    """)
+
 # streamlit variables
 uploaded_file = st.file_uploader("Upload your .csv list of keywords / Crawl file")
 api_key = st.sidebar.text_input('Please enter your Dandelion API Key')

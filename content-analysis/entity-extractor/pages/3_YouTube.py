@@ -19,6 +19,25 @@ st.write("Made in [![this is an image link](https://i.imgur.com/iIOA6kU.png)](ht
 st.title("YouTube Entity Extractor")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
 
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Extracts entities from YouTube video transcripts
+    - Analyzes video content for topical coverage
+    - Identifies key themes and concepts
+
+    **How to use:**
+    1. Enter YouTube video URLs
+    2. Extract transcripts automatically
+    3. Analyze entities in video content
+    4. Export entity analysis
+
+    **Best for:**
+    - Video content optimization
+    - YouTube SEO research
+    - Transcript analysis
+    """)
+
 # streamlit variables
 api_key = st.sidebar.text_input('Please enter your Dandelion API Key')
 accuracy = st.sidebar.slider("Set Entity Accuracy", min_value=10, max_value=100, value=80)

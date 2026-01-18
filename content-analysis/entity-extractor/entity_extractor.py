@@ -26,6 +26,25 @@ except ImportError:
 
 st.title("🔍 Entity Extractor")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Extracts named entities from text content
+    - Identifies people, places, organizations, concepts
+    - Analyzes entity relationships and frequency
+
+    **How to use:**
+    1. Enter your API key (Google NLP or OpenAI)
+    2. Paste text or upload content
+    3. Click "Extract Entities"
+    4. Review categorized entities
+
+    **Best for:**
+    - Content optimization for topical authority
+    - Competitive entity analysis
+    - Knowledge graph building
+    """)
 st.markdown("""
 Extract named entities (people, organizations, locations) from text using SpaCy NLP.
 Identify key topics and entities in your content for semantic SEO analysis.

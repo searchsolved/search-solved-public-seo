@@ -28,6 +28,25 @@ st.set_page_config(
 
 st.title("📖 Reading Score Analyzer")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Calculates readability scores (Flesch, Gunning Fog, etc.)
+    - Analyzes content complexity
+    - Provides grade-level recommendations
+
+    **How to use:**
+    1. Upload a CSV with content or paste text
+    2. Select readability metrics to calculate
+    3. Analyze content scores
+    4. Download readability report
+
+    **Best for:**
+    - Content accessibility audits
+    - Matching content to audience level
+    - Editorial guidelines compliance
+    """)
 st.markdown("Analyze content readability from URLs using multiple readability metrics.")
 
 

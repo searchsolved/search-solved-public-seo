@@ -20,6 +20,25 @@ st.set_page_config(
 
 st.title("✍️ Meta Description Rewriter")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Rewrites meta descriptions using AI (GPT-4)
+    - Optimizes length for desktop and mobile displays
+    - Applies customizable tone and style settings
+
+    **How to use:**
+    1. Enter your OpenAI API key in the sidebar
+    2. Upload a CSV with columns: URL, Meta Description, H1, Title
+    3. Configure tone and length settings
+    4. Click "Rewrite Descriptions" to process
+
+    **Best for:**
+    - Bulk meta description optimization
+    - SEO content refreshes
+    - Ensuring consistent brand voice across pages
+    """)
 st.markdown("Rewrite meta descriptions with AI - professional tone, proper length, SEO-optimized.")
 
 # Sidebar configuration

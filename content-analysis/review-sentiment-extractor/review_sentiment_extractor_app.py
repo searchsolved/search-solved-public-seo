@@ -26,6 +26,25 @@ st.set_page_config(
 
 st.title("💭 Review Sentiment Extractor")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Extracts sentiment from product reviews
+    - Identifies positive/negative themes
+    - Summarizes customer feedback patterns
+
+    **How to use:**
+    1. Upload reviews CSV or paste review text
+    2. Configure sentiment analysis options
+    3. Extract sentiment scores
+    4. Download sentiment analysis report
+
+    **Best for:**
+    - Product review analysis
+    - Customer feedback insights
+    - Content improvement prioritization
+    """)
 st.markdown("Extract positive and negative sentiments from product reviews using AI.")
 
 

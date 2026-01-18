@@ -22,6 +22,25 @@ st.set_page_config(
 
 st.title("❓ Q&A Schema Extractor")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Extracts Q&A structured data from pages
+    - Validates QAPage schema markup
+    - Identifies FAQ schema opportunities
+
+    **How to use:**
+    1. Upload URLs or paste HTML
+    2. Extract Q&A schema
+    3. Validate existing markup
+    4. Export extraction results
+
+    **Best for:**
+    - FAQ schema audits
+    - Structured data validation
+    - Rich result optimization
+    """)
 st.markdown("Extract FAQ and Q&A structured data from websites or crawl exports.")
 
 

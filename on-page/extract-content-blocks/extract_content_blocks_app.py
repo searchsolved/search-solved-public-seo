@@ -28,6 +28,25 @@ st.set_page_config(
 
 st.title("🧱 Extract Content Blocks")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Extracts structured content blocks from pages
+    - Identifies headers, paragraphs, lists
+    - Maps content structure for analysis
+
+    **How to use:**
+    1. Upload URLs or paste HTML
+    2. Configure extraction options
+    3. Extract content blocks
+    4. Download structured output
+
+    **Best for:**
+    - Content structure audits
+    - Template analysis
+    - Content migration preparation
+    """)
 st.markdown("Use AI to identify content blocks and their XPath selectors from web pages.")
 
 

@@ -21,6 +21,25 @@ st.set_page_config(
 
 st.title("🔗 Anchor Text Relevance Checker")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Checks if anchor text matches target page content
+    - Identifies irrelevant or generic anchors
+    - Scores anchor text quality using AI
+
+    **How to use:**
+    1. Enter your OpenAI API key
+    2. Upload internal link data with anchors
+    3. Click "Check Relevance"
+    4. Review and fix problematic anchors
+
+    **Best for:**
+    - Internal linking audits
+    - Anchor text optimization
+    - Link quality improvement
+    """)
 st.markdown("Assess whether anchor text is relevant, natural, and appropriate for target pages.")
 
 # Sidebar configuration

@@ -23,6 +23,25 @@ st.set_page_config(
 
 st.title("🔍 Keyword Gap Analyzer")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Identifies keyword gaps vs competitors
+    - Finds keywords competitors rank for that you don't
+    - Prioritizes gap opportunities by potential
+
+    **How to use:**
+    1. Upload your keyword rankings
+    2. Upload competitor keyword data
+    3. Configure gap analysis
+    4. Review and export opportunities
+
+    **Best for:**
+    - Competitive keyword research
+    - Content gap identification
+    - SEO opportunity discovery
+    """)
 st.markdown("Find keyword gap opportunities by comparing competitor data and matching to existing content.")
 
 

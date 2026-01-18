@@ -23,6 +23,25 @@ st.set_page_config(
 
 st.title("📝 Content Extractor")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Extracts main text content from web pages
+    - Pulls H1 headings and page titles
+    - Processes multiple URLs concurrently
+
+    **How to use:**
+    1. Upload a CSV with a URL column
+    2. Configure rate limiting and concurrent requests
+    3. Click "Extract Content"
+    4. Download results with extracted text
+
+    **Best for:**
+    - Content audits
+    - Striking distance analysis
+    - Competitive content research
+    """)
 st.markdown("""
 Extract main text content and H1 headings from URLs.
 Useful for content audits and striking distance analysis.

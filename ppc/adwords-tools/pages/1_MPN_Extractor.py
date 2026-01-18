@@ -31,10 +31,28 @@ st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-
 
 with st.expander("How to use this tool"):
     st.markdown("""
+    **What this tool does:**
+    - Extracts MPNs (Manufacturer Part Numbers) from search terms
+    - Identifies key phrases using RAKUN2 algorithm
+    - Separates product codes from regular search terms
+    - Helps build negative keyword lists
+
+    **How to use:**
     1. Export your Search Terms Report from Google Ads
     2. Upload the CSV file below
     3. Select the column containing search terms
-    4. Download the extracted MPNs, words and keyphrases
+    4. Adjust extraction settings in the sidebar
+    5. Download the extracted MPNs and keyphrases
+
+    **Settings explained:**
+    - **Min MPN Length**: Minimum characters for MPN detection
+    - **Remove Sizes**: Filters out size-related terms (mm, cm, etc.)
+    - **num_keywords**: Number of keyphrases to extract per row
+
+    **Best for:**
+    - Finding product-specific search terms
+    - Building SKU-targeted campaigns
+    - Identifying non-brand search patterns
     """)
 
 uploaded_file = st.file_uploader(

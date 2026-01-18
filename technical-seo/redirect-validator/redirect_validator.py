@@ -21,6 +21,31 @@ st.title("🔀 Redirect/URL Mapping Validator")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
 st.markdown("Compare your redirect mapping specification against actual crawled redirects.")
 
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Validates that implemented redirects match your specification
+    - Identifies mismatches, missing, and extra redirects
+    - Compares crawled redirects against your mapping document
+
+    **Files needed:**
+    1. **Crawled Redirects File**: Export from your crawler (e.g., Screaming Frog)
+       - Should contain: Source URL (Address) and Redirect URL columns
+    2. **Redirect Mapping File**: Your redirect specification document
+       - Should contain: Source URL and Destination URL columns
+
+    **The tool checks for:**
+    - **Matches**: Redirects correctly implemented as specified
+    - **Mismatches**: Redirects going to wrong destinations
+    - **Missing**: Specified redirects not found in crawl
+    - **Extra**: Redirects in crawl not in your specification
+
+    **Tips:**
+    - URLs are normalized (lowercase, no trailing slashes, no query params)
+    - Make sure your column mapping is correct before validating
+    - Export the full report for stakeholder sharing
+    """)
+
 
 def clean_url(url):
     """Clean and standardize a URL for comparison."""
@@ -322,30 +347,6 @@ if crawled_file and source_file:
 else:
     # Show instructions
     st.info("Upload both files to begin validation.")
-
-    with st.expander("How to use this tool"):
-        st.markdown("""
-        ### What You Need
-
-        1. **Crawled Redirects File**: Export from your crawler (e.g., Screaming Frog)
-           - Should contain: Source URL (Address) and Redirect URL columns
-
-        2. **Redirect Mapping File**: Your redirect specification document
-           - Should contain: Source URL and Destination URL columns
-
-        ### The Tool Will Check
-
-        - **Matches**: Redirects correctly implemented as specified
-        - **Mismatches**: Redirects going to wrong destinations
-        - **Missing**: Specified redirects not found in crawl
-        - **Extra**: Redirects in crawl not in your specification
-
-        ### Tips
-
-        - URLs are normalized before comparison (lowercase, no trailing slashes, no query params)
-        - Make sure your column mapping is correct before validating
-        - Export the full report for stakeholder sharing
-        """)
 
 # Footer
 st.markdown("---")

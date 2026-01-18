@@ -24,6 +24,34 @@ st.title("❓ People Also Ask (PAA) Scraper")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
 st.markdown("Extract 'People Also Ask' questions recursively using the ValueSERP API.")
 
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Recursively extracts PAA questions from Google search results
+    - Expands each PAA to find deeper question layers
+    - Captures answer snippets and source URLs
+
+    **How to use:**
+    1. Get a ValueSERP API key from [valueserp.com](https://www.valueserp.com/)
+    2. Enter your API key in the sidebar
+    3. Configure search settings (location, language, device)
+    4. Enter seed keywords (one per line)
+    5. Click "Extract PAA Questions"
+
+    **Output columns:**
+    - **original_query**: Your seed keyword
+    - **level**: Depth (1 = direct PAA, 2 = PAA of PAA, etc.)
+    - **question**: The PAA question text
+    - **answer_snippet**: The snippet answer shown in search
+    - **source_url/title**: The answer source
+
+    **Best for:**
+    - Building comprehensive FAQ pages
+    - Discovering content topic ideas
+    - Finding featured snippet opportunities
+    - Understanding user search intent
+    """)
+
 # Sidebar configuration
 with st.sidebar:
     st.header("API Configuration")
@@ -292,35 +320,6 @@ if run_button and keywords_input and api_key:
         else:
             st.warning("No PAA questions found for the entered keywords.")
 
-# Help section
-with st.expander("How to use this tool"):
-    st.markdown("""
-    ### Getting Started
-
-    1. **Get a ValueSERP API key** from [valueserp.com](https://www.valueserp.com/)
-    2. **Enter your API key** in the sidebar
-    3. **Configure your search settings** (location, language, device)
-    4. **Enter your seed keywords** (one per line)
-    5. **Click "Extract PAA Questions"**
-
-    ### Understanding the Results
-
-    - **original_query**: Your seed keyword
-    - **level**: Depth level (1 = direct PAA, 2 = PAA of PAA, etc.)
-    - **parent_query**: The query that triggered this question
-    - **question**: The PAA question text
-    - **answer_snippet**: The snippet answer shown in search results
-    - **source_url**: The URL of the answer source
-    - **source_title**: The title of the answer source
-
-    ### Use Cases
-
-    - Build comprehensive FAQ pages
-    - Discover content topic ideas
-    - Understand user search intent
-    - Find featured snippet opportunities
-    - Expand keyword research
-    """)
 
 # Footer
 st.markdown("---")

@@ -26,6 +26,36 @@ st.title("🌍 Hreflang Checker")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
 st.markdown("Extract and validate hreflang tags from any website.")
 
+with st.expander("How to use this tool"):
+    st.markdown("""
+    **What this tool does:**
+    - Extracts hreflang tags from HTML `<link rel="alternate" hreflang="...">` tags
+    - Checks HTTP headers for hreflang Link headers
+    - Validates implementation for common errors
+
+    **Validation checks:**
+    - Missing self-referencing hreflang tag
+    - Missing x-default tag (for multi-language sites)
+    - Duplicate hreflang codes
+    - Invalid language code formats
+
+    **Valid hreflang formats:**
+    - `en` - Language only
+    - `en-US` - Language + region
+    - `x-default` - Default/fallback page
+
+    **How to use:**
+    1. Enter URLs to check (one per line or upload CSV)
+    2. Configure timeout and delay settings
+    3. Click "Check Hreflang"
+    4. Download the validation report
+
+    **Best for:**
+    - International SEO audits
+    - Multi-language site QA
+    - Pre-migration documentation
+    """)
+
 # Sidebar configuration
 with st.sidebar:
     st.header("Configuration")
@@ -371,35 +401,6 @@ if urls_to_check:
 else:
     st.info("Enter URLs above to check hreflang tags.")
 
-# Help section
-with st.expander("How to use this tool"):
-    st.markdown("""
-    ### What This Tool Does
-
-    1. **Extracts hreflang tags** from HTML `<link rel="alternate" hreflang="...">` tags
-    2. **Checks HTTP headers** for hreflang Link headers
-    3. **Validates implementation** for common errors
-
-    ### Validation Checks
-
-    - Missing self-referencing hreflang tag
-    - Missing x-default tag (for multi-language sites)
-    - Duplicate hreflang codes
-    - Invalid language code formats
-
-    ### Valid Hreflang Formats
-
-    - `en` - Language only
-    - `en-US` - Language + region
-    - `x-default` - Default/fallback page
-
-    ### Use Cases
-
-    - International SEO audits
-    - Multi-language site QA
-    - Competitor analysis
-    - Pre-migration documentation
-    """)
 
 # Footer
 st.markdown("---")

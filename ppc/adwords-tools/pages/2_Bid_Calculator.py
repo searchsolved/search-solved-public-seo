@@ -10,10 +10,29 @@ st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-
 
 with st.expander("How to use this tool"):
     st.markdown("""
-    1. Export your Device, Time of Day, Day of Week, or Location report from Google Ads
-    2. Make sure to include **Cost / conv.** and **Bid adj.** columns
-    3. Upload the CSV file below
-    4. Download the recommended bid adjustments
+    **What this tool does:**
+    - Calculates optimal bid adjustments for Google Ads
+    - Analyzes Device, Location, Time of Day, or Day of Week performance
+    - Recommends adjustments based on cost per conversion data
+
+    **How to use:**
+    1. Go to Google Ads > Reports
+    2. Create a report with Device, Location, Time, or Day breakdown
+    3. **Required columns:** Cost / conv. and Bid adj.
+    4. Export as CSV and upload below
+    5. Download the recommended bid adjustments
+
+    **How it works:**
+    - Compares each segment's Cost/Conv to the average
+    - Calculates percentage adjustment needed
+    - Positive adjustment = segment converts cheaper than average
+    - Negative adjustment = segment converts more expensive
+
+    **Best for:**
+    - Optimizing bids by device type
+    - Geographic bid adjustments
+    - Day-parting optimization
+    - Improving ROAS across segments
     """)
 
 uploaded_file = st.file_uploader(

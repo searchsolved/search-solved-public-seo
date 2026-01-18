@@ -606,6 +606,25 @@ def delete_crawl(api_token, crawl_id):
 # API Functions - Data Queries
 # =============================================================================
 
+@st.cache_data(ttl=600)
+def get_crawl_fields(api_token, crawl_id):
+    """Get available fields for a crawl."""
+    try:
+        response = requests.get(
+            f"{BASE_URL}/data/crawl/{crawl_id}/pages/fields",
+            headers=get_headers(api_token),
+            timeout=30
+        )
+        if response.status_code == 200:
+            data = response.json()
+            fields = data.get('fields', [])
+            # Return dict of field_name -> field_info
+            return {f.get('name'): f for f in fields}, None
+        return {}, f"Error {response.status_code}: {response.text}"
+    except Exception as e:
+        return {}, str(e)
+
+
 def search_crawl_data(api_token, crawl_id, fields, oql_query, url_filter=None, limit=1000, offset=0):
     """Search crawl data with pagination."""
     try:
@@ -1407,6 +1426,31 @@ if api_token and page:
                     all_issues = []
                     issue_counts = {}
 
+                    # First, discover available fields
+                    with st.spinner("Discovering available fields..."):
+                        available_fields, field_error = get_crawl_fields(api_token, selected_crawl_id)
+
+                        if field_error:
+                            st.warning(f"Could not fetch field schema: {field_error}")
+                            available_fields = {}
+
+                    # Build list of fields to request (only ones that exist)
+                    desired_fields = [
+                        "url", "title", "title_length", "title_nb_duplicates",
+                        "h1", "h1_nb", "meta_description", "meta_description_length",
+                        "meta_description_nb_duplicates", "word_count", "depth",
+                        "follow_inlinks", "nb_inlinks", "inlinks_internal"
+                    ]
+
+                    # Filter to only available fields, always include url
+                    if available_fields:
+                        fields_to_use = ["url"] + [f for f in desired_fields[1:] if f in available_fields]
+                        with st.expander("Available fields discovered", expanded=False):
+                            st.write(f"Using {len(fields_to_use)} fields: {', '.join(fields_to_use)}")
+                    else:
+                        # Fallback to basic fields
+                        fields_to_use = ["url", "title", "h1", "meta_description", "depth"]
+
                     # Fetch all 200 OK pages with content fields
                     with st.spinner("Fetching page data..."):
                         # Simplified OQL - just filter by status code 200
@@ -1414,9 +1458,7 @@ if api_token and page:
 
                         df_all, error = export_crawl_data(
                             api_token, selected_crawl_id,
-                            ["url", "title", "title_length", "title_duplicates_count",
-                             "h1", "h1_count", "meta_description", "meta_description_length",
-                             "meta_description_duplicates_count", "word_count", "depth", "nb_inlinks"],
+                            fields_to_use,
                             base_oql, url_filter if url_filter else None
                         )
 
@@ -1425,53 +1467,79 @@ if api_token and page:
                     elif df_all is not None and not df_all.empty:
                         st.success(f"Analyzed {len(df_all):,} pages")
 
-                        # Identify issues
+                        # Show columns available
+                        with st.expander("Columns in data", expanded=False):
+                            st.write(", ".join(df_all.columns.tolist()))
+
+                        # Identify issues - handle various field name formats
                         issues_summary = []
+                        issue_dfs = {}
 
                         # Missing titles
-                        missing_titles = df_all[df_all['title'].isna() | (df_all['title'] == '')]
-                        if not missing_titles.empty:
-                            issues_summary.append(("🔴", "Missing Title", len(missing_titles)))
+                        if 'title' in df_all.columns:
+                            missing_titles = df_all[df_all['title'].isna() | (df_all['title'] == '')]
+                            if not missing_titles.empty:
+                                issues_summary.append(("🔴", "Missing Title", len(missing_titles)))
+                                issue_dfs["Missing Title"] = missing_titles
 
                         # Missing H1
-                        missing_h1 = df_all[df_all['h1'].isna() | (df_all['h1'] == '')]
-                        if not missing_h1.empty:
-                            issues_summary.append(("🔴", "Missing H1", len(missing_h1)))
+                        if 'h1' in df_all.columns:
+                            missing_h1 = df_all[df_all['h1'].isna() | (df_all['h1'] == '')]
+                            if not missing_h1.empty:
+                                issues_summary.append(("🔴", "Missing H1", len(missing_h1)))
+                                issue_dfs["Missing H1"] = missing_h1
 
                         # Missing meta description
-                        missing_desc = df_all[df_all['meta_description'].isna() | (df_all['meta_description'] == '')]
-                        if not missing_desc.empty:
-                            issues_summary.append(("🟡", "Missing Meta Description", len(missing_desc)))
+                        if 'meta_description' in df_all.columns:
+                            missing_desc = df_all[df_all['meta_description'].isna() | (df_all['meta_description'] == '')]
+                            if not missing_desc.empty:
+                                issues_summary.append(("🟡", "Missing Meta Description", len(missing_desc)))
+                                issue_dfs["Missing Meta Description"] = missing_desc
 
-                        # Duplicate titles
-                        dup_titles = df_all[df_all['title_duplicates_count'] > 1] if 'title_duplicates_count' in df_all.columns else pd.DataFrame()
-                        if not dup_titles.empty:
-                            issues_summary.append(("🟡", "Duplicate Titles", len(dup_titles)))
+                        # Duplicate titles - try various field names
+                        dup_title_col = next((c for c in df_all.columns if 'title' in c.lower() and 'dup' in c.lower()), None)
+                        if dup_title_col:
+                            dup_titles = df_all[df_all[dup_title_col] > 1]
+                            if not dup_titles.empty:
+                                issues_summary.append(("🟡", "Duplicate Titles", len(dup_titles)))
+                                issue_dfs["Duplicate Titles"] = dup_titles
 
-                        # Duplicate descriptions
-                        dup_desc = df_all[df_all['meta_description_duplicates_count'] > 1] if 'meta_description_duplicates_count' in df_all.columns else pd.DataFrame()
-                        if not dup_desc.empty:
-                            issues_summary.append(("🟡", "Duplicate Descriptions", len(dup_desc)))
+                        # Duplicate descriptions - try various field names
+                        dup_desc_col = next((c for c in df_all.columns if 'description' in c.lower() and 'dup' in c.lower()), None)
+                        if dup_desc_col:
+                            dup_desc = df_all[df_all[dup_desc_col] > 1]
+                            if not dup_desc.empty:
+                                issues_summary.append(("🟡", "Duplicate Descriptions", len(dup_desc)))
+                                issue_dfs["Duplicate Descriptions"] = dup_desc
 
                         # Thin content
-                        thin_content = df_all[df_all['word_count'] < thin_threshold] if 'word_count' in df_all.columns else pd.DataFrame()
-                        if not thin_content.empty:
-                            issues_summary.append(("🟠", f"Thin Content (<{thin_threshold} words)", len(thin_content)))
+                        if 'word_count' in df_all.columns:
+                            thin_content = df_all[df_all['word_count'] < thin_threshold]
+                            if not thin_content.empty:
+                                issues_summary.append(("🟠", f"Thin Content (<{thin_threshold} words)", len(thin_content)))
+                                issue_dfs[f"Thin Content (<{thin_threshold} words)"] = thin_content
 
                         # Short titles
-                        short_titles = df_all[(df_all['title_length'] > 0) & (df_all['title_length'] < 30)] if 'title_length' in df_all.columns else pd.DataFrame()
-                        if not short_titles.empty:
-                            issues_summary.append(("🟡", "Short Titles (<30 chars)", len(short_titles)))
+                        if 'title_length' in df_all.columns:
+                            short_titles = df_all[(df_all['title_length'] > 0) & (df_all['title_length'] < 30)]
+                            if not short_titles.empty:
+                                issues_summary.append(("🟡", "Short Titles (<30 chars)", len(short_titles)))
+                                issue_dfs["Short Titles (<30 chars)"] = short_titles
 
                         # Long titles
-                        long_titles = df_all[df_all['title_length'] > 60] if 'title_length' in df_all.columns else pd.DataFrame()
-                        if not long_titles.empty:
-                            issues_summary.append(("🟡", "Long Titles (>60 chars)", len(long_titles)))
+                        if 'title_length' in df_all.columns:
+                            long_titles = df_all[df_all['title_length'] > 60]
+                            if not long_titles.empty:
+                                issues_summary.append(("🟡", "Long Titles (>60 chars)", len(long_titles)))
+                                issue_dfs["Long Titles (>60 chars)"] = long_titles
 
-                        # Multiple H1s
-                        multiple_h1 = df_all[df_all['h1_count'] > 1] if 'h1_count' in df_all.columns else pd.DataFrame()
-                        if not multiple_h1.empty:
-                            issues_summary.append(("🟡", "Multiple H1 Tags", len(multiple_h1)))
+                        # Multiple H1s - try various field names
+                        h1_count_col = next((c for c in df_all.columns if 'h1' in c.lower() and ('nb' in c.lower() or 'count' in c.lower())), None)
+                        if h1_count_col:
+                            multiple_h1 = df_all[df_all[h1_count_col] > 1]
+                            if not multiple_h1.empty:
+                                issues_summary.append(("🟡", "Multiple H1 Tags", len(multiple_h1)))
+                                issue_dfs["Multiple H1 Tags"] = multiple_h1
 
                         # Display summary
                         st.subheader("📊 Issues Summary")
@@ -1485,36 +1553,20 @@ if api_token and page:
                             tab_names = [f"{row[1]} ({row[2]})" for row in issues_summary]
                             tabs = st.tabs(tab_names)
 
-                            issue_dfs = [missing_titles, missing_h1, missing_desc, dup_titles, dup_desc, thin_content, short_titles, long_titles, multiple_h1]
-                            issue_dfs = [df for df in issue_dfs if not df.empty]
-
-                            for tab, df in zip(tabs, issue_dfs):
+                            for tab, (icon, issue_name, count) in zip(tabs, issues_summary):
                                 with tab:
-                                    st.dataframe(df, use_container_width=True, height=300)
+                                    if issue_name in issue_dfs:
+                                        st.dataframe(issue_dfs[issue_name], use_container_width=True, height=300)
 
                             # Export all issues
                             st.divider()
                             output = io.BytesIO()
                             with pd.ExcelWriter(output, engine='openpyxl') as writer:
                                 summary_df.to_excel(writer, sheet_name='Summary', index=False)
-                                if not missing_titles.empty:
-                                    missing_titles.to_excel(writer, sheet_name='Missing Titles', index=False)
-                                if not missing_h1.empty:
-                                    missing_h1.to_excel(writer, sheet_name='Missing H1', index=False)
-                                if not missing_desc.empty:
-                                    missing_desc.to_excel(writer, sheet_name='Missing Descriptions', index=False)
-                                if not dup_titles.empty:
-                                    dup_titles.to_excel(writer, sheet_name='Duplicate Titles', index=False)
-                                if not dup_desc.empty:
-                                    dup_desc.to_excel(writer, sheet_name='Duplicate Descriptions', index=False)
-                                if not thin_content.empty:
-                                    thin_content.to_excel(writer, sheet_name='Thin Content', index=False)
-                                if not short_titles.empty:
-                                    short_titles.to_excel(writer, sheet_name='Short Titles', index=False)
-                                if not long_titles.empty:
-                                    long_titles.to_excel(writer, sheet_name='Long Titles', index=False)
-                                if not multiple_h1.empty:
-                                    multiple_h1.to_excel(writer, sheet_name='Multiple H1s', index=False)
+                                for issue_name, df in issue_dfs.items():
+                                    # Clean sheet name (Excel has 31 char limit)
+                                    sheet_name = issue_name[:31].replace("<", "").replace(">", "")
+                                    df.to_excel(writer, sheet_name=sheet_name, index=False)
 
                             st.download_button(
                                 "📥 Download Full Report (Excel)",

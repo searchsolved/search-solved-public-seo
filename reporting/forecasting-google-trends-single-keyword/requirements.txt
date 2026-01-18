@@ -1,3 +1,0 @@
-neuralprophet>=0.6.0
-pandas>=2.2.0
-pytrends>=4.9.2

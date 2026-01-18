@@ -6,3 +6,4 @@ trafilatura>=1.6.0
 textstat>=0.7.0
 plotly>=5.18.0
 lxml>=4.9.0
+fake-useragent>=1.4.0

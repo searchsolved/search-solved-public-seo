@@ -246,16 +246,7 @@ def save_image(img, output_format="JPEG"):
 # Streamlit app
 st.set_page_config(page_title="eCommerce Image Centering Tool | By Lee Foot")
 st.title("eCommerce Image Centering Tool")
-st.markdown("""
-<div style="margin-bottom: 20px;">
-    <h6>
-        Built with Streamlit & OpenCV | 
-        <a href="https://www.leefoot.com" target="_blank">By Lee Foot</a> |
-        <a href="https://www.linkedin.com/in/lee-foot/" target="_blank">LinkedIn</a> |
-        <a href="https://www.leefoot.com/contact">Hire Me</a>
-    </h6>
-</div>
-""", unsafe_allow_html=True)
+st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
 st.write("Upload images to center the main subject for consistent product displays")
 
 # Sidebar settings

@@ -12,6 +12,7 @@ from stqdm import stqdm
 
 # App title and introduction
 st.title('Entity Extraction & Visualisation App by Lee Foot.')
+st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
 st.write("This app extracts named entities from text using OpenAI's API and visualizes them using a D3 circle packing chart.")
 
 # Dropdown for detailed instructions

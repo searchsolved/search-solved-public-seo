@@ -182,6 +182,7 @@ def get_ebay_url(cctld, keyword):
 # ============================================================================
 
 st.title("🔍 eBay Related Search Scraper")
+st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
 st.markdown("Discover keyword opportunities by mapping eBay's related search suggestions into an interactive visualization.")
 
 st.markdown("---")
@@ -225,13 +226,6 @@ with st.sidebar:
     st.subheader("⚠️ Note")
     st.caption("eBay may occasionally block requests. If this happens, wait a few minutes and try again with a different keyword.")
     
-    st.markdown("---")
-    
-    st.markdown("""
-    **Built by 🌐 [Lee Foot](https://www.leefoot.com)**
-    
-    [LinkedIn](https://www.linkedin.com/in/lee-foot/) · [🦋 Bluesky](https://bsky.app/profile/leefootseo.bsky.social) · [📧 Contact](https://www.leefoot.com/contact)
-    """)
 
 
 # Main content

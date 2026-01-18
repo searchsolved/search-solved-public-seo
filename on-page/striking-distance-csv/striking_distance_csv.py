@@ -39,6 +39,7 @@ st.set_page_config(
 )
 
 st.title("🎯 Striking Distance CSV Edition")
+st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
 st.markdown("""
 Find quick-win keyword opportunities from your GSC CSV exports.
 Upload GSC data and crawl data to identify keywords you're ranking for but not optimizing.

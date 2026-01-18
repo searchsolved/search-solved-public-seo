@@ -25,6 +25,7 @@ except ImportError:
     SPACY_AVAILABLE = False
 
 st.title("🔍 Entity Extractor")
+st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
 st.markdown("""
 Extract named entities (people, organizations, locations) from text using SpaCy NLP.
 Identify key topics and entities in your content for semantic SEO analysis.
@@ -357,5 +358,3 @@ if input_method == "Text Area" and not text_input:
     - Understanding entity relationships in content
     """)
 
-st.sidebar.markdown("---")
-st.sidebar.markdown("Built by 🌐 [Lee Foot](https://www.leefoot.com) · [LinkedIn](https://www.linkedin.com/in/lee-foot/) · 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social)")

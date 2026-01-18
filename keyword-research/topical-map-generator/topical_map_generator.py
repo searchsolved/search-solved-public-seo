@@ -25,6 +25,7 @@ except ImportError:
     OPENAI_AVAILABLE = False
 
 st.title("🗺️ Topical Map Generator")
+st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
 st.markdown("""
 Use AI (GPT-4o) to organize keywords into hierarchical topical maps.
 Great for content strategy planning and building comprehensive topic coverage.
@@ -361,5 +362,3 @@ else:
     https://platform.openai.com/api-keys
     """)
 
-st.sidebar.markdown("---")
-st.sidebar.markdown("Built by [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social)")

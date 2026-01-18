@@ -73,15 +73,11 @@ st.sidebar.header("Advanced")
 keep_longest_word = st.sidebar.checkbox('Keep Longest Word Only', value=True, help="Remove shorter keyword fragments")
 enable_fuzzy_product_match = st.sidebar.checkbox('Enable Fuzzy Matching (Slower)', value=False)
 
-# Author info in sidebar
-st.sidebar.markdown("---")
-st.sidebar.markdown("**Author:** [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com)")
-st.sidebar.markdown("[![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social)")
 
 # -------------------------------- Main Content --------------------------------
 st.title("Automatic Category Page Suggester")
+st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
 st.markdown("*Discover new category page opportunities based on your product inventory and real search demand.*")
-st.markdown("**By [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com)** · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · 🦋 [Bluesky](https://bsky.app/profile/leefootseo.bsky.social) · [Contact](https://www.leefoot.com/contact)")
 st.markdown("")
 
 # Instructions in an expander (expanded by default)

@@ -633,7 +633,13 @@ def search_crawl_data(api_token, crawl_id, fields, oql_query, url_filter=None, l
 
         if response.status_code == 200:
             data = response.json()
-            return data.get('pages', []), data.get('meta', {}), None
+            # API returns 'urls' not 'pages', and 'total_hits' in meta
+            urls = data.get('urls', data.get('pages', []))
+            meta = data.get('meta', {})
+            # Normalize meta to use 'total' key
+            if 'total_hits' in meta:
+                meta['total'] = meta['total_hits']
+            return urls, meta, None
         return [], {}, f"Error {response.status_code}: {response.text}"
     except Exception as e:
         return [], {}, str(e)
@@ -674,20 +680,19 @@ def export_crawl_data(api_token, crawl_id, fields, oql_query, url_filter=None):
 def aggregate_crawl_data(api_token, crawl_id, group_by, oql_query=None, agg_type="count"):
     """Run aggregate query on crawl data."""
     try:
-        query = {
-            "agg": [
-                {
-                    "groupBy": [{"field": group_by}],
-                    "metric": {"count": {"field": "url"}}
-                }
-            ]
+        # Use the /pages/aggs endpoint with correct format
+        agg_config = {
+            "fields": [{"name": group_by}],
+            "value": "url:count"
         }
 
         if oql_query:
-            query["oql"] = oql_query
+            agg_config["oql"] = oql_query
+
+        query = {"aggs": [agg_config]}
 
         response = requests.post(
-            f"{BASE_URL}/data/crawl/{crawl_id}/pages",
+            f"{BASE_URL}/data/crawl/{crawl_id}/pages/aggs",
             headers=get_headers(api_token),
             json=query,
             timeout=120
@@ -695,7 +700,21 @@ def aggregate_crawl_data(api_token, crawl_id, group_by, oql_query=None, agg_type
 
         if response.status_code == 200:
             data = response.json()
-            return data.get('aggs', []), None
+            # Convert new format (cols/rows) to old format (buckets) for compatibility
+            aggs = data.get('aggs', [])
+            result = []
+            for agg in aggs:
+                cols = agg.get('cols', [])
+                rows = agg.get('rows', [])
+                buckets = []
+                for row in rows:
+                    if len(row) >= 2:
+                        buckets.append({
+                            'key': row[0],
+                            'metrics': {'count': row[1]}
+                        })
+                result.append({'buckets': buckets})
+            return result, None
         return [], f"Error {response.status_code}: {response.text}"
     except Exception as e:
         return [], str(e)
@@ -930,22 +949,26 @@ if api_token and page:
 
             if selected_crawl_id:
                 if st.button("Generate Health Report", type="primary"):
+                    errors_found = []
+
                     with st.spinner("Analyzing site health..."):
-                        # Fetch key metrics
-                        metrics = {}
+                        # Fetch key metrics using aggregation for total count
+                        ok_agg, agg_error = aggregate_crawl_data(api_token, selected_crawl_id, "status_code")
 
-                        # Total pages
-                        total_pages, _, _ = search_crawl_data(api_token, selected_crawl_id, ["url"],
-                            {"and": [{"field": ["fetched", "equals", True]}]}, limit=1)
+                        if agg_error:
+                            errors_found.append(f"Aggregation error: {agg_error}")
 
-                        # 200 OK pages
-                        ok_agg, _ = aggregate_crawl_data(api_token, selected_crawl_id, "status_code",
-                            {"and": [{"field": ["fetched", "equals", True]}]})
+                        # Indexable pages - simplified query
+                        indexable, meta, idx_error = search_crawl_data(api_token, selected_crawl_id, ["url"],
+                            {"and": [{"field": ["status_code", "equals", 200]},
+                                     {"field": ["indexable", "equals", True]}]}, limit=1)
 
-                        # Indexable pages
-                        indexable, meta, _ = search_crawl_data(api_token, selected_crawl_id, ["url"],
-                            {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]},
-                                     {"field": ["meta_robots_index", "equals", True]}, {"field": ["robots_txt_denied", "equals", False]}]}, limit=1)
+                        if idx_error:
+                            # Try alternative field names
+                            indexable, meta, idx_error2 = search_crawl_data(api_token, selected_crawl_id, ["url"],
+                                {"and": [{"field": ["status_code", "equals", 200]}]}, limit=1)
+                            if idx_error2:
+                                errors_found.append(f"Indexable query error: {idx_error}")
 
                         # Parse aggregation results
                         status_counts = {}
@@ -956,10 +979,16 @@ if api_token and page:
 
                         total = sum(status_counts.values())
                         ok_200 = status_counts.get(200, 0)
-                        redirects_3xx = sum(v for k, v in status_counts.items() if 300 <= k < 400)
-                        errors_4xx = sum(v for k, v in status_counts.items() if 400 <= k < 500)
-                        errors_5xx = sum(v for k, v in status_counts.items() if 500 <= k < 600)
+                        redirects_3xx = sum(v for k, v in status_counts.items() if k and 300 <= int(k) < 400)
+                        errors_4xx = sum(v for k, v in status_counts.items() if k and 400 <= int(k) < 500)
+                        errors_5xx = sum(v for k, v in status_counts.items() if k and 500 <= int(k) < 600)
                         indexable_count = meta.get('total', 0) if meta else 0
+
+                    # Show any errors encountered
+                    if errors_found:
+                        with st.expander("⚠️ API Warnings", expanded=False):
+                            for err in errors_found:
+                                st.warning(err)
 
                     # Display metrics
                     st.subheader("📊 Key Metrics")

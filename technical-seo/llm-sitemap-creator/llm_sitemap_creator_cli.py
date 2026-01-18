@@ -130,7 +130,7 @@ def main():
     parser.add_argument('--max-depth', type=int, default=3,
                         help='Max nesting depth (default: 3)')
     parser.add_argument('--model', default='gpt-4o-mini',
-                        choices=['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo'],
+                        choices=['gpt-4o-mini', 'gpt-4o', 'gpt-4.1'],
                         help='OpenAI model (default: gpt-4o-mini)')
     parser.add_argument('--json-output', help='Also save JSON structure to this path')
 

@@ -49,7 +49,7 @@ with st.expander("User Guide"):
 
 # Constants for OpenAI model and token limits
 api_key = st.text_input("Enter your OpenAI API key:", type="password")
-model = st.selectbox("Choose the model:", ["gpt-3.5-turbo-1106", "gpt-4-1106-preview"])
+model = st.selectbox("Choose the model:", ["gpt-4o-mini", "gpt-4o"])
 max_tokens = st.slider("Maximum Tokens:", min_value=500, max_value=2000, value=1000, step=100)
 input_text = st.text_area("Enter your text here:", height=150)
 

@@ -101,7 +101,7 @@ def main():
     parser.add_argument('--output', default='topical_map.csv', help='Output CSV path')
     parser.add_argument('--api-key', help='OpenAI API key (or set OPENAI_API_KEY env var)')
     parser.add_argument('--keyword-col', default='keyword', help='Keyword column name')
-    parser.add_argument('--model', default='gpt-4o-mini', choices=['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo'], help='OpenAI model')
+    parser.add_argument('--model', default='gpt-4o-mini', choices=['gpt-4o-mini', 'gpt-4o', 'gpt-4.1'], help='OpenAI model')
     parser.add_argument('--depth', type=int, default=4, help='Hierarchy depth (2-5)')
     parser.add_argument('--json-output', help='Optional: save raw JSON output')
 

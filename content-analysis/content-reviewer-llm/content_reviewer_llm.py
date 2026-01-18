@@ -57,10 +57,10 @@ with st.sidebar:
 
     if provider == "Anthropic (Claude)":
         ai_key = st.text_input("Anthropic API Key", type="password")
-        model = st.selectbox("Model", ["claude-sonnet-4-20250514", "claude-3-5-sonnet-20241022", "claude-3-haiku-20240307"])
+        model = st.selectbox("Model", ["claude-sonnet-4-5-20250929", "claude-sonnet-4-20250514", "claude-haiku-4-5-20251015"])
     else:
         ai_key = st.text_input("OpenAI API Key", type="password")
-        model = st.selectbox("Model", ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"])
+        model = st.selectbox("Model", ["gpt-4o", "gpt-4o-mini", "gpt-4.1"])
 
     st.header("Review Settings")
     review_type = st.selectbox("Review Focus", [

@@ -91,7 +91,7 @@ def main():
     parser.add_argument('--batch-size', type=int, default=50,
                         help='Keywords per API call (default: 50)')
     parser.add_argument('--model', default='gpt-4o-mini',
-                        choices=['gpt-4o-mini', 'gpt-4o', 'gpt-4-turbo'],
+                        choices=['gpt-4o-mini', 'gpt-4o', 'gpt-4.1'],
                         help='OpenAI model (default: gpt-4o-mini)')
     parser.add_argument('--no-confidence', action='store_true',
                         help='Skip confidence scores')

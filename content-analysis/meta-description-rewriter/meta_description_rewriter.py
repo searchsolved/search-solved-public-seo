@@ -47,7 +47,7 @@ with st.sidebar:
     api_key = st.text_input("OpenAI API Key", type="password")
 
     st.header("⚙️ Settings")
-    model = st.selectbox("Model", ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo"], index=0)
+    model = st.selectbox("Model", ["gpt-4o-mini", "gpt-4o", "gpt-4.1"], index=0)
 
     st.header("📏 Length Settings")
     max_desktop = st.slider("Desktop max chars", 140, 170, 160)

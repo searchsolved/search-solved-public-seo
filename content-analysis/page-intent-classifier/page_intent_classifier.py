@@ -92,7 +92,7 @@ api_key = st.sidebar.text_input(
 
 model = st.sidebar.selectbox(
     "Model",
-    ["gpt-4o-mini", "gpt-3.5-turbo", "gpt-4o", "gpt-4-turbo"],
+    ["gpt-4o-mini", "gpt-4o", "gpt-4.1"],
     help="GPT-4o-mini is recommended for cost-effectiveness"
 )
 

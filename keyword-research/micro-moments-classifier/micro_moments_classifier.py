@@ -88,7 +88,7 @@ batch_size = st.sidebar.slider(
 
 model = st.sidebar.selectbox(
     "Model",
-    ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo"],
+    ["gpt-4o-mini", "gpt-4o", "gpt-4.1"],
     index=0,
     help="GPT model to use"
 )

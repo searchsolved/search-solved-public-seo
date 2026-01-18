@@ -9,7 +9,7 @@
 
 import streamlit as st
 
-st.set_page_config(page_title="Google Trends & NueralProphet - Explainable Trends at Scale", page_icon="🔎",
+st.set_page_config(page_title="[LEGACY] Google Trends Batch Forecasting", page_icon="⚠️",
                    layout="wide")  # needs to be the first thing after the streamlit import
 
 import chardet
@@ -29,8 +29,10 @@ set_random_seed(0)
 st.write(
     "Made by [@leefootseo](https://bsky.app/profile/leefootseo.bsky.social) | [Website](https://www.leefoot.com) | [Contact](https://www.leefoot.com/contact)")
 
-st.title("Google Trends & Facebook Prophet Tool")
+st.title("⚠️ [LEGACY] Google Trends & Facebook Prophet Tool")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![Hire Me](https://img.shields.io/badge/-Hire%20Me-FF6B6B?logoColor=white)](https://www.leefoot.com/contact) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logo=bluesky&logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social)")
+
+st.warning("**Legacy Tool:** This tool uses the unofficial Google Trends API (pytrends) which is frequently rate-limited and unreliable. Results may be incomplete or the tool may fail entirely. Use with caution.")
 
 with st.expander("How to use this tool"):
     st.markdown("""

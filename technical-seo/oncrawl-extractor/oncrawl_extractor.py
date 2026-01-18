@@ -48,13 +48,17 @@ with st.expander("How to use this tool"):
     4. Run queries and export data as CSV/Excel
 
     **Available modules:**
-    - **Data Extraction**: 35+ preset queries (404s, redirects, thin content, orphan pages, etc.) or custom OQL builder
-    - **Crawl Management**: Launch, pause, resume, cancel crawls and view history
-    - **Aggregations**: Group data by status code, depth, URL segments with charts
+    - **Site Health Dashboard**: Quick overview with key metrics, status codes, and top issues
+    - **Bulk Audit Export**: Export multiple audits (404s, redirects, thin content, etc.) to one Excel file
+    - **Cannibalization Finder**: Find pages with duplicate titles/H1s competing for same keywords
+    - **Content Quality Report**: Combined audit of thin content, missing elements, and duplicates
+    - **Data Extraction**: 35+ preset queries or custom OQL builder
+    - **Crawl Management**: Launch, pause, resume, cancel crawls
+    - **Aggregations**: Group data by status code, depth, URL segments
     - **Crawl Comparison**: Find new, lost, and changed pages between crawls
-    - **Project Management**: Create/delete projects, monitor usage quotas
-    - **Scheduling**: Set up daily, weekly, or monthly automated crawls
-    - **Link Export**: Export all internal or external links
+    - **Project Management**: Create/delete projects, monitor quotas
+    - **Scheduling**: Set up automated crawls
+    - **Link Export**: Export internal or external links
     """)
 st.markdown("Comprehensive OnCrawl API client for data extraction, crawl management, and analysis.")
 
@@ -859,6 +863,10 @@ with st.sidebar:
         page = st.radio(
             "Select Module",
             options=[
+                "🏥 Site Health Dashboard",
+                "📦 Bulk Audit Export",
+                "🔍 Cannibalization Finder",
+                "📝 Content Quality Report",
                 "📊 Data Extraction",
                 "🔄 Crawl Management",
                 "📈 Aggregations",
@@ -879,9 +887,617 @@ with st.sidebar:
 if api_token and page:
 
     # =========================================================================
+    # SITE HEALTH DASHBOARD
+    # =========================================================================
+    if page == "🏥 Site Health Dashboard":
+        st.header("🏥 Site Health Dashboard")
+
+        workspaces, ws_error = get_workspaces(api_token)
+
+        if ws_error:
+            st.error(ws_error)
+        elif workspaces:
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                workspace_options = {ws['name']: ws['id'] for ws in workspaces}
+                selected_ws_name = st.selectbox("Workspace", list(workspace_options.keys()), key="health_ws")
+                selected_ws_id = workspace_options[selected_ws_name]
+
+            with col2:
+                projects, _ = get_projects(api_token, selected_ws_id)
+                if projects:
+                    project_options = {p['name']: p['id'] for p in projects}
+                    selected_proj_name = st.selectbox("Project", list(project_options.keys()), key="health_proj")
+                    selected_proj_id = project_options[selected_proj_name]
+                else:
+                    selected_proj_id = None
+
+            with col3:
+                if selected_proj_id:
+                    crawls, _ = get_crawls(api_token, selected_ws_id, selected_proj_id, status="done")
+                    if crawls:
+                        crawl_options = {}
+                        for c in crawls:
+                            crawl_date = datetime.fromtimestamp(c.get('created_at', 0) / 1000).strftime('%Y-%m-%d %H:%M')
+                            crawl_options[crawl_date] = c['id']
+                        selected_crawl_label = st.selectbox("Crawl", list(crawl_options.keys()), key="health_crawl")
+                        selected_crawl_id = crawl_options[selected_crawl_label]
+                    else:
+                        selected_crawl_id = None
+                else:
+                    selected_crawl_id = None
+
+            if selected_crawl_id:
+                if st.button("Generate Health Report", type="primary"):
+                    with st.spinner("Analyzing site health..."):
+                        # Fetch key metrics
+                        metrics = {}
+
+                        # Total pages
+                        total_pages, _, _ = search_crawl_data(api_token, selected_crawl_id, ["url"],
+                            {"and": [{"field": ["fetched", "equals", True]}]}, limit=1)
+
+                        # 200 OK pages
+                        ok_agg, _ = aggregate_crawl_data(api_token, selected_crawl_id, "status_code",
+                            {"and": [{"field": ["fetched", "equals", True]}]})
+
+                        # Indexable pages
+                        indexable, meta, _ = search_crawl_data(api_token, selected_crawl_id, ["url"],
+                            {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]},
+                                     {"field": ["meta_robots_index", "equals", True]}, {"field": ["robots_txt_denied", "equals", False]}]}, limit=1)
+
+                        # Parse aggregation results
+                        status_counts = {}
+                        if ok_agg:
+                            for agg in ok_agg:
+                                for bucket in agg.get('buckets', []):
+                                    status_counts[bucket.get('key')] = bucket.get('metrics', {}).get('count', 0)
+
+                        total = sum(status_counts.values())
+                        ok_200 = status_counts.get(200, 0)
+                        redirects_3xx = sum(v for k, v in status_counts.items() if 300 <= k < 400)
+                        errors_4xx = sum(v for k, v in status_counts.items() if 400 <= k < 500)
+                        errors_5xx = sum(v for k, v in status_counts.items() if 500 <= k < 600)
+                        indexable_count = meta.get('total', 0) if meta else 0
+
+                    # Display metrics
+                    st.subheader("📊 Key Metrics")
+                    m1, m2, m3, m4, m5 = st.columns(5)
+                    m1.metric("Total Pages", f"{total:,}")
+                    m2.metric("200 OK", f"{ok_200:,}", f"{ok_200/total*100:.1f}%" if total else "0%")
+                    m3.metric("Indexable", f"{indexable_count:,}")
+                    m4.metric("Redirects (3xx)", f"{redirects_3xx:,}")
+                    m5.metric("Errors (4xx/5xx)", f"{errors_4xx + errors_5xx:,}")
+
+                    # Status code breakdown
+                    st.subheader("📈 Status Code Distribution")
+                    if status_counts:
+                        status_df = pd.DataFrame([
+                            {"Status Code": k, "Count": v, "Percentage": f"{v/total*100:.1f}%"}
+                            for k, v in sorted(status_counts.items())
+                        ])
+                        col1, col2 = st.columns([1, 2])
+                        with col1:
+                            st.dataframe(status_df, use_container_width=True, hide_index=True)
+                        with col2:
+                            st.bar_chart(status_df.set_index("Status Code")["Count"])
+
+                    # Top issues
+                    st.subheader("⚠️ Top Issues")
+                    with st.spinner("Checking for issues..."):
+                        issues = []
+
+                        # Check for 404s
+                        _, meta_404, _ = search_crawl_data(api_token, selected_crawl_id, ["url"],
+                            {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 404]}]}, limit=1)
+                        if meta_404.get('total', 0) > 0:
+                            issues.append(("🔴", "404 Not Found", meta_404['total'], "High"))
+
+                        # Check for redirect chains
+                        _, meta_chains, _ = search_crawl_data(api_token, selected_crawl_id, ["url"],
+                            {"and": [{"field": ["fetched", "equals", True]}, {"field": ["redirect_count", "gt", 1]}]}, limit=1)
+                        if meta_chains.get('total', 0) > 0:
+                            issues.append(("🟡", "Redirect Chains", meta_chains['total'], "Medium"))
+
+                        # Check for missing titles
+                        _, meta_titles, _ = search_crawl_data(api_token, selected_crawl_id, ["url"],
+                            {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["title", "is_empty", True]}]}, limit=1)
+                        if meta_titles.get('total', 0) > 0:
+                            issues.append(("🟡", "Missing Titles", meta_titles['total'], "Medium"))
+
+                        # Check for missing H1s
+                        _, meta_h1, _ = search_crawl_data(api_token, selected_crawl_id, ["url"],
+                            {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["h1", "is_empty", True]}]}, limit=1)
+                        if meta_h1.get('total', 0) > 0:
+                            issues.append(("🟡", "Missing H1", meta_h1['total'], "Medium"))
+
+                        # Check for thin content
+                        _, meta_thin, _ = search_crawl_data(api_token, selected_crawl_id, ["url"],
+                            {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["word_count", "lt", 300]}]}, limit=1)
+                        if meta_thin.get('total', 0) > 0:
+                            issues.append(("🟡", "Thin Content (<300 words)", meta_thin['total'], "Medium"))
+
+                        # Check for orphan pages
+                        _, meta_orphan, _ = search_crawl_data(api_token, selected_crawl_id, ["url"],
+                            {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["nb_inlinks", "equals", 0]}]}, limit=1)
+                        if meta_orphan.get('total', 0) > 0:
+                            issues.append(("🟠", "Orphan Pages", meta_orphan['total'], "Medium"))
+
+                        # Check for slow pages
+                        _, meta_slow, _ = search_crawl_data(api_token, selected_crawl_id, ["url"],
+                            {"and": [{"field": ["fetched", "equals", True]}, {"field": ["status_code", "equals", 200]}, {"field": ["delay_total", "gt", 3000]}]}, limit=1)
+                        if meta_slow.get('total', 0) > 0:
+                            issues.append(("🟠", "Slow Pages (>3s)", meta_slow['total'], "Medium"))
+
+                    if issues:
+                        issues_df = pd.DataFrame(issues, columns=["", "Issue", "Count", "Priority"])
+                        st.dataframe(issues_df, use_container_width=True, hide_index=True)
+                    else:
+                        st.success("No major issues detected!")
+        else:
+            st.warning("No workspaces found")
+
+    # =========================================================================
+    # BULK AUDIT EXPORT
+    # =========================================================================
+    elif page == "📦 Bulk Audit Export":
+        st.header("📦 Bulk Audit Export")
+        st.markdown("Export multiple SEO audits to a single Excel file with separate sheets.")
+
+        workspaces, ws_error = get_workspaces(api_token)
+
+        if ws_error:
+            st.error(ws_error)
+        elif workspaces:
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                workspace_options = {ws['name']: ws['id'] for ws in workspaces}
+                selected_ws_name = st.selectbox("Workspace", list(workspace_options.keys()), key="bulk_ws")
+                selected_ws_id = workspace_options[selected_ws_name]
+
+            with col2:
+                projects, _ = get_projects(api_token, selected_ws_id)
+                if projects:
+                    project_options = {p['name']: p['id'] for p in projects}
+                    selected_proj_name = st.selectbox("Project", list(project_options.keys()), key="bulk_proj")
+                    selected_proj_id = project_options[selected_proj_name]
+                else:
+                    selected_proj_id = None
+
+            with col3:
+                if selected_proj_id:
+                    crawls, _ = get_crawls(api_token, selected_ws_id, selected_proj_id, status="done")
+                    if crawls:
+                        crawl_options = {}
+                        for c in crawls:
+                            crawl_date = datetime.fromtimestamp(c.get('created_at', 0) / 1000).strftime('%Y-%m-%d %H:%M')
+                            crawl_options[crawl_date] = c['id']
+                        selected_crawl_label = st.selectbox("Crawl", list(crawl_options.keys()), key="bulk_crawl")
+                        selected_crawl_id = crawl_options[selected_crawl_label]
+                    else:
+                        selected_crawl_id = None
+                else:
+                    selected_crawl_id = None
+
+            if selected_crawl_id:
+                st.divider()
+
+                # Audit selection
+                st.subheader("Select Audits to Export")
+
+                audit_options = {
+                    "404 Pages": PRESET_QUERIES["404 Pages"],
+                    "301 Redirects": PRESET_QUERIES["301 Redirects"],
+                    "302 Redirects": PRESET_QUERIES["302 Redirects"],
+                    "Redirect Chains": PRESET_QUERIES["Redirect Chains"],
+                    "Missing Titles": PRESET_QUERIES["Pages Without Title"],
+                    "Missing H1": PRESET_QUERIES["Pages Without H1"],
+                    "Missing Descriptions": PRESET_QUERIES["Pages Without Description"],
+                    "Duplicate Titles": PRESET_QUERIES["Duplicate Titles"],
+                    "Duplicate Descriptions": PRESET_QUERIES["Duplicate Descriptions"],
+                    "Thin Content (<300 words)": PRESET_QUERIES["Thin Content (<300 words)"],
+                    "Orphan Pages": PRESET_QUERIES["Orphan Pages"],
+                    "Slow Pages (>3s)": PRESET_QUERIES["Slow Pages (>3s)"],
+                    "Non-Indexable Pages": PRESET_QUERIES["Non-Indexable Pages"],
+                    "Not in Sitemap": PRESET_QUERIES["Not in Sitemap"],
+                    "Images Without Alt": PRESET_QUERIES["Images Without Alt"],
+                }
+
+                col1, col2, col3 = st.columns(3)
+                selected_audits = []
+
+                with col1:
+                    st.markdown("**Errors & Redirects**")
+                    if st.checkbox("404 Pages", value=True, key="bulk_404"): selected_audits.append("404 Pages")
+                    if st.checkbox("301 Redirects", value=True, key="bulk_301"): selected_audits.append("301 Redirects")
+                    if st.checkbox("302 Redirects", key="bulk_302"): selected_audits.append("302 Redirects")
+                    if st.checkbox("Redirect Chains", value=True, key="bulk_chains"): selected_audits.append("Redirect Chains")
+
+                with col2:
+                    st.markdown("**Content Issues**")
+                    if st.checkbox("Missing Titles", value=True, key="bulk_titles"): selected_audits.append("Missing Titles")
+                    if st.checkbox("Missing H1", value=True, key="bulk_h1"): selected_audits.append("Missing H1")
+                    if st.checkbox("Missing Descriptions", key="bulk_desc"): selected_audits.append("Missing Descriptions")
+                    if st.checkbox("Duplicate Titles", value=True, key="bulk_dup_titles"): selected_audits.append("Duplicate Titles")
+                    if st.checkbox("Thin Content", value=True, key="bulk_thin"): selected_audits.append("Thin Content (<300 words)")
+
+                with col3:
+                    st.markdown("**Technical Issues**")
+                    if st.checkbox("Orphan Pages", value=True, key="bulk_orphan"): selected_audits.append("Orphan Pages")
+                    if st.checkbox("Slow Pages (>3s)", key="bulk_slow"): selected_audits.append("Slow Pages (>3s)")
+                    if st.checkbox("Non-Indexable", key="bulk_noindex"): selected_audits.append("Non-Indexable Pages")
+                    if st.checkbox("Not in Sitemap", key="bulk_sitemap"): selected_audits.append("Not in Sitemap")
+                    if st.checkbox("Images Without Alt", key="bulk_alt"): selected_audits.append("Images Without Alt")
+
+                if selected_audits and st.button("Generate Bulk Export", type="primary"):
+                    progress_bar = st.progress(0)
+                    status_text = st.empty()
+
+                    all_data = {}
+                    for idx, audit_name in enumerate(selected_audits):
+                        status_text.text(f"Extracting: {audit_name}...")
+                        progress_bar.progress((idx + 1) / len(selected_audits))
+
+                        config = audit_options[audit_name]
+                        df, error = export_crawl_data(api_token, selected_crawl_id, config['fields'], config['oql'])
+
+                        if df is not None and not df.empty:
+                            # Clean sheet name (Excel has 31 char limit)
+                            sheet_name = audit_name[:31].replace("/", "-").replace(":", "-")
+                            all_data[sheet_name] = df
+
+                    progress_bar.progress(1.0)
+                    status_text.text("Complete!")
+
+                    if all_data:
+                        # Create Excel file with multiple sheets
+                        output = io.BytesIO()
+                        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                            # Summary sheet
+                            summary_data = [{"Audit": k, "Issues Found": len(v)} for k, v in all_data.items()]
+                            summary_df = pd.DataFrame(summary_data)
+                            summary_df.to_excel(writer, sheet_name='Summary', index=False)
+
+                            # Individual sheets
+                            for sheet_name, df in all_data.items():
+                                df.to_excel(writer, sheet_name=sheet_name, index=False)
+
+                        st.success(f"Generated report with {len(all_data)} sheets")
+
+                        # Show summary
+                        st.dataframe(summary_df, use_container_width=True, hide_index=True)
+
+                        st.download_button(
+                            "📥 Download Excel Report",
+                            output.getvalue(),
+                            file_name=f"oncrawl_bulk_audit_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            type="primary"
+                        )
+                    else:
+                        st.info("No issues found in selected audits.")
+        else:
+            st.warning("No workspaces found")
+
+    # =========================================================================
+    # CANNIBALIZATION FINDER
+    # =========================================================================
+    elif page == "🔍 Cannibalization Finder":
+        st.header("🔍 Cannibalization Finder")
+        st.markdown("Find pages with duplicate or similar titles/H1s that may be competing for the same keywords.")
+
+        workspaces, ws_error = get_workspaces(api_token)
+
+        if ws_error:
+            st.error(ws_error)
+        elif workspaces:
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                workspace_options = {ws['name']: ws['id'] for ws in workspaces}
+                selected_ws_name = st.selectbox("Workspace", list(workspace_options.keys()), key="cannibal_ws")
+                selected_ws_id = workspace_options[selected_ws_name]
+
+            with col2:
+                projects, _ = get_projects(api_token, selected_ws_id)
+                if projects:
+                    project_options = {p['name']: p['id'] for p in projects}
+                    selected_proj_name = st.selectbox("Project", list(project_options.keys()), key="cannibal_proj")
+                    selected_proj_id = project_options[selected_proj_name]
+                else:
+                    selected_proj_id = None
+
+            with col3:
+                if selected_proj_id:
+                    crawls, _ = get_crawls(api_token, selected_ws_id, selected_proj_id, status="done")
+                    if crawls:
+                        crawl_options = {}
+                        for c in crawls:
+                            crawl_date = datetime.fromtimestamp(c.get('created_at', 0) / 1000).strftime('%Y-%m-%d %H:%M')
+                            crawl_options[crawl_date] = c['id']
+                        selected_crawl_label = st.selectbox("Crawl", list(crawl_options.keys()), key="cannibal_crawl")
+                        selected_crawl_id = crawl_options[selected_crawl_label]
+                    else:
+                        selected_crawl_id = None
+                else:
+                    selected_crawl_id = None
+
+            if selected_crawl_id:
+                st.divider()
+
+                check_type = st.radio("Check for duplicates in:", ["Titles", "H1 Tags", "Both"], horizontal=True)
+
+                url_filter = st.text_input("URL Filter (optional)", placeholder="/blog/", key="cannibal_filter",
+                                          help="Only check pages matching this URL pattern")
+
+                if st.button("Find Cannibalization", type="primary"):
+                    results = []
+
+                    if check_type in ["Titles", "Both"]:
+                        with st.spinner("Checking duplicate titles..."):
+                            oql = {"and": [
+                                {"field": ["fetched", "equals", True]},
+                                {"field": ["status_code", "equals", 200]},
+                                {"field": ["title_duplicates_count", "gt", 1]}
+                            ]}
+                            df_titles, error = export_crawl_data(
+                                api_token, selected_crawl_id,
+                                ["url", "title", "title_duplicates_count", "depth", "nb_inlinks"],
+                                oql, url_filter if url_filter else None
+                            )
+                            if df_titles is not None and not df_titles.empty:
+                                df_titles['Issue Type'] = 'Duplicate Title'
+                                results.append(df_titles)
+
+                    if check_type in ["H1 Tags", "Both"]:
+                        with st.spinner("Checking duplicate H1s..."):
+                            # Get all pages with H1s, then find duplicates in Python
+                            oql = {"and": [
+                                {"field": ["fetched", "equals", True]},
+                                {"field": ["status_code", "equals", 200]},
+                                {"field": ["h1", "is_empty", False]}
+                            ]}
+                            df_h1, error = export_crawl_data(
+                                api_token, selected_crawl_id,
+                                ["url", "h1", "depth", "nb_inlinks"],
+                                oql, url_filter if url_filter else None
+                            )
+                            if df_h1 is not None and not df_h1.empty:
+                                # Find duplicate H1s
+                                h1_counts = df_h1['h1'].value_counts()
+                                duplicate_h1s = h1_counts[h1_counts > 1].index.tolist()
+                                df_h1_dupes = df_h1[df_h1['h1'].isin(duplicate_h1s)].copy()
+                                if not df_h1_dupes.empty:
+                                    df_h1_dupes['h1_duplicates_count'] = df_h1_dupes['h1'].map(h1_counts)
+                                    df_h1_dupes['Issue Type'] = 'Duplicate H1'
+                                    results.append(df_h1_dupes)
+
+                    if results:
+                        combined_df = pd.concat(results, ignore_index=True)
+                        combined_df = combined_df.sort_values(
+                            by=['title_duplicates_count'] if 'title_duplicates_count' in combined_df.columns else ['h1_duplicates_count'],
+                            ascending=False
+                        )
+
+                        st.success(f"Found {len(combined_df):,} pages with potential cannibalization")
+
+                        # Group by title/h1 for easier review
+                        st.subheader("Pages Grouped by Duplicate Content")
+
+                        if 'title' in combined_df.columns:
+                            for title in combined_df['title'].unique()[:20]:  # Show top 20 groups
+                                group = combined_df[combined_df['title'] == title]
+                                if len(group) > 1:
+                                    with st.expander(f"📄 {title[:80]}... ({len(group)} pages)"):
+                                        st.dataframe(group[['url', 'depth', 'nb_inlinks']], use_container_width=True, hide_index=True)
+
+                        st.divider()
+                        st.subheader("Full Results")
+                        st.dataframe(combined_df, use_container_width=True, height=400)
+
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.download_button("Download CSV", combined_df.to_csv(index=False),
+                                file_name=f"oncrawl_cannibalization_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                                mime="text/csv")
+                        with col2:
+                            output = io.BytesIO()
+                            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                                combined_df.to_excel(writer, index=False)
+                            st.download_button("Download Excel", output.getvalue(),
+                                file_name=f"oncrawl_cannibalization_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                    else:
+                        st.success("No cannibalization issues found!")
+        else:
+            st.warning("No workspaces found")
+
+    # =========================================================================
+    # CONTENT QUALITY REPORT
+    # =========================================================================
+    elif page == "📝 Content Quality Report":
+        st.header("📝 Content Quality Report")
+        st.markdown("Comprehensive content audit: thin content, missing elements, and duplicates in one view.")
+
+        workspaces, ws_error = get_workspaces(api_token)
+
+        if ws_error:
+            st.error(ws_error)
+        elif workspaces:
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                workspace_options = {ws['name']: ws['id'] for ws in workspaces}
+                selected_ws_name = st.selectbox("Workspace", list(workspace_options.keys()), key="content_ws")
+                selected_ws_id = workspace_options[selected_ws_name]
+
+            with col2:
+                projects, _ = get_projects(api_token, selected_ws_id)
+                if projects:
+                    project_options = {p['name']: p['id'] for p in projects}
+                    selected_proj_name = st.selectbox("Project", list(project_options.keys()), key="content_proj")
+                    selected_proj_id = project_options[selected_proj_name]
+                else:
+                    selected_proj_id = None
+
+            with col3:
+                if selected_proj_id:
+                    crawls, _ = get_crawls(api_token, selected_ws_id, selected_proj_id, status="done")
+                    if crawls:
+                        crawl_options = {}
+                        for c in crawls:
+                            crawl_date = datetime.fromtimestamp(c.get('created_at', 0) / 1000).strftime('%Y-%m-%d %H:%M')
+                            crawl_options[crawl_date] = c['id']
+                        selected_crawl_label = st.selectbox("Crawl", list(crawl_options.keys()), key="content_crawl")
+                        selected_crawl_id = crawl_options[selected_crawl_label]
+                    else:
+                        selected_crawl_id = None
+                else:
+                    selected_crawl_id = None
+
+            if selected_crawl_id:
+                st.divider()
+
+                # Settings
+                col1, col2 = st.columns(2)
+                with col1:
+                    thin_threshold = st.slider("Thin content threshold (words)", 100, 500, 300)
+                with col2:
+                    url_filter = st.text_input("URL Filter (optional)", placeholder="/blog/", key="content_filter")
+
+                if st.button("Generate Content Report", type="primary"):
+                    all_issues = []
+                    issue_counts = {}
+
+                    # Fetch all 200 OK pages with content fields
+                    with st.spinner("Fetching page data..."):
+                        base_oql = {"and": [
+                            {"field": ["fetched", "equals", True]},
+                            {"field": ["status_code", "equals", 200]}
+                        ]}
+
+                        df_all, error = export_crawl_data(
+                            api_token, selected_crawl_id,
+                            ["url", "title", "title_length", "title_duplicates_count",
+                             "h1", "h1_count", "meta_description", "meta_description_length",
+                             "meta_description_duplicates_count", "word_count", "depth", "nb_inlinks"],
+                            base_oql, url_filter if url_filter else None
+                        )
+
+                    if df_all is not None and not df_all.empty:
+                        st.success(f"Analyzed {len(df_all):,} pages")
+
+                        # Identify issues
+                        issues_summary = []
+
+                        # Missing titles
+                        missing_titles = df_all[df_all['title'].isna() | (df_all['title'] == '')]
+                        if not missing_titles.empty:
+                            issues_summary.append(("🔴", "Missing Title", len(missing_titles)))
+
+                        # Missing H1
+                        missing_h1 = df_all[df_all['h1'].isna() | (df_all['h1'] == '')]
+                        if not missing_h1.empty:
+                            issues_summary.append(("🔴", "Missing H1", len(missing_h1)))
+
+                        # Missing meta description
+                        missing_desc = df_all[df_all['meta_description'].isna() | (df_all['meta_description'] == '')]
+                        if not missing_desc.empty:
+                            issues_summary.append(("🟡", "Missing Meta Description", len(missing_desc)))
+
+                        # Duplicate titles
+                        dup_titles = df_all[df_all['title_duplicates_count'] > 1] if 'title_duplicates_count' in df_all.columns else pd.DataFrame()
+                        if not dup_titles.empty:
+                            issues_summary.append(("🟡", "Duplicate Titles", len(dup_titles)))
+
+                        # Duplicate descriptions
+                        dup_desc = df_all[df_all['meta_description_duplicates_count'] > 1] if 'meta_description_duplicates_count' in df_all.columns else pd.DataFrame()
+                        if not dup_desc.empty:
+                            issues_summary.append(("🟡", "Duplicate Descriptions", len(dup_desc)))
+
+                        # Thin content
+                        thin_content = df_all[df_all['word_count'] < thin_threshold] if 'word_count' in df_all.columns else pd.DataFrame()
+                        if not thin_content.empty:
+                            issues_summary.append(("🟠", f"Thin Content (<{thin_threshold} words)", len(thin_content)))
+
+                        # Short titles
+                        short_titles = df_all[(df_all['title_length'] > 0) & (df_all['title_length'] < 30)] if 'title_length' in df_all.columns else pd.DataFrame()
+                        if not short_titles.empty:
+                            issues_summary.append(("🟡", "Short Titles (<30 chars)", len(short_titles)))
+
+                        # Long titles
+                        long_titles = df_all[df_all['title_length'] > 60] if 'title_length' in df_all.columns else pd.DataFrame()
+                        if not long_titles.empty:
+                            issues_summary.append(("🟡", "Long Titles (>60 chars)", len(long_titles)))
+
+                        # Multiple H1s
+                        multiple_h1 = df_all[df_all['h1_count'] > 1] if 'h1_count' in df_all.columns else pd.DataFrame()
+                        if not multiple_h1.empty:
+                            issues_summary.append(("🟡", "Multiple H1 Tags", len(multiple_h1)))
+
+                        # Display summary
+                        st.subheader("📊 Issues Summary")
+                        if issues_summary:
+                            summary_df = pd.DataFrame(issues_summary, columns=["", "Issue", "Pages Affected"])
+                            st.dataframe(summary_df, use_container_width=True, hide_index=True)
+
+                            # Tabs for each issue type
+                            st.subheader("📋 Detailed Results")
+
+                            tab_names = [f"{row[1]} ({row[2]})" for row in issues_summary]
+                            tabs = st.tabs(tab_names)
+
+                            issue_dfs = [missing_titles, missing_h1, missing_desc, dup_titles, dup_desc, thin_content, short_titles, long_titles, multiple_h1]
+                            issue_dfs = [df for df in issue_dfs if not df.empty]
+
+                            for tab, df in zip(tabs, issue_dfs):
+                                with tab:
+                                    st.dataframe(df, use_container_width=True, height=300)
+
+                            # Export all issues
+                            st.divider()
+                            output = io.BytesIO()
+                            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                                summary_df.to_excel(writer, sheet_name='Summary', index=False)
+                                if not missing_titles.empty:
+                                    missing_titles.to_excel(writer, sheet_name='Missing Titles', index=False)
+                                if not missing_h1.empty:
+                                    missing_h1.to_excel(writer, sheet_name='Missing H1', index=False)
+                                if not missing_desc.empty:
+                                    missing_desc.to_excel(writer, sheet_name='Missing Descriptions', index=False)
+                                if not dup_titles.empty:
+                                    dup_titles.to_excel(writer, sheet_name='Duplicate Titles', index=False)
+                                if not dup_desc.empty:
+                                    dup_desc.to_excel(writer, sheet_name='Duplicate Descriptions', index=False)
+                                if not thin_content.empty:
+                                    thin_content.to_excel(writer, sheet_name='Thin Content', index=False)
+                                if not short_titles.empty:
+                                    short_titles.to_excel(writer, sheet_name='Short Titles', index=False)
+                                if not long_titles.empty:
+                                    long_titles.to_excel(writer, sheet_name='Long Titles', index=False)
+                                if not multiple_h1.empty:
+                                    multiple_h1.to_excel(writer, sheet_name='Multiple H1s', index=False)
+
+                            st.download_button(
+                                "📥 Download Full Report (Excel)",
+                                output.getvalue(),
+                                file_name=f"oncrawl_content_quality_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                type="primary"
+                            )
+                        else:
+                            st.success("No content quality issues found!")
+                    else:
+                        st.warning("No data returned from crawl.")
+        else:
+            st.warning("No workspaces found")
+
+    # =========================================================================
     # DATA EXTRACTION PAGE
     # =========================================================================
-    if page == "📊 Data Extraction":
+    elif page == "📊 Data Extraction":
         st.header("📊 Data Extraction")
 
         workspaces, ws_error = get_workspaces(api_token)
@@ -1621,30 +2237,60 @@ else:
     col1, col2 = st.columns(2)
 
     with col1:
-        with st.expander("📊 Data Extraction"):
+        with st.expander("🏥 Site Health Dashboard", expanded=True):
             st.markdown("""
-            - **35+ preset queries** for common SEO issues
-            - Custom query builder with OQL
-            - Export to CSV/Excel
-            - URL filtering
+            - **Quick overview** of your site's health
+            - Key metrics: total pages, indexable, errors
+            - Status code distribution with charts
+            - Top issues automatically detected
             """)
 
+        with st.expander("📦 Bulk Audit Export"):
+            st.markdown("""
+            - Export **multiple audits at once**
+            - Single Excel file with separate sheets
+            - 404s, redirects, thin content, orphans, etc.
+            - Summary sheet with issue counts
+            """)
+
+        with st.expander("🔍 Cannibalization Finder"):
+            st.markdown("""
+            - Find **duplicate titles and H1s**
+            - Pages competing for same keywords
+            - Grouped view for easy review
+            - Filter by URL pattern
+            """)
+
+        with st.expander("📝 Content Quality Report"):
+            st.markdown("""
+            - **Comprehensive content audit**
+            - Missing titles, H1s, descriptions
+            - Thin content detection (custom threshold)
+            - Duplicate and length issues
+            """)
+
+        with st.expander("📊 Data Extraction"):
+            st.markdown("""
+            - **35+ preset queries** for SEO issues
+            - Custom OQL query builder
+            - Export to CSV/Excel
+            """)
+
+    with col2:
         with st.expander("🔄 Crawl Management"):
             st.markdown("""
-            - Launch new crawls
-            - Pause, resume, cancel running crawls
+            - Launch, pause, resume crawls
             - View crawl history
-            - Manage crawl configurations
+            - Manage configurations
             """)
 
         with st.expander("📈 Aggregations"):
             st.markdown("""
-            - Group data by status code, depth, segments
+            - Group by status code, depth, segments
             - Visual charts
             - Export aggregated data
             """)
 
-    with col2:
         with st.expander("🔀 Crawl Comparison"):
             st.markdown("""
             - Compare two crawls
@@ -1654,24 +2300,30 @@ else:
 
         with st.expander("📁 Project Management"):
             st.markdown("""
-            - Create new projects
+            - Create/delete projects
             - View project details
-            - Delete projects
+            - Monitor usage quotas
             """)
 
         with st.expander("⏰ Scheduling"):
             st.markdown("""
-            - Set up automated crawls
             - Daily, weekly, monthly schedules
             - Manage existing schedules
             """)
 
+        with st.expander("🔗 Link Export"):
+            st.markdown("""
+            - Export internal links
+            - Export external links
+            """)
+
     with st.expander("🔑 How to get your API token"):
         st.markdown("""
-        1. Log in to your OnCrawl account
-        2. Go to **Account Settings** → **API**
-        3. Generate or copy your API access token
-        4. Paste it in the sidebar
+        1. Log in to [app.oncrawl.com](https://app.oncrawl.com)
+        2. Click your profile icon → **Account Settings**
+        3. Scroll to **API Access Tokens**
+        4. Click **Generate new token** or copy existing
+        5. Paste the token in the sidebar
 
         Your token is stored only in your browser session.
         """)

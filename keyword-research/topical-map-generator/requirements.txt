@@ -1,4 +1,4 @@
 streamlit
-pandas
+pandas>=2.2.0
 openai
 openpyxl

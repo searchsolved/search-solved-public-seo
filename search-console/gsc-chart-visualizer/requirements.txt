@@ -1,6 +1,6 @@
 streamlit
 google-auth-oauthlib
 google-api-python-client
-pandas
+pandas>=2.2.0
 searchconsole
 altair

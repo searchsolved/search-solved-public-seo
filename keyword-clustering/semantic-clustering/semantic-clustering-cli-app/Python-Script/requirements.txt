@@ -1,4 +1,4 @@
-pandas>=2.0.0
+pandas>=2.2.0
 sentence-transformers>=2.2.2
 polyfuzz>=0.4.0
 plotly>=5.14.1

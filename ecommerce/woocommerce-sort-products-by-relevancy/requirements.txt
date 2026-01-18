@@ -1,5 +1,5 @@
 streamlit>=1.28.0
-pandas>=2.0.0
+pandas>=2.2.0
 woocommerce>=3.0.0
 fuzzywuzzy>=0.18.0
 python-Levenshtein>=0.21.0

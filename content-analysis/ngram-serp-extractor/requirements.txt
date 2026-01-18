@@ -1,5 +1,5 @@
 streamlit
 requests
 trafilatura
-pandas
+pandas>=2.2.0
 nltk

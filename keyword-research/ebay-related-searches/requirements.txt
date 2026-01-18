@@ -1,5 +1,5 @@
 stqdm==0.0.5
-pandas>=2.0.0
+pandas>=2.2.0
 streamlit>=1.30.0
 streamlit-echarts>=0.4.0
 beautifulsoup4>=4.12.0

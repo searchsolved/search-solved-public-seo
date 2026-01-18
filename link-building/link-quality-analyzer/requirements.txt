@@ -1,5 +1,5 @@
 streamlit
-pandas
+pandas>=2.2.0
 requests
 beautifulsoup4
 textstat

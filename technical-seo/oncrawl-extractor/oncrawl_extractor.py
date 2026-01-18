@@ -355,28 +355,28 @@ def get_account(api_token):
 def get_workspaces(api_token):
     """Fetch all workspaces for the account."""
     try:
-        account, error = get_account(api_token)
-        if error:
-            return [], error
+        # Fetch workspaces directly from /workspaces endpoint
+        response = requests.get(
+            f"{BASE_URL}/workspaces",
+            headers=get_headers(api_token),
+            timeout=30
+        )
 
-        workspace_ids = account.get('workspace_ids', [])
-        workspaces = []
+        if response.status_code == 200:
+            data = response.json()
+            ws_list = data.get('workspaces', [])
+            workspaces = []
 
-        for ws_id in workspace_ids:
-            ws_response = requests.get(
-                f"{BASE_URL}/workspaces/{ws_id}",
-                headers=get_headers(api_token),
-                timeout=30
-            )
-            if ws_response.status_code == 200:
-                ws_data = ws_response.json().get('workspace', {})
+            for ws_data in ws_list:
                 workspaces.append({
-                    'id': ws_id,
-                    'name': ws_data.get('name', ws_id),
+                    'id': ws_data.get('id'),
+                    'name': ws_data.get('name', ws_data.get('id', 'Unknown')),
                     'crawl_pages_limit': ws_data.get('crawl_pages_limit'),
                     'crawl_pages_used': ws_data.get('crawl_pages_used')
                 })
-        return workspaces, None
+            return workspaces, None
+        else:
+            return [], f"Error {response.status_code}: {response.text}"
     except Exception as e:
         return [], str(e)
 

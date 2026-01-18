@@ -670,11 +670,18 @@ def export_crawl_data(api_token, crawl_id, fields, oql_query, url_filter=None):
 
         if response.status_code == 200:
             csv_content = response.content.decode('utf-8')
-            df = pd.read_csv(StringIO(csv_content), sep=';', quotechar='"')
+            # Try semicolon separator first (OnCrawl default), then comma
+            try:
+                df = pd.read_csv(StringIO(csv_content), sep=';', quotechar='"')
+                if len(df.columns) == 1 and ',' in df.columns[0]:
+                    # Likely comma-separated, retry
+                    df = pd.read_csv(StringIO(csv_content), sep=',', quotechar='"')
+            except Exception:
+                df = pd.read_csv(StringIO(csv_content), sep=',', quotechar='"')
             return df, None
-        return None, f"Error {response.status_code}: {response.text}"
+        return None, f"Error {response.status_code}: {response.text[:500]}"
     except Exception as e:
-        return None, str(e)
+        return None, f"Exception: {str(e)}"
 
 
 def aggregate_crawl_data(api_token, crawl_id, group_by, oql_query=None, agg_type="count"):
@@ -1402,10 +1409,8 @@ if api_token and page:
 
                     # Fetch all 200 OK pages with content fields
                     with st.spinner("Fetching page data..."):
-                        base_oql = {"and": [
-                            {"field": ["fetched", "equals", True]},
-                            {"field": ["status_code", "equals", 200]}
-                        ]}
+                        # Simplified OQL - just filter by status code 200
+                        base_oql = {"field": ["status_code", "equals", 200]}
 
                         df_all, error = export_crawl_data(
                             api_token, selected_crawl_id,
@@ -1415,7 +1420,9 @@ if api_token and page:
                             base_oql, url_filter if url_filter else None
                         )
 
-                    if df_all is not None and not df_all.empty:
+                    if error:
+                        st.error(f"API Error: {error}")
+                    elif df_all is not None and not df_all.empty:
                         st.success(f"Analyzed {len(df_all):,} pages")
 
                         # Identify issues

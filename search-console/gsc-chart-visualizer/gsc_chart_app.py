@@ -1,4 +1,6 @@
-# Simple GSC Connector for Streamlit by Lee Foot
+# Author   : Lee Foot
+# Website  : https://leefoot.com
+# Simple GSC Connector for Streamlit
 # More scripts and apps like this at https://www.leefoot.com
 
 # Standard library imports
@@ -66,16 +68,42 @@ def init_session_state():
 # -------------
 
 def load_config():
+    # Check if secrets are configured
+    try:
+        client_id = st.secrets["installed"]["client_id"]
+        client_secret = st.secrets["installed"]["client_secret"]
+        redirect_uris = st.secrets["installed"]["redirect_uris"] if not IS_LOCAL else ["http://localhost:8501"]
+    except (KeyError, FileNotFoundError):
+        st.error("""
+        ⚠️ **OAuth credentials not configured**
+
+        This app requires Google OAuth credentials to connect to Search Console.
+
+        To set up:
+        1. Create OAuth credentials in [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+        2. Add secrets in Streamlit Cloud dashboard under Settings → Secrets:
+
+        ```toml
+        [installed]
+        client_id = "your-client-id.apps.googleusercontent.com"
+        client_secret = "your-client-secret"
+        redirect_uris = ["https://your-app.streamlit.app"]
+        ```
+
+        For local development, set `IS_LOCAL = True` at the top of this file.
+        """)
+        st.stop()
+
     client_config = {
         "installed": {
-            "client_id": str(st.secrets["installed"]["client_id"]),
-            "client_secret": str(st.secrets["installed"]["client_secret"]),
+            "client_id": str(client_id),
+            "client_secret": str(client_secret),
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
             "token_uri": "https://accounts.google.com/o/oauth2/token",
             "redirect_uris": (
                 ["http://localhost:8501"]
                 if IS_LOCAL
-                else [str(st.secrets["installed"]["redirect_uris"][0])]
+                else [str(redirect_uris[0])]
             ),
         }
     }

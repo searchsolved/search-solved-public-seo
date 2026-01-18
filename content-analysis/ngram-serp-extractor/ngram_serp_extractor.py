@@ -1,3 +1,6 @@
+# Author   : Lee Foot
+# Website  : https://leefoot.com
+
 import streamlit as st
 
 st.set_page_config(page_title="SERP N-gram & Title Extractor", page_icon="📈",
@@ -10,9 +13,17 @@ from trafilatura import bare_extraction
 from trafilatura.settings import use_config
 
 import pandas as pd
-from nltk.corpus import stopwords
+import nltk
 from collections import Counter
 from itertools import chain
+
+# Download NLTK stopwords data (required for Streamlit Cloud)
+@st.cache_resource
+def download_nltk_data():
+    nltk.download('stopwords', quiet=True)
+
+download_nltk_data()
+from nltk.corpus import stopwords
 stop = stopwords.words('english')
 
 newconfig = use_config()

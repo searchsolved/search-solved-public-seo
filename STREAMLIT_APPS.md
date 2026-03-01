@@ -63,7 +63,7 @@ This file tracks all Streamlit apps in this repository that need deployment.
 
 | App Name | Path | App URL |
 |----------|------|---------|
-| BERT Semantic Interlinker | `internal-linker/` | https://bertlinker.streamlit.app/ |
+| BERTlinker | `internal-linker/` | https://bertlinker.com |
 | GSC Data Exporter | `search-console/` | https://gscdata.streamlit.app/ |
 | Internet Archive Analyser | `wayback-url-tool/` | https://wayback.streamlit.app/ |
 | Wikipedia Citation Finder | `linking/wikipedia-citation-finder/` | https://wikicite.streamlit.app/ |

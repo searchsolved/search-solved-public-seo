@@ -25,7 +25,7 @@ This is the public SEO tools repository containing Streamlit apps and Python scr
 
 ### Private Code - DO NOT RELEASE
 
-- **BERT Interlinker source code** - Only the deployed Streamlit app (bertlinker.streamlit.app) is public. Source code remains private in the separate `seo/clients` repo.
+- **BERTlinker source code** - Only the SaaS at bertlinker.com is public. Source code remains private in the separate `seo/clients` repo.
 - **Client-specific tools** - Tools in `/Users/leefoot/Documents/GitHub/seo/clients/` are private and should never be copied directly. They must be sanitized before public release.
 
 ### When Releasing Client Tools

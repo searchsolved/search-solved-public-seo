@@ -4,8 +4,8 @@ Advanced tools for analyzing, optimizing, and automating internal linking strate
 
 ## Tools Overview
 
-### 🧠 **BERT Interlinker**
-Uses BERT embeddings to intelligently suggest internal links based on semantic content similarity.
+### 🧠 **BERTlinker**
+SaaS platform using BERT embeddings to intelligently suggest internal links based on semantic content similarity. Available at [bertlinker.com](https://bertlinker.com).
 - **Use Case**: Automated internal linking based on content relevance
 - **Technology**: BERT neural language model
 - **Input**: Website content or page text
@@ -86,13 +86,8 @@ Discovers Wikipedia citation opportunities for link building and authority build
 
 ## Quick Start
 
-### BERT Interlinker
-```bash
-cd bert-interlinker
-pip install -r requirements.txt
-# Setup instructions in directory README
-python bert_interlinker.py
-```
+### BERTlinker
+BERTlinker is now a SaaS service at [bertlinker.com](https://bertlinker.com).
 
 ### eCommerce Link Builder
 ```bash
@@ -121,7 +116,7 @@ streamlit run wikipedia_citation_finder_streamlit_source.py
 
 ## Input Requirements
 
-### **BERT Interlinker**
+### **BERTlinker**
 - Website content or page text files
 - Site structure data (optional)
 - Target pages for link suggestions
@@ -154,7 +149,7 @@ streamlit run wikipedia_citation_finder_streamlit_source.py
 
 ### **Machine Learning Requirements**
 ```bash
-# BERT Interlinker dependencies
+# BERTlinker dependencies
 pip install transformers torch sentence-transformers
 pip install numpy pandas scikit-learn
 ```
@@ -194,7 +189,7 @@ pip install streamlit plotly pandas
 
 ## Advanced Features
 
-### **BERT Interlinker**
+### **BERTlinker**
 - Custom model fine-tuning
 - Domain-specific vocabulary
 - Content freshness scoring

@@ -6,9 +6,7 @@
 [![Google Colab](https://img.shields.io/badge/Google%20Colab-Notebooks-F9AB00.svg)](https://colab.research.google.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-The largest open-source collection of **SEO tools** on GitHub — **100+ scripts, apps, and APIs** for eCommerce SEO, keyword research, content analysis, link building, technical audits, and reporting.
-
-> Used by SEO professionals worldwide. Featured in **Search Engine Journal**. Free and open source.
+**100+ original SEO tools** — scripts, apps, and APIs built from real client work. Not a curated list — every tool here was written by me for eCommerce SEO, keyword research, content analysis, link building, technical audits, and reporting.
 
 ---
 

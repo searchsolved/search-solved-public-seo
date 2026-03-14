@@ -295,3 +295,6 @@ yarn-error.log*
 *.rar
 *.tar.gz
 *.7z
+
+# Internal tracking files
+STREAMLIT_APPS.md

@@ -22,14 +22,13 @@ Try these tools directly in your browser — no installation required:
 
 | App | Description | Link |
 |-----|-------------|------|
+| **BERTlinker** | Find internal linking opportunities using BERT | [![Visit Site](https://img.shields.io/badge/Visit_Site-007EC6?style=for-the-badge&logoColor=white)](https://bertlinker.com) |
 | **Image Centering Tool** | Batch center and resize product images | [![Open App](https://img.shields.io/badge/Open_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://imagewiz.streamlit.app/) |
 | **Wikipedia Citation Finder** | Find Wikipedia pages needing citations for link opportunities | [![Open App](https://img.shields.io/badge/Open_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://wikicite.streamlit.app/) |
 | **GSC Data Downloader** | Download your Google Search Console data | [![Open App](https://img.shields.io/badge/Open_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://gscdata.streamlit.app/) |
 | **Website Migration Mapper** | Auto-map URLs from old site to new | [![Open App](https://img.shields.io/badge/Open_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://migration.streamlit.app/) |
-| **BERTlinker** | Find internal linking opportunities using BERT | [![Visit Site](https://img.shields.io/badge/Visit_Site-007EC6?style=for-the-badge&logoColor=white)](https://bertlinker.com) |
 | **Wayback URL Extractor** | Extract historical URLs from archive.org | [![Open App](https://img.shields.io/badge/Open_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://wayback.streamlit.app/) |
 | **Category Generator** | Auto-suggest new category pages from product inventory using n-grams | [![Open App](https://img.shields.io/badge/Open_App-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://category-generator.streamlit.app/) |
-| **PredictClicks** | SEO forecasting tool. Login with your Search Console account to start forecasting | [![Visit Site](https://img.shields.io/badge/Visit_Site-007EC6?style=for-the-badge&logoColor=white)](https://www.predictclicks.com) |
 
 ---
 

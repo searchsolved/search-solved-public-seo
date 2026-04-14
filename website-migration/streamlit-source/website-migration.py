@@ -61,8 +61,6 @@ with st.expander("How to use this tool"):
         unsafe_allow_html=True
     )
 
-    show_instructions_expander()
-
 
 def create_file_uploader_widget(column, file_types):
     """

@@ -13,6 +13,13 @@ Extract and visualize named entities using GPT with beautiful D3.js circle packi
 - **Output**: Interactive D3.js circle packing visualization with entity labels
 - **Features**: GPT-3.5/GPT-4 extraction, SpaCy-style labels, Wikipedia URLs
 
+#### 🌍 **Bulk H1 Translator**
+Translate H1 headings to English in bulk using a local LLM or any OpenAI-compatible API.
+- **Use Case**: International site audits, reviewing multilingual content at scale
+- **Input**: CSV with H1 and Language columns (Screaming Frog format, columns mappable)
+- **Output**: Original data plus an English `translated_h1` column
+- **Features**: Local LLM (LM Studio) or OpenAI, JSON schema responses, retry handling
+
 #### 📝 **Content Hub Classifier**
 Categorize articles and content into topic hubs using GPT.
 - **Use Case**: Organize content into topical clusters
@@ -75,6 +82,13 @@ Use OpenAI to extract positive and negative sentiments from product reviews.
 - **Input**: Customer reviews
 - **Output**: Praise points and pain points extracted
 - **Features**: Batch processing, sentiment categorization
+
+#### 🏷️ **Tag Consolidator**
+Use OpenAI to consolidate granular tags into broader generic categories.
+- **Use Case**: Rolling up hundreds of near-duplicate feedback tags into a manageable set
+- **Input**: CSV with primary and secondary tag columns
+- **Output**: Original data with a 'Generic Tag' column mapping each tag to its category
+- **Features**: Groups by primary tag, one API call per group, Streamlit + CLI versions
 
 ### Content Processing Tools
 

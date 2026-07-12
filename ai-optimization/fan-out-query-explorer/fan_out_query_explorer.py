@@ -35,9 +35,6 @@ import requests
 from requests.auth import HTTPBasicAuth
 from collections import Counter
 import json
-from sentence_transformers import SentenceTransformer
-from sentence_transformers.util import community_detection
-import torch
 
 st.set_page_config(
     page_title="Fan-Out Query Explorer",
@@ -400,12 +397,13 @@ if target_input and st.button("Explore Fan-Out Queries", type="primary"):
             "Clusters are named after their shortest member."
         )
 
-        with st.spinner("Clustering queries..."):
-            model = SentenceTransformer("all-MiniLM-L6-v2")
+        with st.spinner("Clustering queries (loading model on first run)..."):
+            import sentence_transformers as _st_lib
+            model = _st_lib.SentenceTransformer("all-MiniLM-L6-v2")
             queries = df_fan_outs["fan_out_query"].tolist()
             embeddings = model.encode(queries, convert_to_tensor=True, show_progress_bar=False)
 
-            clusters = community_detection(
+            clusters = _st_lib.util.community_detection(
                 embeddings,
                 min_community_size=2,
                 threshold=0.65,

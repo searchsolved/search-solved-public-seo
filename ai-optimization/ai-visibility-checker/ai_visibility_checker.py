@@ -175,8 +175,7 @@ def fetch_llm_mentions(login, password, entities, platform_value, loc, lang, max
     url = "https://api.dataforseo.com/v3/ai_optimization/llm_mentions/search/live"
 
     post_data = [{
-        "entities": entities,
-        "search_scope": ["any"],
+        "target": entities,
         "platform": platform_value,
         "location_name": loc,
         "language_name": lang,
@@ -305,10 +304,19 @@ entity_text = st.text_area(
 
 entities = []
 if entity_text:
-    entities = [e.strip() for e in entity_text.strip().split("\n") if e.strip()]
-    if len(entities) > 10:
+    raw_entities = [e.strip() for e in entity_text.strip().split("\n") if e.strip()]
+    if len(raw_entities) > 10:
         st.warning("Maximum 10 entities allowed. Only the first 10 will be used.")
-        entities = entities[:10]
+        raw_entities = raw_entities[:10]
+    entities = [
+        {
+            "domain": e,
+            "search_filter": "include",
+            "search_scope": ["any"],
+            "include_subdomains": True,
+        }
+        for e in raw_entities
+    ]
     st.info(f"{len(entities)} entity/entities entered")
 
 

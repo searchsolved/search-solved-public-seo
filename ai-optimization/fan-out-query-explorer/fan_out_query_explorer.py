@@ -35,6 +35,9 @@ import requests
 from requests.auth import HTTPBasicAuth
 from collections import Counter
 import json
+from sentence_transformers import SentenceTransformer
+from sentence_transformers.util import community_detection
+import torch
 
 st.set_page_config(
     page_title="Fan-Out Query Explorer",
@@ -210,20 +213,29 @@ def fetch_llm_mentions(login, password, target, target_is_domain, platform_choic
     """
     url = "https://api.dataforseo.com/v3/ai_optimization/llm_mentions/search/live"
 
-    # Build the request payload
+    # Build the target entity per DataForSEO spec
+    if target_is_domain:
+        entity = {
+            "domain": target,
+            "search_filter": "include",
+            "search_scope": ["any"],
+            "include_subdomains": subdomains,
+        }
+    else:
+        entity = {
+            "keyword": target,
+            "search_filter": "include",
+            "search_scope": ["any"],
+            "match_type": "word_match",
+        }
+
     payload = {
-        "search_scope": ["any"],
-        "ai_platform": platform_choice,
+        "target": [entity],
+        "platform": platform_choice,
         "location_code": loc_code,
         "language_code": lang_code,
         "limit": result_limit,
     }
-
-    if target_is_domain:
-        payload["target"] = target
-        payload["include_subdomains"] = subdomains
-    else:
-        payload["keyword"] = target
 
     try:
         response = requests.post(
@@ -379,6 +391,67 @@ if target_input and st.button("Explore Fan-Out Queries", type="primary"):
         },
         hide_index=True,
     )
+
+    # CLUSTERING: group fan-out queries by semantic similarity
+    if len(df_fan_outs) >= 3:
+        st.subheader("Clustered Fan-Out Queries")
+        st.caption(
+            "Fan-out queries grouped by semantic similarity using sentence-transformers. "
+            "Clusters are named after their shortest member."
+        )
+
+        with st.spinner("Clustering queries..."):
+            model = SentenceTransformer("all-MiniLM-L6-v2")
+            queries = df_fan_outs["fan_out_query"].tolist()
+            embeddings = model.encode(queries, convert_to_tensor=True, show_progress_bar=False)
+
+            clusters = community_detection(
+                embeddings,
+                min_community_size=2,
+                threshold=0.65,
+            )
+
+            cluster_labels = [""] * len(queries)
+            for cluster_id, members in enumerate(clusters):
+                shortest = min((queries[i] for i in members), key=len)
+                for i in members:
+                    cluster_labels[i] = shortest
+
+            df_fan_outs["cluster"] = cluster_labels
+            df_fan_outs.loc[df_fan_outs["cluster"] == "", "cluster"] = "Unclustered"
+
+        clustered = df_fan_outs[df_fan_outs["cluster"] != "Unclustered"]
+        unclustered = df_fan_outs[df_fan_outs["cluster"] == "Unclustered"]
+
+        cluster_summary = (
+            clustered.groupby("cluster")
+            .agg(queries=("fan_out_query", "count"), total_frequency=("frequency", "sum"))
+            .sort_values("total_frequency", ascending=False)
+            .reset_index()
+        )
+        cluster_summary.columns = ["Cluster Name", "Queries in Cluster", "Total Frequency"]
+
+        st.dataframe(cluster_summary, use_container_width=True, hide_index=True)
+
+        with st.expander(f"View all clustered queries ({len(clustered)} queries in {len(cluster_summary)} clusters)"):
+            st.dataframe(
+                clustered[["cluster", "fan_out_query", "frequency"]].sort_values(["cluster", "frequency"], ascending=[True, False]),
+                use_container_width=True,
+                hide_index=True,
+            )
+
+        if len(unclustered) > 0:
+            with st.expander(f"Unclustered queries ({len(unclustered)})"):
+                st.dataframe(unclustered[["fan_out_query", "frequency"]], use_container_width=True, hide_index=True)
+
+        # Add cluster to download
+        csv_clustered = df_fan_outs.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            label="Download Clustered Fan-Outs CSV",
+            data=csv_clustered,
+            file_name="fan_out_queries_clustered.csv",
+            mime="text/csv",
+        )
 
     # SECONDARY OUTPUT: Parent questions table
     st.subheader("Parent Questions")

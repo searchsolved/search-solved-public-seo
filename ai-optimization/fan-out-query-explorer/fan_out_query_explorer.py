@@ -397,26 +397,38 @@ if target_input and st.button("Explore Fan-Out Queries", type="primary"):
             "Clusters are named after their shortest member."
         )
 
-        with st.spinner("Clustering queries (loading model on first run)..."):
-            import sentence_transformers as _st_lib
-            model = _st_lib.SentenceTransformer("all-MiniLM-L6-v2")
+        with st.spinner("Clustering queries..."):
+            from sklearn.feature_extraction.text import TfidfVectorizer
+            from sklearn.cluster import AgglomerativeClustering
+            from sklearn.metrics.pairwise import cosine_distances
+
             queries = df_fan_outs["fan_out_query"].tolist()
-            embeddings = model.encode(queries, convert_to_tensor=True, show_progress_bar=False)
+            tfidf = TfidfVectorizer(stop_words="english", min_df=1)
+            matrix = tfidf.fit_transform(queries)
+            distance_matrix = cosine_distances(matrix)
 
-            clusters = _st_lib.util.community_detection(
-                embeddings,
-                min_community_size=2,
-                threshold=0.65,
+            clustering = AgglomerativeClustering(
+                n_clusters=None,
+                distance_threshold=0.7,
+                metric="precomputed",
+                linkage="average",
             )
+            labels = clustering.fit_predict(distance_matrix)
 
-            cluster_labels = [""] * len(queries)
-            for cluster_id, members in enumerate(clusters):
-                shortest = min((queries[i] for i in members), key=len)
-                for i in members:
-                    cluster_labels[i] = shortest
+            cluster_labels = []
+            from collections import defaultdict
+            groups = defaultdict(list)
+            for i, label in enumerate(labels):
+                groups[label].append(i)
 
-            df_fan_outs["cluster"] = cluster_labels
-            df_fan_outs.loc[df_fan_outs["cluster"] == "", "cluster"] = "Unclustered"
+            label_names = {}
+            for label, members in groups.items():
+                if len(members) >= 2:
+                    label_names[label] = min((queries[i] for i in members), key=len)
+                else:
+                    label_names[label] = "Unclustered"
+
+            df_fan_outs["cluster"] = [label_names[l] for l in labels]
 
         clustered = df_fan_outs[df_fan_outs["cluster"] != "Unclustered"]
         unclustered = df_fan_outs[df_fan_outs["cluster"] == "Unclustered"]

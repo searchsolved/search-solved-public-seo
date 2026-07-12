@@ -389,72 +389,74 @@ if target_input and st.button("Explore Fan-Out Queries", type="primary"):
         hide_index=True,
     )
 
-    # CLUSTERING: group fan-out queries by semantic similarity
-    if len(df_fan_outs) >= 3:
+    # CLUSTERING: group fan-out queries by TF-IDF similarity (optional)
+    try:
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        from sklearn.cluster import AgglomerativeClustering
+        from sklearn.metrics.pairwise import cosine_distances
+        _HAS_SKLEARN = True
+    except ImportError:
+        _HAS_SKLEARN = False
+
+    if len(df_fan_outs) >= 3 and _HAS_SKLEARN:
         st.subheader("Clustered Fan-Out Queries")
         st.caption(
-            "Fan-out queries grouped by semantic similarity using sentence-transformers. "
+            "Fan-out queries grouped by text similarity. "
             "Clusters are named after their shortest member."
         )
 
-        with st.spinner("Clustering queries..."):
-            from sklearn.feature_extraction.text import TfidfVectorizer
-            from sklearn.cluster import AgglomerativeClustering
-            from sklearn.metrics.pairwise import cosine_distances
+        queries = df_fan_outs["fan_out_query"].tolist()
+        tfidf = TfidfVectorizer(stop_words="english", min_df=1)
+        matrix = tfidf.fit_transform(queries)
+        distance_matrix = cosine_distances(matrix)
 
-            queries = df_fan_outs["fan_out_query"].tolist()
-            tfidf = TfidfVectorizer(stop_words="english", min_df=1)
-            matrix = tfidf.fit_transform(queries)
-            distance_matrix = cosine_distances(matrix)
+        clustering_model = AgglomerativeClustering(
+            n_clusters=None,
+            distance_threshold=0.7,
+            metric="precomputed",
+            linkage="average",
+        )
+        labels = clustering_model.fit_predict(distance_matrix)
 
-            clustering = AgglomerativeClustering(
-                n_clusters=None,
-                distance_threshold=0.7,
-                metric="precomputed",
-                linkage="average",
-            )
-            labels = clustering.fit_predict(distance_matrix)
+        from collections import defaultdict
+        groups = defaultdict(list)
+        for i, label in enumerate(labels):
+            groups[label].append(i)
 
-            cluster_labels = []
-            from collections import defaultdict
-            groups = defaultdict(list)
-            for i, label in enumerate(labels):
-                groups[label].append(i)
+        label_names = {}
+        for label, members in groups.items():
+            if len(members) >= 2:
+                label_names[label] = min((queries[i] for i in members), key=len)
+            else:
+                label_names[label] = "Unclustered"
 
-            label_names = {}
-            for label, members in groups.items():
-                if len(members) >= 2:
-                    label_names[label] = min((queries[i] for i in members), key=len)
-                else:
-                    label_names[label] = "Unclustered"
-
-            df_fan_outs["cluster"] = [label_names[l] for l in labels]
+        df_fan_outs["cluster"] = [label_names[l] for l in labels]
 
         clustered = df_fan_outs[df_fan_outs["cluster"] != "Unclustered"]
         unclustered = df_fan_outs[df_fan_outs["cluster"] == "Unclustered"]
 
-        cluster_summary = (
-            clustered.groupby("cluster")
-            .agg(queries=("fan_out_query", "count"), total_frequency=("frequency", "sum"))
-            .sort_values("total_frequency", ascending=False)
-            .reset_index()
-        )
-        cluster_summary.columns = ["Cluster Name", "Queries in Cluster", "Total Frequency"]
-
-        st.dataframe(cluster_summary, use_container_width=True, hide_index=True)
-
-        with st.expander(f"View all clustered queries ({len(clustered)} queries in {len(cluster_summary)} clusters)"):
-            st.dataframe(
-                clustered[["cluster", "fan_out_query", "frequency"]].sort_values(["cluster", "frequency"], ascending=[True, False]),
-                use_container_width=True,
-                hide_index=True,
+        if len(clustered) > 0:
+            cluster_summary = (
+                clustered.groupby("cluster")
+                .agg(queries=("fan_out_query", "count"), total_frequency=("frequency", "sum"))
+                .sort_values("total_frequency", ascending=False)
+                .reset_index()
             )
+            cluster_summary.columns = ["Cluster Name", "Queries in Cluster", "Total Frequency"]
+
+            st.dataframe(cluster_summary, use_container_width=True, hide_index=True)
+
+            with st.expander(f"View all clustered queries ({len(clustered)} queries in {len(cluster_summary)} clusters)"):
+                st.dataframe(
+                    clustered[["cluster", "fan_out_query", "frequency"]].sort_values(["cluster", "frequency"], ascending=[True, False]),
+                    use_container_width=True,
+                    hide_index=True,
+                )
 
         if len(unclustered) > 0:
             with st.expander(f"Unclustered queries ({len(unclustered)})"):
                 st.dataframe(unclustered[["fan_out_query", "frequency"]], use_container_width=True, hide_index=True)
 
-        # Add cluster to download
         csv_clustered = df_fan_outs.to_csv(index=False).encode("utf-8")
         st.download_button(
             label="Download Clustered Fan-Outs CSV",

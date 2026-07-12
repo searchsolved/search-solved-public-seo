@@ -1,3 +1,6 @@
+# Author: Lee Foot
+# Website: https://leefoot.com
+
 ####################################################################################
 # Author   : Lee Foot                                                              #
 # Website  : https://www.leefoot.com                                               #
@@ -26,10 +29,12 @@ csv_files = glob.glob(os.path.join(path, "*.csv"))
   
   
 # loop over the list of csv files
-for f in csv_files:
-      
-    # read the csv file
-    df = pd.read_csv(f)
+if not csv_files:
+    print("No CSV files found in the current directory.")
+    sys.exit(1)
+
+# read the first csv file
+df = pd.read_csv(csv_files[0])
     
 cols = df.columns.tolist()
 
@@ -77,7 +82,7 @@ while cluster:
 df_new = pd.concat(df_all)
 
 
-df = df.merge(df_new.drop_duplicates('Keyword'), how='left', on="Keyword")
+df = df.merge(df_new.drop_duplicates(choice), how='left', left_on=choice, right_on="Keyword")
 
 # ------------------------------ rename the clusters to the shortest keyword -------------------------------------------
 
@@ -99,8 +104,8 @@ df.insert(0, col.name, col)
 
 df.sort_values(["Cluster Name", "Keyword"], ascending=[True, True], inplace=True)
 
-newpath = path + 'output' 
+newpath = os.path.join(path, 'output')
 if not os.path.exists(newpath):
     os.makedirs(newpath)
 
-df.to_csv(path + newpath + "test.csv")
+df.to_csv(os.path.join(newpath, "test.csv"))

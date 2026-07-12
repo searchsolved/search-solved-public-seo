@@ -1,3 +1,6 @@
+# Author: Lee Foot
+# Website: https://leefoot.com
+
 ####################################################################################
 # Author   : Lee Foot                                                              #
 # Website  : https://www.leefoot.com                                               #
@@ -30,17 +33,6 @@ while True:
     page += 1
 
 print(f"Found {len(categories)} categories in the store")
-# Fetch all the product categories using pagination
-categories = []
-page = 1
-while True:
-    response = wcapi.get("products/categories", params={"per_page": 100, "page": page})
-    if not response.ok or not response.json():
-        break
-    categories += response.json()
-    page += 1
-
-print(f"Found {len(categories)} categories in the store")
 
 # Loop through each category
 for category in categories:
@@ -49,7 +41,7 @@ for category in categories:
     category_id = category["id"]
 
     # Fetch all the products in the category
-    products = wcapi.get(f"products?category={category_id}").json()
+    products = wcapi.get(f"products", params={"category": category_id, "per_page": 100}).json()
     num_products = len(products)
     print(f"Found {num_products} products in the category")
 

@@ -1,3 +1,6 @@
+# Author: Lee Foot
+# Website: https://leefoot.com
+
 ####################################################################################
 # Author   : Lee Foot                                                              #
 # Website  : https://www.leefoot.com                                               #
@@ -76,7 +79,6 @@ device_select = st.sidebar.selectbox(
 
 minimum_frequency = st.sidebar.slider("Set Minimum Keyword Frequency", min_value=1, max_value=10, value=2)
 num_pages = st.sidebar.slider("Set Number of Results to Analyse", min_value=10, max_value=100, value=20)
-minimum_frequency -= 1
 
 with st.form(key='columns_in_form_2'):
     submitted = st.form_submit_button('Submit')
@@ -139,9 +141,9 @@ if submitted:
     # drop rows containing a single word
     df['total_words'] = df['title'].str.count(' ') + 1
 
-    # drop single word keywords and rows with a frequency of 1
-    df = df[~df["serp_frequency"].isin([minimum_frequency])]
-    df = df[~df["total_words"].isin([minimum_frequency])]
+    # drop rows below minimum frequency and single word keywords
+    df = df[df["serp_frequency"] >= minimum_frequency]
+    df = df[df["total_words"] >= 2]
 
     df = df[~df["title"].str.contains("\.\.\.", na=False)]
 

@@ -1,3 +1,6 @@
+# Author: Lee Foot
+# Website: https://leefoot.com
+
 ####################################################################################
 #                                                                                  #
 #  Keyword Difficulty Finder                                                       #
@@ -176,7 +179,7 @@ if submitted:
             'location': location_select,
             'include_fields': ['organic_results', 'search_information'],
             'location_auto': True,
-            'device': "Desktop",
+            'device': device,
             'output': 'json',
             'page': '1',
             'num': '10'
@@ -229,7 +232,7 @@ if submitted:
     # rename the column names ready for the vlookup style match
     df_results.rename(columns={"Total Results": "Search Results"}, inplace=True)
     df_results_phrase.rename(columns={"Total Results": "Quoted Results"}, inplace=True)
-    df_results_allintitle.rename(columns={"Total Results": "Allintite Results"}, inplace=True)
+    df_results_allintitle.rename(columns={"Total Results": "Allintitle Results"}, inplace=True)
 
     # remove the keyword modifiers for matching
     df_results_phrase['Keyword'] = df_results_phrase['Keyword'].apply(lambda x: x.replace('\"', ''))
@@ -238,7 +241,7 @@ if submitted:
     # do the vlookup merge
     df_comp = pd.merge(df_comp, df_results[['Keyword', 'Search Results']], on='Keyword', how='left')
     df_comp = pd.merge(df_comp, df_results_phrase[['Keyword', 'Quoted Results']], on='Keyword', how='left')
-    df_comp = pd.merge(df_comp, df_results_allintitle[['Keyword', 'Allintite Results']], on='Keyword', how='left')
+    df_comp = pd.merge(df_comp, df_results_allintitle[['Keyword', 'Allintitle Results']], on='Keyword', how='left')
 
     # make the cluster df
     df_cluster = pd.DataFrame(None)
@@ -295,9 +298,9 @@ if submitted:
         df_comp['Serp Cluster'] = "zzz_no_cluster"
 
     # pop the columns to the front
-    col = df_comp.pop('Allintite Results')
+    col = df_comp.pop('Allintitle Results')
     df_comp.insert(0, col.name, col)
-    df_comp = df_comp.sort_values(by="Allintite Results", ascending=True)
+    df_comp = df_comp.sort_values(by="Allintitle Results", ascending=True)
 
     col = df_comp.pop('Quoted Results')
     df_comp.insert(0, col.name, col)

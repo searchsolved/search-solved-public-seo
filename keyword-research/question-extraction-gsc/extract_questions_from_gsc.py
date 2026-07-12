@@ -1,3 +1,6 @@
+# Author: Lee Foot
+# Website: https://leefoot.com
+
 ####################################################################################
 #                                                                                  #
 #  Question Extraction from Google Search Console                                  #
@@ -113,6 +116,9 @@ def extract_questions():
 
     # Filter rows matching question patterns
     df = df[df['query'].str.contains(QUESTION_PATTERN, na=False, regex=True)]
+
+    # Merge question-mark queries into the main results
+    df = pd.concat([df, questions]).drop_duplicates(subset=['query'], keep='first')
 
     # Reset index
     df = df.reset_index(drop=True)

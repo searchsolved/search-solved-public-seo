@@ -1,3 +1,6 @@
+# Author: Lee Foot
+# Website: https://leefoot.com
+
 ####################################################################################
 #                                                                                  #
 #  Google Algorithm Tracker                                                        #
@@ -164,6 +167,9 @@ update_types = [
     "Reviews Update",
     "Link Spam Update",
     "Page Experience Update",
+    "Site Reputation Abuse",
+    "Expired Domain Abuse",
+    "Scaled Content Abuse",
     "Other"
 ]
 

@@ -107,13 +107,8 @@ target_type = st.sidebar.radio(
     help="Search by keyword topic or by domain mentions"
 )
 
-# Platform
-platform = st.sidebar.selectbox(
-    "AI Platform",
-    ["chat_gpt", "google"],
-    format_func=lambda x: "ChatGPT" if x == "chat_gpt" else "Google AI Overview",
-    help="Fan-out queries are only available from ChatGPT. Google AI Overviews return mentions but not fan-out sub-questions."
-)
+# Platform (fan-out queries are only returned by ChatGPT)
+platform = "chat_gpt"
 
 # Location
 locations = {

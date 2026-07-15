@@ -1,14 +1,17 @@
-#!/usr/bin/env python3
+# Author: Lee Foot
+# Website: https://leefoot.com
+
 """
 Related Searches Tree Builder - CLI Version
 
-Build hierarchical trees of related searches using ValueSERP API.
+Build hierarchical trees of related searches using the DataForSEO SERP API.
 
 Usage:
-    python related_searches_tree_cli.py --keyword "seo tools" --api-key YOUR_KEY
+    python related_searches_tree_cli.py --keyword "seo tools" --login YOUR_LOGIN --password YOUR_PASSWORD
 
-Author: Lee Foot
-Website: https://www.leefoot.com
+Environment variables:
+    DATAFORSEO_LOGIN     - DataForSEO account login
+    DATAFORSEO_PASSWORD  - DataForSEO account password
 """
 
 import argparse
@@ -16,30 +19,73 @@ import pandas as pd
 import requests
 import os
 import sys
+from base64 import b64encode
 
 
-def get_related_searches(keyword, api_key, location):
-    """Fetch related searches for a keyword from ValueSERP."""
-    params = {
-        'api_key': api_key,
-        'q': keyword,
-        'location': location,
-        'num': '10'
+# Location code mapping
+LOCATION_CODES = {
+    "United Kingdom": 2826,
+    "United States": 2840,
+    "Australia": 2036,
+    "Canada": 2124,
+    "Germany": 2276,
+    "France": 2250,
+    "Spain": 2724,
+    "Italy": 2380,
+    "Netherlands": 2528,
+    "India": 2356,
+    "Ireland": 2372,
+}
+
+
+def _build_auth_headers(login, password):
+    """Build DataForSEO Basic auth headers."""
+    cred = b64encode(f"{login}:{password}".encode()).decode()
+    return {
+        'Authorization': f'Basic {cred}',
+        'Content-Type': 'application/json'
     }
 
+
+def get_related_searches(keyword, login, password, location_code):
+    """Fetch related searches for a keyword from the DataForSEO SERP API."""
+    headers = _build_auth_headers(login, password)
+    payload = [{
+        "keyword": keyword,
+        "location_code": location_code,
+        "language_code": "en",
+        "device": "desktop",
+        "depth": 10
+    }]
+
     try:
-        response = requests.get('https://api.valueserp.com/search', params=params)
+        response = requests.post(
+            'https://api.dataforseo.com/v3/serp/google/organic/live/advanced',
+            headers=headers,
+            json=payload,
+            timeout=60
+        )
         data = response.json()
 
-        related = data.get('related_searches', [])
-        return [r['query'] for r in related] if related else []
+        if data.get("status_code") != 20000:
+            msg = data.get("status_message", "Unknown error")
+            print(f"  Warning: API error for '{keyword}': {msg}")
+            return []
+
+        items = data["tasks"][0]["result"][0]["items"]
+        related = []
+        for item in items:
+            if item["type"] == "related_searches":
+                for rs in item.get("items", []):
+                    related.append(rs["title"])
+        return related
 
     except Exception as e:
         print(f"  Warning: Error fetching '{keyword}': {str(e)}")
         return []
 
 
-def build_tree(seed_keywords, api_key, location, max_depth, max_results):
+def build_tree(seed_keywords, login, password, location_code, max_depth, max_results):
     """Build a tree of related searches."""
     relationships = {'Parent': [], 'Child': []}
     visited = set()
@@ -57,7 +103,7 @@ def build_tree(seed_keywords, api_key, location, max_depth, max_results):
 
         print(f"  Depth {depth}: Exploring '{keyword}'")
 
-        related = get_related_searches(keyword, api_key, location)
+        related = get_related_searches(keyword, login, password, location_code)
 
         for r in related[:max_results]:
             r_lower = r.lower()
@@ -69,6 +115,8 @@ def build_tree(seed_keywords, api_key, location, max_depth, max_results):
                     queue.append((r, depth + 1))
 
     print(f"  Total API queries: {total_queries}")
+    est_cost = total_queries * 0.002
+    print(f"  Estimated cost: ${est_cost:.3f}")
     return relationships
 
 
@@ -124,11 +172,14 @@ def print_tree(relationships, root_keywords):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Build hierarchical trees of related searches using ValueSERP API'
+        description='Build hierarchical trees of related searches using the DataForSEO SERP API'
     )
     parser.add_argument('--keyword', required=True, nargs='+',
                         help='Seed keyword(s) to explore')
-    parser.add_argument('--api-key', help='ValueSERP API key (or set VALUESERP_API_KEY env var)')
+    parser.add_argument('--login',
+                        help='DataForSEO login (or set DATAFORSEO_LOGIN env var)')
+    parser.add_argument('--password',
+                        help='DataForSEO password (or set DATAFORSEO_PASSWORD env var)')
     parser.add_argument('--output', default='related_searches.csv',
                         help='Output CSV path (default: related_searches.csv)')
     parser.add_argument('--dot-output', help='Output DOT file path for Graphviz')
@@ -136,28 +187,36 @@ def main():
                         help='Crawl depth (default: 2)')
     parser.add_argument('--max-results', type=int, default=10,
                         help='Max related searches per keyword (default: 10)')
-    parser.add_argument('--location', default='United Kingdom',
-                        help='Search location (default: United Kingdom)')
+    parser.add_argument('--location-code', type=int, default=2826,
+                        help='DataForSEO location code (default: 2826 for United Kingdom)')
 
     args = parser.parse_args()
 
-    # Get API key
-    api_key = args.api_key or os.environ.get('VALUESERP_API_KEY')
-    if not api_key:
-        print("Error: API key required. Use --api-key or set VALUESERP_API_KEY environment variable")
+    # Get credentials
+    login = args.login or os.environ.get('DATAFORSEO_LOGIN')
+    password = args.password or os.environ.get('DATAFORSEO_PASSWORD')
+    if not login or not password:
+        print("Error: DataForSEO credentials required.")
+        print("  Use --login and --password, or set DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD environment variables.")
         sys.exit(1)
 
     seed_keywords = args.keyword
     print(f"Building tree for: {', '.join(seed_keywords)}")
     print(f"  Depth: {args.depth}")
-    print(f"  Location: {args.location}")
+    print(f"  Location code: {args.location_code}")
     print(f"  Max results per keyword: {args.max_results}")
+
+    # Estimate cost
+    est_calls = sum(args.max_results ** i for i in range(args.depth + 1)) * len(seed_keywords)
+    est_cost = est_calls * 0.002
+    print(f"  Estimated max API calls: ~{est_calls} (approx. ${est_cost:.2f})")
 
     # Build tree
     relationships = build_tree(
         seed_keywords,
-        api_key,
-        args.location,
+        login,
+        password,
+        args.location_code,
         args.depth,
         args.max_results
     )

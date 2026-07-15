@@ -1,36 +1,26 @@
-####################################################################################
-#                                                                                  #
-#  SERP Crossover Analyzer                                                         #
-#                                                                                  #
-#  Analyze URL overlap across multiple keyword SERPs.                              #
-#                                                                                  #
-####################################################################################
-# Author   : Lee Foot                                                              #
-# Website  : https://www.leefoot.com                                                   #
-# Contact  : https://www.leefoot.com/contact                                           #
-# Email    : hello@leefoot.com                                                     #
-# LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
-# Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                       #
-####################################################################################
+# Author: Lee Foot
+# Website: https://leefoot.com
 
 """
 SERP Crossover Analyzer
 
-Fetches SERP results for multiple keywords and analyzes URL crossover.
-Identifies keyword cannibalization and topic overlap opportunities.
+Fetches SERP results for multiple keywords and analyses URL crossover.
+Identifies keyword cannibalisation and topic overlap opportunities.
 
 Features:
-- Fetch SERPs for multiple keywords via ValueSERP API
+- Fetch SERPs for multiple keywords via DataForSEO SERP API
 - Calculate URL crossover percentage between keywords
 - Identify which URLs rank for multiple keywords
 - Visual crossover matrix
 - Export detailed results
 """
 
+import os
+import math
 import streamlit as st
 import pandas as pd
 import requests
-import json
+from base64 import b64encode
 from io import BytesIO
 from urllib.parse import urlparse
 
@@ -44,31 +34,52 @@ with st.expander("How to use this tool"):
     **What this tool does:**
     - Fetches SERP results for multiple keywords
     - Calculates URL crossover percentage between keywords
-    - Identifies cannibalization and topic clustering opportunities
+    - Identifies cannibalisation and topic clustering opportunities
 
     **Requirements:**
-    - ValueSERP API key (get one at [valueserp.com](https://www.valueserp.com/))
+    - DataForSEO account (sign up at [dataforseo.com](https://dataforseo.com/))
 
     **How to use:**
-    1. Enter your ValueSERP API key in the sidebar
+    1. Enter your DataForSEO login and password in the sidebar
     2. Enter keywords to compare (one per line)
     3. Select location and device
-    4. Click "Analyze SERPs"
+    4. Click "Analyse SERPs"
     5. Review crossover matrix and overlapping URLs
 
     **Use cases:**
-    - Identify keyword cannibalization (same URL ranking for multiple keywords)
+    - Identify keyword cannibalisation (same URL ranking for multiple keywords)
     - Find topic clustering opportunities
-    - Analyze SERP similarity for keyword grouping
+    - Analyse SERP similarity for keyword grouping
     """)
+
+LOCATION_CODES = {
+    "United Kingdom": 2826,
+    "United States": 2840,
+    "Australia": 2036,
+    "Canada": 2124,
+    "Germany": 2276,
+    "France": 2250,
+    "Spain": 2724,
+    "Italy": 2380,
+    "Netherlands": 2528,
+    "India": 2356,
+}
 
 # Sidebar settings
 st.sidebar.header("API Settings")
 
-api_key = st.sidebar.text_input(
-    "ValueSERP API Key",
+dataforseo_login = st.sidebar.text_input(
+    "DataForSEO Login",
     type="password",
-    help="Your API key from valueserp.com"
+    value=os.environ.get('DATAFORSEO_LOGIN', ''),
+    help="Your login from dataforseo.com"
+)
+
+dataforseo_password = st.sidebar.text_input(
+    "DataForSEO Password",
+    type="password",
+    value=os.environ.get('DATAFORSEO_PASSWORD', ''),
+    help="Your password from dataforseo.com"
 )
 
 st.sidebar.markdown("---")
@@ -76,15 +87,7 @@ st.sidebar.header("Search Settings")
 
 location = st.sidebar.selectbox(
     "Location",
-    [
-        "United Kingdom",
-        "United States",
-        "Australia",
-        "Canada",
-        "Germany",
-        "France",
-        "Spain"
-    ],
+    list(LOCATION_CODES.keys()),
     index=0
 )
 
@@ -108,37 +111,45 @@ def extract_domain(url):
     try:
         parsed = urlparse(url)
         return parsed.netloc.replace('www.', '')
-    except:
+    except Exception:
         return url
 
 
-def fetch_serp(keyword, api_key, location, device, num_results):
-    """Fetch SERP results for a keyword."""
-    params = {
-        'api_key': api_key,
-        'q': keyword,
-        'location': location,
-        'device': device.lower(),
-        'include_fields': 'organic_results',
-        'location_auto': True,
-        'output': 'json',
-        'page': '1',
-        'num': str(num_results)
+def fetch_serp(keyword, login, password, location_name, device_type, num_results):
+    """Fetch SERP results for a keyword using the DataForSEO API."""
+    cred = b64encode(f"{login}:{password}".encode()).decode()
+    headers = {
+        'Authorization': f'Basic {cred}',
+        'Content-Type': 'application/json'
     }
 
+    payload = [{
+        "keyword": keyword,
+        "location_code": LOCATION_CODES[location_name],
+        "language_code": "en",
+        "device": device_type.lower(),
+        "depth": num_results
+    }]
+
     try:
-        response = requests.get('https://api.valueserp.com/search', params=params)
+        response = requests.post(
+            'https://api.dataforseo.com/v3/serp/google/organic/live/advanced',
+            headers=headers,
+            json=payload,
+            timeout=60
+        )
         data = response.json()
 
-        results = []
-        organic = data.get('organic_results', [])
+        items = data["tasks"][0]["result"][0]["items"]
+        organic = [item for item in items if item["type"] == "organic"]
 
+        results = []
         for i, result in enumerate(organic[:num_results]):
             results.append({
-                'position': i + 1,
+                'position': result.get('rank_group', i + 1),
                 'title': result.get('title', ''),
-                'link': result.get('link', ''),
-                'domain': extract_domain(result.get('link', ''))
+                'link': result.get('url', ''),
+                'domain': extract_domain(result.get('url', ''))
             })
 
         return results
@@ -151,7 +162,6 @@ def fetch_serp(keyword, api_key, location, device, num_results):
 def calculate_crossover(serp_data):
     """Calculate crossover matrix between keywords."""
     keywords = list(serp_data.keys())
-    n = len(keywords)
 
     # Create URL sets for each keyword
     url_sets = {kw: set(r['link'] for r in results) for kw, results in serp_data.items()}
@@ -223,25 +233,27 @@ keyword_input = st.text_area(
 
 keywords = [kw.strip() for kw in keyword_input.strip().split('\n') if kw.strip()] if keyword_input else []
 
+has_credentials = bool(dataforseo_login and dataforseo_password)
+
 if keywords:
     if len(keywords) < 2:
         st.warning("Please enter at least 2 keywords to compare")
     elif len(keywords) > 20:
         st.warning("Please enter no more than 20 keywords")
     else:
-        st.info(f"Ready to analyze {len(keywords)} keywords")
-        st.caption(f"Estimated API calls: {len(keywords)}")
+        estimated_cost = len(keywords) * 0.002 * math.ceil(num_results / 10)
+        st.info(f"Ready to analyse {len(keywords)} keywords. Estimated cost: ${estimated_cost:.3f}")
 
-if st.button("Analyze SERPs", type="primary", disabled=not api_key or len(keywords) < 2 or len(keywords) > 20):
-    if not api_key:
-        st.error("Please enter your ValueSERP API key")
+if st.button("Analyse SERPs", type="primary", disabled=not has_credentials or len(keywords) < 2 or len(keywords) > 20):
+    if not has_credentials:
+        st.error("Please enter your DataForSEO login and password")
     else:
         serp_data = {}
         progress_bar = st.progress(0)
 
         for i, keyword in enumerate(keywords):
             st.text(f"Fetching SERP for: {keyword}")
-            results = fetch_serp(keyword, api_key, location, device, num_results)
+            results = fetch_serp(keyword, dataforseo_login, dataforseo_password, location, device, num_results)
             if results:
                 serp_data[keyword] = results
             progress_bar.progress((i + 1) / len(keywords))
@@ -258,7 +270,7 @@ if st.button("Analyze SERPs", type="primary", disabled=not api_key or len(keywor
 
             st.success("Analysis complete!")
         else:
-            st.error("Need at least 2 successful SERP fetches to analyze")
+            st.error("Need at least 2 successful SERP fetches to analyse")
 
 # Display results
 if 'crossover_matrix' in st.session_state:
@@ -269,7 +281,7 @@ if 'crossover_matrix' in st.session_state:
     # Summary metrics
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("Keywords Analyzed", len(serp_data))
+        st.metric("Keywords Analysed", len(serp_data))
     with col2:
         total_urls = sum(len(r) for r in serp_data.values())
         st.metric("Total SERP Results", total_urls)
@@ -306,11 +318,11 @@ if 'crossover_matrix' in st.session_state:
     st.dataframe(styled_matrix, use_container_width=True)
 
     st.markdown("""
-    **Color key:**
-    - 🔴 Red (50%+): High crossover - potential cannibalization
-    - 🟡 Yellow (25-50%): Moderate crossover - related topics
-    - 🟢 Green (1-25%): Low crossover - different intent
-    - ⬜ White (0%): No crossover
+    **Colour key:**
+    - Red (50%+): High crossover - potential cannibalisation
+    - Yellow (25-50%): Moderate crossover - related topics
+    - Green (1-25%): Low crossover - different intent
+    - White (0%): No crossover
     """)
 
     # Overlapping URLs
@@ -378,8 +390,8 @@ if 'crossover_matrix' in st.session_state:
         )
 
 else:
-    if not api_key:
-        st.warning("Enter your ValueSERP API key in the sidebar to get started")
+    if not has_credentials:
+        st.warning("Enter your DataForSEO login and password in the sidebar to get started")
 
     st.subheader("Example Output")
 

@@ -1,22 +1,41 @@
-#!/usr/bin/env python3
+# Author: Lee Foot
+# Website: https://leefoot.com
+
 """
 SERP Crossover Analyzer - CLI Version
 
-Analyze URL overlap across multiple keyword SERPs.
+Analyse URL overlap across multiple keyword SERPs using the DataForSEO API.
 
 Usage:
-    python serp_crossover_analyzer_cli.py --keywords "seo tools" "keyword research" --api-key YOUR_KEY
+    python serp_crossover_analyzer_cli.py --keywords "seo tools" "keyword research" --login YOUR_LOGIN --password YOUR_PASS
+    python serp_crossover_analyzer_cli.py --keywords "seo tools" "keyword research"  # uses env vars
 
-Author: Lee Foot
-Website: https://www.leefoot.com
+Environment variables:
+    DATAFORSEO_LOGIN    - DataForSEO account login
+    DATAFORSEO_PASSWORD - DataForSEO account password
 """
 
 import argparse
+import math
 import pandas as pd
 import requests
 import os
 import sys
+from base64 import b64encode
 from urllib.parse import urlparse
+
+LOCATION_CODES = {
+    "United Kingdom": 2826,
+    "United States": 2840,
+    "Australia": 2036,
+    "Canada": 2124,
+    "Germany": 2276,
+    "France": 2250,
+    "Spain": 2724,
+    "Italy": 2380,
+    "Netherlands": 2528,
+    "India": 2356,
+}
 
 
 def extract_domain(url):
@@ -24,37 +43,45 @@ def extract_domain(url):
     try:
         parsed = urlparse(url)
         return parsed.netloc.replace('www.', '')
-    except:
+    except Exception:
         return url
 
 
-def fetch_serp(keyword, api_key, location, device, num_results):
-    """Fetch SERP results for a keyword."""
-    params = {
-        'api_key': api_key,
-        'q': keyword,
-        'location': location,
-        'device': device.lower(),
-        'include_fields': 'organic_results',
-        'location_auto': True,
-        'output': 'json',
-        'page': '1',
-        'num': str(num_results)
+def fetch_serp(keyword, login, password, location_code, device, num_results):
+    """Fetch SERP results for a keyword using the DataForSEO API."""
+    cred = b64encode(f"{login}:{password}".encode()).decode()
+    headers = {
+        'Authorization': f'Basic {cred}',
+        'Content-Type': 'application/json'
     }
 
+    payload = [{
+        "keyword": keyword,
+        "location_code": location_code,
+        "language_code": "en",
+        "device": device.lower(),
+        "depth": num_results
+    }]
+
     try:
-        response = requests.get('https://api.valueserp.com/search', params=params)
+        response = requests.post(
+            'https://api.dataforseo.com/v3/serp/google/organic/live/advanced',
+            headers=headers,
+            json=payload,
+            timeout=60
+        )
         data = response.json()
 
-        results = []
-        organic = data.get('organic_results', [])
+        items = data["tasks"][0]["result"][0]["items"]
+        organic = [item for item in items if item["type"] == "organic"]
 
+        results = []
         for i, result in enumerate(organic[:num_results]):
             results.append({
-                'position': i + 1,
+                'position': result.get('rank_group', i + 1),
                 'title': result.get('title', ''),
-                'link': result.get('link', ''),
-                'domain': extract_domain(result.get('link', ''))
+                'link': result.get('url', ''),
+                'domain': extract_domain(result.get('url', ''))
             })
 
         return results
@@ -125,15 +152,21 @@ def find_overlapping_urls(serp_data):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Analyze URL overlap across multiple keyword SERPs'
+        description='Analyse URL overlap across multiple keyword SERPs using the DataForSEO API'
     )
     parser.add_argument('--keywords', required=True, nargs='+',
                         help='Keywords to compare')
-    parser.add_argument('--api-key', help='ValueSERP API key (or set VALUESERP_API_KEY env var)')
+    parser.add_argument('--login',
+                        help='DataForSEO login (or set DATAFORSEO_LOGIN env var)')
+    parser.add_argument('--password',
+                        help='DataForSEO password (or set DATAFORSEO_PASSWORD env var)')
     parser.add_argument('--output', default='serp_crossover.csv',
                         help='Output CSV path (default: serp_crossover.csv)')
     parser.add_argument('--location', default='United Kingdom',
-                        help='Search location (default: United Kingdom)')
+                        choices=list(LOCATION_CODES.keys()),
+                        help='Search location name (default: United Kingdom)')
+    parser.add_argument('--location-code', type=int, default=None,
+                        help='DataForSEO location code (overrides --location, default: 2826)')
     parser.add_argument('--device', choices=['desktop', 'mobile', 'tablet'],
                         default='desktop', help='Device type (default: desktop)')
     parser.add_argument('--num-results', type=int, default=10,
@@ -141,10 +174,13 @@ def main():
 
     args = parser.parse_args()
 
-    # Get API key
-    api_key = args.api_key or os.environ.get('VALUESERP_API_KEY')
-    if not api_key:
-        print("Error: API key required. Use --api-key or set VALUESERP_API_KEY environment variable")
+    # Get credentials
+    login = args.login or os.environ.get('DATAFORSEO_LOGIN')
+    password = args.password or os.environ.get('DATAFORSEO_PASSWORD')
+
+    if not login or not password:
+        print("Error: DataForSEO credentials required.")
+        print("Use --login and --password, or set DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD environment variables.")
         sys.exit(1)
 
     keywords = args.keywords
@@ -152,16 +188,23 @@ def main():
         print("Error: Need at least 2 keywords to compare")
         sys.exit(1)
 
-    print(f"Analyzing {len(keywords)} keywords...")
-    print(f"  Location: {args.location}")
+    # Resolve location code
+    location_code = args.location_code if args.location_code else LOCATION_CODES[args.location]
+
+    # Show estimated cost
+    estimated_cost = len(keywords) * 0.002 * math.ceil(args.num_results / 10)
+
+    print(f"Analysing {len(keywords)} keywords...")
+    print(f"  Location: {args.location} (code: {location_code})")
     print(f"  Device: {args.device}")
     print(f"  Results per SERP: {args.num_results}")
+    print(f"  Estimated cost: ${estimated_cost:.3f}")
 
     # Fetch SERPs
     serp_data = {}
     for keyword in keywords:
         print(f"  Fetching: {keyword}")
-        results = fetch_serp(keyword, api_key, args.location, args.device, args.num_results)
+        results = fetch_serp(keyword, login, password, location_code, args.device, args.num_results)
         if results:
             serp_data[keyword] = results
 

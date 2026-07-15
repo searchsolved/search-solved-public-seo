@@ -1,46 +1,58 @@
+# Author: Lee Foot
+# Website: https://leefoot.com
+
 ####################################################################################
 #                                                                                  #
 #  SERP Clustering at Scale                                                        #
 #                                                                                  #
-#  Clusters keywords based on common SERP URLs from ValueSERP batch exports.       #
-#  Supports multiple clustering strategies with consolidation scoring.              #
+#  Clusters keywords based on common SERP URLs.                                    #
+#  Supports CSV imports (SERP API etc.) and live DataForSEO SERP fetching.        #
+#  Multiple clustering strategies with consolidation scoring.                      #
 #                                                                                  #
 ####################################################################################
-# Author   : Lee Foot                                                              #
-# Website  : https://www.leefoot.com                                               #
 # Contact  : https://www.leefoot.com/contact                                       #
 # Email    : hello@leefoot.com                                                     #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
-# Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                                              #
+# Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                      #
 ####################################################################################
 
 """
-SERP Clustering Script - Improved Version
-Version: 3.0
+SERP Clustering Script
+Version: 4.0
 
-A script to identify content consolidation opportunities based on shared URLs in search results.
-Supports overlapping clusters and multiple clustering strategies.
+A script to identify content consolidation opportunities based on shared URLs in
+search results. Supports overlapping clusters and multiple clustering strategies.
 
 Features:
 - Multi-strategy clustering (connected components, cliques, core-based)
-- Consolidation scoring (0-100) to prioritize opportunities
+- Consolidation scoring (0-100) to prioritise opportunities
 - Overlap detection between clusters
 - Detailed cluster metrics
+- Live SERP fetching via DataForSEO API
+- CSV import from SERP API or similar tools
 
-Usage:
-    1. Export SERP data from ValueSERP in CSV format
+Usage (CSV mode):
+    1. Export SERP data from SERP API (or similar) in CSV format
     2. Place CSV files in a folder
-    3. Update FOLDER_LOCATION to point to your folder
-    4. Run the script
+    3. Run: python serp_clustering_at_scale.py
+
+Usage (Live DataForSEO mode):
+    1. Create a text file with one keyword per line
+    2. Run: python serp_clustering_at_scale.py --keywords-file keywords.txt
+    3. Credentials via --login/--password or DATAFORSEO_LOGIN/DATAFORSEO_PASSWORD env vars
 
 Requirements:
-    pip install pandas tqdm
+    pip install pandas tqdm requests
 """
 
+import argparse
 import glob
 import os
+import sys
 import time
 import logging
+import requests
+from base64 import b64encode
 from collections import defaultdict
 from itertools import combinations
 
@@ -51,22 +63,125 @@ from tqdm import tqdm
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-start_time = time.time()
+# ----------------
+# DataForSEO Configuration
+# ----------------
+
+DATAFORSEO_ENDPOINT = "https://api.dataforseo.com/v3/serp/google/organic/live/advanced"
+COST_PER_KEYWORD = 0.002  # USD per keyword (10 results)
+
+LOCATION_CODES = {
+    "United Kingdom": 2826,
+    "United States": 2840,
+    "Australia": 2036,
+    "Canada": 2124,
+    "Germany": 2276,
+    "France": 2250,
+    "Spain": 2724,
+    "Italy": 2380,
+    "Netherlands": 2528,
+    "India": 2356,
+}
 
 # ----------------
-# Configuration Variables
+# Configuration Variables (CSV mode defaults)
 # ----------------
 
 COMMON_URLS = 4  # minimum number of common URLs to match on. Default = 4
 CLUSTERING_STRATEGY = 'all'  # Options: 'connected', 'cliques', 'core', 'all'
 CORE_THRESHOLD = 0.7  # For core clustering: minimum connectivity percentage
-FOLDER_LOCATION = os.path.join(os.getcwd(), 'valueserp_exports')  # folder containing exported CSV files
-FILE_PREFIX = "/Batch_Results_*.csv"  # file prefix for ValueSERP exports
+FOLDER_LOCATION = os.path.join(os.getcwd(), 'serp_exports')  # folder containing exported CSV files
+FILE_PREFIX = "/Batch_Results_*.csv"  # file prefix for SERP export CSVs
 EXPORT_CSV_FILE_PATH = os.path.join(os.getcwd(), 'serp_cluster_results.csv')  # output file path
 
 
 # ----------------
-# Read and Clean Data
+# DataForSEO Live Fetching
+# ----------------
+
+def fetch_serps_dataforseo(keywords, login, password, location_code, device="desktop"):
+    """
+    Fetch live SERP results from DataForSEO for a list of keywords.
+
+    Returns a DataFrame with columns 'query' and 'link', matching the format
+    produced by CSV mode.
+    """
+    cred = b64encode(f"{login}:{password}".encode()).decode()
+    headers = {
+        "Authorization": f"Basic {cred}",
+        "Content-Type": "application/json",
+    }
+
+    rows = []
+    failed = []
+
+    for i, keyword in enumerate(tqdm(keywords, desc="Fetching SERPs from DataForSEO")):
+        keyword = keyword.strip()
+        if not keyword:
+            continue
+
+        payload = [{
+            "keyword": keyword,
+            "location_code": location_code,
+            "language_code": "en",
+            "device": device,
+            "depth": 10,
+        }]
+
+        try:
+            response = requests.post(
+                DATAFORSEO_ENDPOINT,
+                headers=headers,
+                json=payload,
+                timeout=30,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            tasks = data.get("tasks", [])
+            if not tasks or tasks[0].get("status_code") != 20000:
+                error_msg = tasks[0].get("status_message", "Unknown error") if tasks else "No tasks returned"
+                logger.warning(f"API error for '{keyword}': {error_msg}")
+                failed.append(keyword)
+                continue
+
+            result = tasks[0].get("result", [])
+            if not result:
+                logger.warning(f"No results for '{keyword}'")
+                failed.append(keyword)
+                continue
+
+            items = result[0].get("items", [])
+            organic_results = [item for item in items if item.get("type") == "organic"]
+
+            for item in organic_results:
+                url = item.get("url", "")
+                if url:
+                    rows.append({"query": keyword, "link": url})
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Request failed for '{keyword}': {e}")
+            failed.append(keyword)
+
+        # Rate limit: 0.5s between requests
+        if i < len(keywords) - 1:
+            time.sleep(0.5)
+
+    if failed:
+        logger.warning(f"{len(failed)} keyword(s) failed: {', '.join(failed[:10])}")
+        if len(failed) > 10:
+            logger.warning(f"  ... and {len(failed) - 10} more")
+
+    if not rows:
+        raise ValueError("No SERP data retrieved from DataForSEO. Check credentials and keywords.")
+
+    df = pd.DataFrame(rows)
+    logger.info(f"Retrieved {len(df)} query-URL pairs for {df['query'].nunique()} keywords")
+    return df
+
+
+# ----------------
+# Read and Clean Data (CSV mode)
 # ----------------
 
 def validate_folder_and_files(folder_location, file_prefix):
@@ -111,8 +226,9 @@ def read_csv_files(file_paths):
 
 def prepare_data(df):
     """Prepares and cleans the data for clustering."""
-    # Rename columns
-    df = df.rename(columns={"search.q": "query", "result.organic_results.link": "link"})
+    # Rename columns (only if CSV mode columns are present)
+    if "search.q" in df.columns and "result.organic_results.link" in df.columns:
+        df = df.rename(columns={"search.q": "query", "result.organic_results.link": "link"})
 
     # Convert queries to lowercase
     df['query'] = df['query'].str.lower()
@@ -251,7 +367,7 @@ def get_shortest_query_in_cluster(queries):
 
 
 def analyze_cluster_details(cluster_queries, query_map, similarity_matrix):
-    """Analyze detailed metrics for a cluster."""
+    """Analyse detailed metrics for a cluster."""
     queries = list(cluster_queries)
 
     # Find URLs shared by all queries
@@ -306,7 +422,7 @@ def calculate_consolidation_score(metrics, cluster_size, overlapping_count):
     Calculate a score (0-100) indicating how strong the consolidation opportunity is.
     Higher scores mean stronger consolidation candidates.
     """
-    # Base score from average shared URLs (normalize to 0-40 range)
+    # Base score from average shared URLs (normalise to 0-40 range)
     base_score = min(40, metrics['avg_shared_urls'] * 4)
 
     # Connectivity bonus (0-30 range)
@@ -456,19 +572,167 @@ def export_results(df, file_path):
 
 
 # ----------------
+# CLI Argument Parsing
+# ----------------
+
+def parse_args():
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(
+        description="SERP Clustering at Scale - Cluster keywords by shared SERP URLs.",
+        epilog="CSV mode: reads SERP API exports from a folder. "
+               "Live mode: fetches SERPs from DataForSEO when --keywords-file is provided.",
+    )
+
+    # Mode selection (live mode triggered by --keywords-file)
+    parser.add_argument(
+        "--keywords-file",
+        type=str,
+        default=None,
+        help="Path to a text file with keywords (one per line). "
+             "When provided, fetches live SERPs from DataForSEO instead of reading CSVs.",
+    )
+
+    # DataForSEO credentials
+    parser.add_argument(
+        "--login",
+        type=str,
+        default=None,
+        help="DataForSEO login (or set DATAFORSEO_LOGIN env var).",
+    )
+    parser.add_argument(
+        "--password",
+        type=str,
+        default=None,
+        help="DataForSEO password (or set DATAFORSEO_PASSWORD env var).",
+    )
+
+    # DataForSEO options
+    parser.add_argument(
+        "--location",
+        type=str,
+        default="United Kingdom",
+        choices=list(LOCATION_CODES.keys()),
+        help="Location for SERP results (default: United Kingdom).",
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="desktop",
+        choices=["desktop", "mobile"],
+        help="Device type for SERP results (default: desktop).",
+    )
+
+    # Clustering options
+    parser.add_argument(
+        "--common-urls",
+        type=int,
+        default=COMMON_URLS,
+        help=f"Minimum shared URLs to cluster keywords (default: {COMMON_URLS}).",
+    )
+    parser.add_argument(
+        "--strategy",
+        type=str,
+        default=CLUSTERING_STRATEGY,
+        choices=["connected", "cliques", "core", "all"],
+        help=f"Clustering strategy (default: {CLUSTERING_STRATEGY}).",
+    )
+    parser.add_argument(
+        "--core-threshold",
+        type=float,
+        default=CORE_THRESHOLD,
+        help=f"Core clustering connectivity threshold (default: {CORE_THRESHOLD}).",
+    )
+
+    # CSV mode options
+    parser.add_argument(
+        "--folder",
+        type=str,
+        default=FOLDER_LOCATION,
+        help=f"Folder containing SERP CSV exports (default: {FOLDER_LOCATION}).",
+    )
+    parser.add_argument(
+        "--file-prefix",
+        type=str,
+        default=FILE_PREFIX,
+        help=f"File prefix pattern for CSV files (default: {FILE_PREFIX}).",
+    )
+
+    # Output
+    parser.add_argument(
+        "--output",
+        type=str,
+        default=EXPORT_CSV_FILE_PATH,
+        help=f"Output CSV file path (default: {EXPORT_CSV_FILE_PATH}).",
+    )
+
+    return parser.parse_args()
+
+
+# ----------------
 # Main Processing Function
 # ----------------
 
-def process_serps():
+def process_serps(args=None):
     """Main function to process Search Engine Result Pages and identify consolidation opportunities."""
-    try:
-        # Validate folder and get file paths
-        logger.info(f"Looking for CSV files in: {FOLDER_LOCATION}")
-        file_paths = validate_folder_and_files(FOLDER_LOCATION, FILE_PREFIX)
+    start_time = time.time()
 
-        # Read CSV files
-        df = read_csv_files(file_paths)
-        logger.info(f"Successfully read {len(df)} rows from CSV files")
+    try:
+        # Determine mode
+        if args and args.keywords_file:
+            # Live DataForSEO mode
+            logger.info("Mode: Live SERP fetching via DataForSEO")
+
+            # Resolve credentials
+            login = args.login or os.environ.get("DATAFORSEO_LOGIN")
+            password = args.password or os.environ.get("DATAFORSEO_PASSWORD")
+
+            if not login or not password:
+                logger.error(
+                    "DataForSEO credentials required. Provide --login and --password "
+                    "or set DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD environment variables."
+                )
+                sys.exit(1)
+
+            # Read keywords
+            if not os.path.exists(args.keywords_file):
+                logger.error(f"Keywords file not found: {args.keywords_file}")
+                sys.exit(1)
+
+            with open(args.keywords_file, "r", encoding="utf-8") as f:
+                keywords = [line.strip() for line in f if line.strip()]
+
+            if not keywords:
+                logger.error("No keywords found in the file.")
+                sys.exit(1)
+
+            # Show estimated cost
+            location_code = LOCATION_CODES[args.location]
+            estimated_cost = len(keywords) * COST_PER_KEYWORD
+            logger.info(f"Keywords: {len(keywords)}")
+            logger.info(f"Location: {args.location} (code: {location_code})")
+            logger.info(f"Device: {args.device}")
+            logger.info(f"Estimated cost: ${estimated_cost:.2f}")
+
+            # Fetch SERPs
+            df = fetch_serps_dataforseo(
+                keywords=keywords,
+                login=login,
+                password=password,
+                location_code=location_code,
+                device=args.device,
+            )
+
+        else:
+            # CSV mode (original behaviour)
+            logger.info("Mode: CSV import")
+            folder = args.folder if args else FOLDER_LOCATION
+            prefix = args.file_prefix if args else FILE_PREFIX
+
+            logger.info(f"Looking for CSV files in: {folder}")
+            file_paths = validate_folder_and_files(folder, prefix)
+
+            df = read_csv_files(file_paths)
+            logger.info(f"Successfully read {len(df)} rows from CSV files")
 
         # Prepare data
         df = prepare_data(df)
@@ -478,19 +742,25 @@ def process_serps():
         query_map = create_query_map(df)
         logger.info(f"Processing {len(query_map)} unique queries")
 
+        # Resolve clustering parameters
+        common_urls = args.common_urls if args else COMMON_URLS
+        strategy = args.strategy if args else CLUSTERING_STRATEGY
+        core_threshold = args.core_threshold if args else CORE_THRESHOLD
+
         # Find consolidation clusters
         clusters, similarity_matrix = find_consolidation_clusters(
             query_map,
-            COMMON_URLS,
-            strategy=CLUSTERING_STRATEGY,
-            core_threshold=CORE_THRESHOLD
+            common_urls,
+            strategy=strategy,
+            core_threshold=core_threshold,
         )
 
         # Create results DataFrame
         results_df = create_cluster_dataframe(clusters, query_map)
 
         # Export results
-        export_results(results_df, EXPORT_CSV_FILE_PATH)
+        output_path = args.output if args else EXPORT_CSV_FILE_PATH
+        export_results(results_df, output_path)
 
         # Calculate statistics
         total_queries = len(query_map)
@@ -505,7 +775,7 @@ def process_serps():
         logger.info(f'  - {clique_count} cliques')
         logger.info(f'  - {core_count} core clusters')
         logger.info(f'{clustered_queries} out of {total_queries} queries are in clusters')
-        logger.info(f'Results exported to: {EXPORT_CSV_FILE_PATH}')
+        logger.info(f'Results exported to: {output_path}')
 
         # Show top consolidation opportunities
         top_opportunities = results_df[results_df['consolidation_score'] >= 60].groupby('serp_cluster').first()
@@ -526,5 +796,7 @@ def process_serps():
 # ----------------
 
 if __name__ == "__main__":
-    process_serps()
-    print(f'The script took {time.time() - start_time:.2f} seconds!')
+    args = parse_args()
+    start = time.time()
+    process_serps(args)
+    print(f'The script took {time.time() - start:.2f} seconds!')

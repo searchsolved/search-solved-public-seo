@@ -1,6 +1,16 @@
+# Author: Lee Foot
+# Website: https://leefoot.com
+
+# Author   : Lee Foot
+# Website  : https://leefoot.com
 ####################################################################################
-# Author   : Lee Foot                                                              #
-# Website  : https://www.leefoot.com                                               #
+#                                                                                  #
+#  Google Trends Forecasting (DataForSEO)                                          #
+#                                                                                  #
+#  Fetches Google Trends interest-over-time via the DataForSEO Trends API          #
+#  and forecasts future search interest with NeuralProphet.                        #
+#                                                                                  #
+####################################################################################
 # Contact  : https://www.leefoot.com/contact                                       #
 # Email    : hello@leefoot.com                                                     #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
@@ -9,46 +19,50 @@
 
 import streamlit as st
 
-st.set_page_config(page_title="[LEGACY] Google Trends Forecasting", page_icon="⚠️",
+st.set_page_config(page_title="Google Trends Forecasting", page_icon="📈",
                    layout="wide")
 
 import chardet
 from stqdm import stqdm
 from neuralprophet import NeuralProphet
 from neuralprophet import set_random_seed
-from pytrends.request import TrendReq
 import pandas as pd
 import xlsxwriter
 import matplotlib.pyplot as plt
-import base64
 import os
 import time
 import requests
+from requests.auth import HTTPBasicAuth
+import math
 
 set_random_seed(0)
 
-st.title("⚠️ [LEGACY] Google Trends & NeuralProphet Forecasting")
+st.title("Google Trends & NeuralProphet Forecasting")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![Hire Me](https://img.shields.io/badge/-Hire%20Me-FF6B6B?logoColor=white)](https://www.leefoot.com/contact) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social) · [![More Tools](https://img.shields.io/badge/-More%20Tools-8B5CF6?logoColor=white)](https://leefoot.com/tools) · [![GitHub](https://img.shields.io/badge/-GitHub-6B7280?logoColor=white)](https://github.com/searchsolved/search-solved-public-seo)")
-
-st.warning("**Legacy Tool:** This tool uses the unofficial Google Trends API (pytrends) which is frequently rate-limited and unreliable. Results may be incomplete or the tool may fail entirely. Use with caution.")
 
 with st.expander("How to use this tool"):
     st.markdown("""
     **What this tool does:**
     - Forecasts Google Trends data using NeuralProphet ML
-    - Analyzes seasonal patterns and projects future performance
+    - Analyses seasonal patterns and projects future performance
     - Works with single keywords or batch processing
 
     **Two modes available:**
-    - **Single Keyword:** Enter one keyword, get an instant forecast with visualization
+    - **Single Keyword:** Enter one keyword, get an instant forecast with visualisation
     - **Batch Upload:** Upload a CSV of keywords, get an Excel file with forecasts for each
 
     **How to use:**
-    1. Choose your mode (Single Keyword or Batch Upload)
-    2. Configure forecast settings in the sidebar
-    3. Enter your keyword or upload your file
-    4. Click Submit and wait for results
-    5. Download your predictions
+    1. Enter your DataForSEO API credentials in the sidebar
+    2. Choose your mode (Single Keyword or Batch Upload)
+    3. Configure forecast settings in the sidebar
+    4. Enter your keyword or upload your file
+    5. Click Submit and wait for results
+    6. Download your predictions
+
+    **Data source:**
+    - Uses the [DataForSEO Trends API](https://dataforseo.com) (official, reliable)
+    - Cost: approximately $0.0012 per keyword request
+    - Get API credentials at [dataforseo.com](https://app.dataforseo.com/api-access)
 
     **Best for:**
     - Keyword trend forecasting
@@ -57,36 +71,179 @@ with st.expander("How to use this tool"):
     - Identifying rising/declining topics
     """)
 
-# Sidebar settings (shared between both modes)
-st.sidebar.header("Settings")
-FORECAST_WEEKS = st.sidebar.number_input('Weeks to forecast', min_value=1, max_value=104, value=52)
-LANGUAGE = st.sidebar.selectbox(
-    "Google Trends language/region",
-    (
-        "en-GB",
-        "en-US",
-        "es",
-        "pt-BR",
-        "fr",
-        "de",
-        "it",
-        "hi",
-        "pl",
-        "ro",
-        "zh-CN",
-        "sv",
-        "tr",
-        "cy",
-        "no",
-        "ja",
-        "ua",
-        "ru"
-    ),
-)
-HISTORIC = st.sidebar.checkbox('Include historic predictions?', value=True)
-RETRIES = st.sidebar.number_input('API retries', min_value=1, max_value=10, value=3)
+# ---------------------------------------------------------------------------
+# Location mapping: display name -> (location_code, location_name)
+# Uses standard DataForSEO / Google Ads geo target codes.
+# ---------------------------------------------------------------------------
+LOCATIONS = {
+    "United Kingdom": (2826, "United Kingdom"),
+    "United States": (2840, "United States"),
+    "Spain": (2724, "Spain"),
+    "Brazil": (2076, "Brazil"),
+    "France": (2250, "France"),
+    "Germany": (2276, "Germany"),
+    "Italy": (2380, "Italy"),
+    "India": (2356, "India"),
+    "Poland": (2616, "Poland"),
+    "Romania": (2642, "Romania"),
+    "China": (2156, "China"),
+    "Sweden": (2752, "Sweden"),
+    "Turkey": (2792, "Turkey"),
+    "Wales (United Kingdom)": (2826, "United Kingdom"),
+    "Norway": (2578, "Norway"),
+    "Japan": (2392, "Japan"),
+    "Ukraine": (2804, "Ukraine"),
+}
 
+DATAFORSEO_TRENDS_URL = "https://api.dataforseo.com/v3/keywords_data/dataforseo_trends/explore/live"
+COST_PER_REQUEST = 0.0012  # USD per request (up to 5 keywords)
+
+
+def fetch_trends_data(keywords, api_login, api_password, location_code, time_range="past_5_years"):
+    """Fetch Google Trends interest-over-time data from DataForSEO.
+
+    Parameters
+    ----------
+    keywords : list[str]
+        One to five keywords.
+    api_login : str
+        DataForSEO login (email).
+    api_password : str
+        DataForSEO API password.
+    location_code : int
+        DataForSEO location code.
+    time_range : str
+        One of the preset time ranges.
+
+    Returns
+    -------
+    dict
+        Mapping of keyword -> pandas DataFrame with columns ``ds`` (datetime)
+        and ``y`` (interest 0-100). Empty dict on failure.
+    """
+    if not keywords:
+        return {}
+
+    payload = [{
+        "keywords": keywords[:5],
+        "location_code": location_code,
+        "type": "web",
+        "time_range": time_range,
+    }]
+
+    try:
+        resp = requests.post(
+            DATAFORSEO_TRENDS_URL,
+            json=payload,
+            auth=HTTPBasicAuth(api_login, api_password),
+            timeout=60,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except requests.RequestException as exc:
+        st.error(f"DataForSEO API request failed: {exc}")
+        return {}
+
+    # Check top-level status
+    if data.get("status_code") != 20000:
+        st.error(f"DataForSEO error: {data.get('status_message', 'Unknown error')}")
+        return {}
+
+    tasks = data.get("tasks", [])
+    if not tasks:
+        return {}
+
+    task = tasks[0]
+    if task.get("status_code") != 20000:
+        st.error(f"DataForSEO task error: {task.get('status_message', 'Unknown error')}")
+        return {}
+
+    results = task.get("result", [])
+    if not results:
+        return {}
+
+    result = results[0]
+    graph_items = result.get("items", [])
+
+    # Find the dataforseo_trends_graph item
+    graph_data = None
+    for item in graph_items:
+        if item.get("type") == "dataforseo_trends_graph":
+            graph_data = item
+            break
+
+    if not graph_data or not graph_data.get("data"):
+        return {}
+
+    returned_keywords = graph_data.get("keywords", keywords[:5])
+    data_points = graph_data["data"]
+
+    # Build a DataFrame per keyword
+    result_dfs = {}
+    for idx, kw in enumerate(returned_keywords):
+        rows = []
+        for point in data_points:
+            date_str = point.get("date_from")
+            values = point.get("values", [])
+            if idx < len(values) and date_str:
+                rows.append({"ds": pd.to_datetime(date_str), "y": values[idx]})
+        if rows:
+            df = pd.DataFrame(rows)
+            df = df.sort_values("ds").reset_index(drop=True)
+            result_dfs[kw] = df
+
+    return result_dfs
+
+
+# ---------------------------------------------------------------------------
+# Sidebar settings
+# ---------------------------------------------------------------------------
+st.sidebar.header("DataForSEO Credentials")
+
+api_login = os.environ.get("DATAFORSEO_LOGIN", "")
+api_password = os.environ.get("DATAFORSEO_PASSWORD", "")
+
+api_login = st.sidebar.text_input(
+    "DataForSEO Login (Email)",
+    value=api_login,
+    help="Your DataForSEO account email. Set DATAFORSEO_LOGIN env var for CLI use.",
+)
+api_password = st.sidebar.text_input(
+    "DataForSEO Password",
+    value=api_password,
+    type="password",
+    help="Your DataForSEO API password. Set DATAFORSEO_PASSWORD env var for CLI use.",
+)
+
+st.sidebar.markdown("---")
+st.sidebar.header("Forecast Settings")
+
+FORECAST_WEEKS = st.sidebar.number_input('Weeks to forecast', min_value=1, max_value=104, value=52)
+
+selected_location = st.sidebar.selectbox(
+    "Location",
+    list(LOCATIONS.keys()),
+    index=0,
+)
+location_code, _location_name = LOCATIONS[selected_location]
+
+TIME_RANGE = st.sidebar.selectbox(
+    "Historical time range",
+    [
+        "past_5_years",
+        "past_12_months",
+        "past_90_days",
+        "past_30_days",
+    ],
+    index=0,
+    help="Longer ranges give the model more data to learn seasonal patterns.",
+)
+
+HISTORIC = st.sidebar.checkbox('Include historic predictions?', value=True)
+
+# ---------------------------------------------------------------------------
 # Mode selection
+# ---------------------------------------------------------------------------
 mode = st.radio("Choose mode:", ["Single Keyword", "Batch Upload"], horizontal=True)
 
 if mode == "Single Keyword":
@@ -95,30 +252,37 @@ if mode == "Single Keyword":
 
     keyword = st.text_input('Enter your search keyword')
 
+    # Cost estimate
+    if keyword:
+        st.caption(f"Estimated cost: ${COST_PER_REQUEST:.4f} (1 API request)")
+
     with st.form(key='single_keyword_form'):
         submitted = st.form_submit_button('Generate Forecast', type='primary')
 
     if submitted and keyword:
-        with st.spinner(f"Fetching Google Trends data for '{keyword}'..."):
+        if not api_login or not api_password:
+            st.warning("Please enter your DataForSEO credentials in the sidebar.")
+            st.stop()
+
+        with st.spinner(f"Fetching trends data for '{keyword}'..."):
             try:
-                # Get cookie for pytrends
-                session = requests.Session()
-                session.get('https://trends.google.com')
-                cookies_map = session.cookies.get_dict()
-                nid_cookie = cookies_map.get('NID', '')
+                kw_data = fetch_trends_data(
+                    [keyword], api_login, api_password, location_code, TIME_RANGE
+                )
 
-                pt = TrendReq(hl=LANGUAGE, timeout=(10, 25), retries=RETRIES, backoff_factor=0.5,
-                              requests_args={'headers': {'Cookie': f'NID={nid_cookie}'}})
-
-                pt.build_payload([keyword])
-                df = pt.interest_over_time()
-
-                if df.empty:
-                    st.warning("No data received from Google Trends. The keyword may have insufficient search volume or the API may be rate-limited.")
+                if not kw_data:
+                    st.warning(
+                        "No data received from DataForSEO. The keyword may have "
+                        "insufficient search volume or your credentials may be incorrect."
+                    )
                     st.stop()
 
-                df = df[df['isPartial'] == False].reset_index()
-                data = df.rename(columns={'date': 'ds', keyword: 'y'})[['ds', 'y']]
+                # Use the first (and only) keyword's data
+                data = list(kw_data.values())[0]
+
+                if data.empty or len(data) < 4:
+                    st.warning("Not enough data points to build a forecast. Try a longer time range.")
+                    st.stop()
 
                 st.info("Training NeuralProphet model...")
                 model = NeuralProphet(daily_seasonality=True)
@@ -162,7 +326,7 @@ if mode == "Single Keyword":
                 )
 
             except KeyError as e:
-                st.error("No data received from Google Trends. Please try again or use a different keyword.")
+                st.error("No data received. Please try again or use a different keyword.")
             except Exception as e:
                 st.error(f"Error: {str(e)}")
 
@@ -173,7 +337,7 @@ else:
     # ==================== BATCH UPLOAD MODE ====================
     st.subheader("Batch Keyword Forecast")
 
-    SLEEP_TIMER = st.sidebar.number_input('Delay between requests (seconds)', min_value=1, max_value=30, value=5)
+    SLEEP_TIMER = st.sidebar.number_input('Delay between requests (seconds)', min_value=1, max_value=30, value=2)
 
     uploaded_file = st.file_uploader("Upload your CSV with keywords", type=['csv', 'txt'])
 
@@ -197,13 +361,21 @@ else:
                 submitted = st.form_submit_button('Start Batch Forecast', type='primary')
 
             if submitted:
+                if not api_login or not api_password:
+                    st.warning("Please enter your DataForSEO credentials in the sidebar.")
+                    st.stop()
+
                 df = df[df[kw_col].notna()]
                 df.drop_duplicates(subset=kw_col, inplace=True)
                 ALL_KWS = df[kw_col].astype(str).to_list()
 
-                st.info(f"Processing {len(ALL_KWS)} keywords...")
-
-                pt = TrendReq(hl=LANGUAGE, timeout=(10, 25), retries=RETRIES, backoff_factor=0.5)
+                # Cost estimate: each request handles up to 5 keywords
+                num_requests = math.ceil(len(ALL_KWS) / 5)
+                estimated_cost = num_requests * COST_PER_REQUEST
+                st.info(
+                    f"Processing {len(ALL_KWS)} keywords in {num_requests} API "
+                    f"request(s). Estimated cost: **${estimated_cost:.4f}**"
+                )
 
                 # Create Excel workbook
                 workbook = xlsxwriter.Workbook('gtrends_forecasts.xlsx')
@@ -218,13 +390,14 @@ else:
                 with stqdm(total=len(ALL_KWS)) as pbar:
                     while counter <= len(ALL_KWS):
                         KW = ALL_KWS[start:counter]
-                        worksheet_name = str(ALL_KWS[start]).replace(" ", "_")
+                        kw_str = KW[0]
+                        worksheet_name = str(kw_str).replace(" ", "_")
 
                         # Strip special characters
                         spec_chars = ["!", '"', "#", "%", "&", "'", "(", ")",
                                       "*", "+", ",", "-", ".", "/", ":", ";", "<",
                                       "=", ">", "?", "@", "[", "\\", "]", "^",
-                                      "`", "{", "|", "}", "~", "–"]
+                                      "`", "{", "|", "}", "~"]
 
                         for char in spec_chars:
                             worksheet_name = worksheet_name.replace(char, '')
@@ -233,7 +406,7 @@ else:
                         if worksheet_name == "nan":
                             worksheet_name = f"nan{counter}"
 
-                        pbar.set_description(f"Processing: {KW[0][:30]}...")
+                        pbar.set_description(f"Processing: {kw_str[:30]}...")
                         pbar.update(1)
 
                         try:
@@ -241,60 +414,78 @@ else:
                             headings = ['Date', 'Actual', 'Predicted']
                             worksheet.write_row('A1', headings, bold)
 
-                            pt.build_payload(KW)
-                            trends_df = pt.interest_over_time()
+                            kw_data = fetch_trends_data(
+                                [kw_str], api_login, api_password, location_code, TIME_RANGE
+                            )
 
-                            if not trends_df.empty:
-                                trends_df = trends_df[trends_df['isPartial'] == False].reset_index()
-                                data = trends_df.rename(columns={'date': 'ds', KW[0]: 'y'})[['ds', 'y']]
+                            # Exact match first, then case-insensitive fallback
+                            matched_kw = None
+                            if kw_data:
+                                if kw_str in kw_data:
+                                    matched_kw = kw_str
+                                else:
+                                    kw_lower = kw_str.lower()
+                                    for k in kw_data:
+                                        if k.lower() == kw_lower:
+                                            matched_kw = k
+                                            break
+                                    if matched_kw is None and len(kw_data) == 1:
+                                        matched_kw = next(iter(kw_data))
 
-                                model = NeuralProphet(daily_seasonality=True)
-                                model.fit(data, freq="W")
+                            if matched_kw is not None:
+                                data = kw_data[matched_kw]
 
-                                future = model.make_future_dataframe(data, periods=FORECAST_WEEKS, n_historic_predictions=HISTORIC)
-                                forecast = model.predict(future)
-                                result_data = forecast.rename(columns={'ds': 'date', 'y': 'actual', 'yhat1': 'predicted'})
+                                if not data.empty and len(data) >= 4:
+                                    model = NeuralProphet(daily_seasonality=True)
+                                    model.fit(data, freq="W")
 
-                                worksheet.set_column('A:A', 16, cell_format1)
+                                    future = model.make_future_dataframe(data, periods=FORECAST_WEEKS, n_historic_predictions=HISTORIC)
+                                    forecast = model.predict(future)
+                                    result_data = forecast.rename(columns={'ds': 'date', 'y': 'actual', 'yhat1': 'predicted'})
 
-                                for i, date in enumerate(result_data['date']):
-                                    worksheet.write(i + 1, 0, str(date)[:10])
+                                    worksheet.set_column('A:A', 16, cell_format1)
 
-                                if 'actual' in result_data.columns:
-                                    worksheet.write_column('B2', result_data['actual'].fillna(''))
-                                if 'predicted' in result_data.columns:
-                                    worksheet.write_column('C2', result_data['predicted'].fillna(''))
+                                    for i, date in enumerate(result_data['date']):
+                                        worksheet.write(i + 1, 0, str(date)[:10])
 
-                                # Create chart
-                                max_rows = len(result_data)
-                                chart = workbook.add_chart({'type': 'scatter', 'subtype': 'smooth'})
+                                    if 'actual' in result_data.columns:
+                                        worksheet.write_column('B2', result_data['actual'].fillna(''))
+                                    if 'predicted' in result_data.columns:
+                                        worksheet.write_column('C2', result_data['predicted'].fillna(''))
 
-                                chart.add_series({
-                                    'name': f'={worksheet_name}!$B$1',
-                                    'categories': f'={worksheet_name}!$A$2:$A${max_rows + 1}',
-                                    'values': f'={worksheet_name}!$B$2:$B${max_rows + 1}',
-                                    'line': {'color': 'gray'},
-                                })
+                                    # Create chart
+                                    max_rows = len(result_data)
+                                    chart = workbook.add_chart({'type': 'scatter', 'subtype': 'smooth'})
 
-                                chart.add_series({
-                                    'name': f'={worksheet_name}!$C$1',
-                                    'categories': f'={worksheet_name}!$A$2:$A${max_rows + 1}',
-                                    'values': f'={worksheet_name}!$C$2:$C${max_rows + 1}',
-                                    'line': {'dash_type': 'round_dot', 'color': 'black'},
-                                })
+                                    chart.add_series({
+                                        'name': f'={worksheet_name}!$B$1',
+                                        'categories': f'={worksheet_name}!$A$2:$A${max_rows + 1}',
+                                        'values': f'={worksheet_name}!$B$2:$B${max_rows + 1}',
+                                        'line': {'color': 'gray'},
+                                    })
 
-                                chart.set_title({'name': worksheet_name})
-                                chart.set_x_axis({'name': 'Date', 'date_axis': True})
-                                chart.set_y_axis({'name': 'Search Interest'})
-                                chart.set_style(7)
+                                    chart.add_series({
+                                        'name': f'={worksheet_name}!$C$1',
+                                        'categories': f'={worksheet_name}!$A$2:$A${max_rows + 1}',
+                                        'values': f'={worksheet_name}!$C$2:$C${max_rows + 1}',
+                                        'line': {'dash_type': 'round_dot', 'color': 'black'},
+                                    })
 
-                                worksheet.insert_chart('D2', chart, {'x_offset': 25, 'y_offset': 10, 'x_scale': 2.5, 'y_scale': 1.5})
+                                    chart.set_title({'name': worksheet_name})
+                                    chart.set_x_axis({'name': 'Date', 'date_axis': True})
+                                    chart.set_y_axis({'name': 'Search Interest'})
+                                    chart.set_style(7)
+
+                                    worksheet.insert_chart('D2', chart, {'x_offset': 25, 'y_offset': 10, 'x_scale': 2.5, 'y_scale': 1.5})
+                                else:
+                                    worksheet.write('A2', 'Insufficient data points')
+                                    errors.append(kw_str)
                             else:
                                 worksheet.write('A2', 'No data available')
-                                errors.append(KW[0])
+                                errors.append(kw_str)
 
                         except Exception as e:
-                            errors.append(f"{KW[0]}: {str(e)[:50]}")
+                            errors.append(f"{kw_str}: {str(e)[:50]}")
 
                         start += 1
                         counter += 1
@@ -307,7 +498,7 @@ else:
                 st.success(f"Finished processing {len(ALL_KWS)} keywords!")
 
                 if errors:
-                    with st.expander(f"⚠️ {len(errors)} keywords had issues"):
+                    with st.expander(f"{len(errors)} keywords had issues"):
                         for err in errors:
                             st.write(f"- {err}")
 

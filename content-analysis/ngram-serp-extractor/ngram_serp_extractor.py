@@ -1,6 +1,7 @@
-# Author   : Lee Foot
-# Website  : https://leefoot.com
+# Author: Lee Foot
+# Website: https://leefoot.com
 
+import os
 import streamlit as st
 
 st.set_page_config(page_title="SERP N-gram & Title Extractor", page_icon="📈",
@@ -9,6 +10,7 @@ st.set_page_config(page_title="SERP N-gram & Title Extractor", page_icon="📈",
 import requests
 import json
 import trafilatura
+from base64 import b64encode
 from trafilatura import bare_extraction
 from trafilatura.settings import use_config
 
@@ -29,6 +31,19 @@ stop = stopwords.words('english')
 newconfig = use_config()
 newconfig.set("DEFAULT", "EXTRACTION_TIMEOUT", "0")
 
+LOCATION_CODES = {
+    "United Kingdom": 2826,
+    "United States": 2840,
+    "Australia": 2036,
+    "Canada": 2124,
+    "Germany": 2276,
+    "France": 2250,
+    "Spain": 2724,
+    "Italy": 2380,
+    "Netherlands": 2528,
+    "India": 2356,
+}
+
 st.title("SERP N-gram & Title Extractor")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![Hire Me](https://img.shields.io/badge/-Hire%20Me-FF6B6B?logoColor=white)](https://www.leefoot.com/contact) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social) · [![More Tools](https://img.shields.io/badge/-More%20Tools-8B5CF6?logoColor=white)](https://leefoot.com/tools) · [![GitHub](https://img.shields.io/badge/-GitHub-6B7280?logoColor=white)](https://github.com/searchsolved/search-solved-public-seo)")
 
@@ -36,14 +51,14 @@ with st.expander("How to use this tool"):
     st.markdown("""
     **What this tool does:**
     - Extracts n-grams from SERP content
-    - Analyzes phrase frequency across top results
+    - Analyses phrase frequency across top results
     - Identifies common patterns in ranking content
 
     **How to use:**
-    1. Upload SERP scrape data or enter URLs
-    2. Configure n-gram size (2-5 words)
-    3. Extract and analyze phrases
-    4. Download frequency analysis
+    1. Enter your DataForSEO login and password in the sidebar
+    2. Enter a seed keyword and click Submit
+    3. The tool extracts page titles and content from ranking pages
+    4. Use this data to optimise your page titles and expand content coverage
 
     **Best for:**
     - SERP content analysis
@@ -54,28 +69,32 @@ with st.expander("How to use this tool"):
 
 with st.expander("How do I use this app?"):
     st.write("""
-        1. You will need an API key from www.ValueSERP.com - they offer 100 searches for free
-        2. Enter your API key, enter a seed keyword, and click submit
+        1. You will need a DataForSEO account from dataforseo.com
+        2. Enter your login and password, enter a seed keyword, and click Submit
         3. The tool extracts page titles and content from ranking pages
-        4. Use this data to optimize your page titles and expand content coverage
+        4. Use this data to optimise your page titles and expand content coverage
     """)
 
 # streamlit variables
 kw = st.text_input('Input Your Search Keyword')
-value_serp_key = st.sidebar.text_input('Input your ValueSERP API Key', type='password')
+
+dataforseo_login = st.sidebar.text_input(
+    'DataForSEO Login',
+    type='password',
+    value=os.environ.get('DATAFORSEO_LOGIN', ''),
+    help="Your login from dataforseo.com"
+)
+
+dataforseo_password = st.sidebar.text_input(
+    'DataForSEO Password',
+    type='password',
+    value=os.environ.get('DATAFORSEO_PASSWORD', ''),
+    help="Your password from dataforseo.com"
+)
 
 location_select = st.sidebar.selectbox(
     "Select The Region To Search Google From",
-    (
-        "United Kingdom",
-        "United States",
-        "Australia",
-        "France",
-        "Canada",
-        "Germany",
-        "Italy",
-        "Spain",
-    ),
+    list(LOCATION_CODES.keys()),
 )
 
 device_select = st.sidebar.selectbox(
@@ -88,7 +107,11 @@ device_select = st.sidebar.selectbox(
 )
 
 num_pages = st.sidebar.slider("Set Number of Pages to Analyse", min_value=1, max_value=10, value=1)
-num_pages = num_pages * 10
+depth = num_pages * 10
+
+# Show estimated cost
+estimated_cost = 0.002 * num_pages
+st.sidebar.caption(f"Estimated cost per search: ${estimated_cost:.3f}")
 
 # store the SERP Data
 links = []
@@ -97,8 +120,8 @@ with st.form(key='columns_in_form_2'):
     submitted = st.form_submit_button('Submit')
 
 if submitted:
-    if not value_serp_key:
-        st.error("Please enter your ValueSERP API key in the sidebar")
+    if not dataforseo_login or not dataforseo_password:
+        st.error("Please enter your DataForSEO login and password in the sidebar")
         st.stop()
 
     if not kw:
@@ -108,31 +131,44 @@ if submitted:
     # store the data
     links = []
 
-    # set up the request parameters
-    params = {
-        'api_key': value_serp_key,
-        'q': kw,
-        'location': location_select,
-        'include_fields': 'organic_results',
-        'location_auto': True,
-        'device': device_select,
-        'output': 'json',
-        'page': '1',
-        'num': num_pages
+    # set up DataForSEO auth
+    cred = b64encode(f"{dataforseo_login}:{dataforseo_password}".encode()).decode()
+    headers = {
+        'Authorization': f'Basic {cred}',
+        'Content-Type': 'application/json'
     }
 
-    # make the http GET request to VALUE SERP
+    payload = [{
+        "keyword": kw,
+        "location_code": LOCATION_CODES[location_select],
+        "language_code": "en",
+        "device": device_select.lower(),
+        "depth": depth
+    }]
+
+    # make the HTTP POST request to DataForSEO
     with st.spinner('Fetching SERP data...'):
-        api_result = requests.get('https://api.valueserp.com/search', params)
-        response_df = json.loads(api_result.text)
-        result = response_df.get('organic_results')
+        api_result = requests.post(
+            'https://api.dataforseo.com/v3/serp/google/organic/live/advanced',
+            headers=headers,
+            json=payload,
+            timeout=60
+        )
+        response_data = api_result.json()
 
     try:
-        for var in result:
-            links.append(var['link'])
+        items = response_data["tasks"][0]["result"][0]["items"]
+        organic_results = [item for item in items if item["type"] == "organic"]
 
-    except TypeError:
-        st.error("No results found. Please check your API key and try again.")
+        for result in organic_results:
+            links.append(result['url'])
+
+    except (KeyError, TypeError, IndexError):
+        st.error("No results found. Please check your DataForSEO credentials and try again.")
+        st.stop()
+
+    if not links:
+        st.error("No organic results found for this keyword.")
         st.stop()
 
     # store the extracted data
@@ -249,12 +285,12 @@ if submitted:
 
     with col1:
         csv_ngrams = df_ngrams.to_csv(index=False).encode('utf-8')
-        st.download_button("📥 Download Bigrams", csv_ngrams, "bigrams.csv", "text/csv")
+        st.download_button("Download Bigrams", csv_ngrams, "bigrams.csv", "text/csv")
 
     with col2:
         csv_titles = df_title_display.to_csv(index=False).encode('utf-8')
-        st.download_button("📥 Download Title Keywords", csv_titles, "title_keywords.csv", "text/csv")
+        st.download_button("Download Title Keywords", csv_titles, "title_keywords.csv", "text/csv")
 
     with col3:
         csv_serp = df_serp_display.to_csv(index=False).encode('utf-8')
-        st.download_button("📥 Download SERP Titles", csv_serp, "serp_titles.csv", "text/csv")
+        st.download_button("Download SERP Titles", csv_serp, "serp_titles.csv", "text/csv")

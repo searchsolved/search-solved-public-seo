@@ -3,9 +3,9 @@
 
 ####################################################################################
 #                                                                                  #
-#  Keyword Difficulty Finder                                                       #
+#  Keyword Difficulty Checker                                                      #
 #                                                                                  #
-#  Check keyword difficulty using allintitle, phrase match, and SERP clustering.   #
+#  Check keyword difficulty and search intent using the DataForSEO Labs API.       #
 #                                                                                  #
 ####################################################################################
 # Author   : Lee Foot                                                              #
@@ -13,341 +13,484 @@
 # Contact  : https://www.leefoot.com/contact                                       #
 # Email    : hello@leefoot.com                                                     #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
-# Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                                              #
+# Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                      #
 ####################################################################################
 
-import streamlit as st
+import math
+import os
+from base64 import b64encode
+from io import BytesIO
 
-st.set_page_config(page_title="Keyword Difficulty Finder", page_icon="mag",
-                   layout="wide")
-
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import json
-
+import chardet
 import pandas as pd
 import requests
-from io import BytesIO
-import chardet
+import streamlit as st
 from stqdm import stqdm
 
-st.title("Keyword Difficulty Finder")
-st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![Hire Me](https://img.shields.io/badge/-Hire%20Me-FF6B6B?logoColor=white)](https://www.leefoot.com/contact) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social) · [![More Tools](https://img.shields.io/badge/-More%20Tools-8B5CF6?logoColor=white)](https://leefoot.com/tools) · [![GitHub](https://img.shields.io/badge/-GitHub-6B7280?logoColor=white)](https://github.com/searchsolved/search-solved-public-seo)")
+st.set_page_config(
+    page_title="Keyword Difficulty Checker",
+    page_icon="mag",
+    layout="wide",
+)
+
+st.title("Keyword Difficulty Checker")
+st.markdown(
+    "*Created by* "
+    "[![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) "
+    "· [![Hire Me](https://img.shields.io/badge/-Hire%20Me-FF6B6B?logoColor=white)](https://www.leefoot.com/contact) "
+    "· [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) "
+    "· [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social) "
+    "· [![More Tools](https://img.shields.io/badge/-More%20Tools-8B5CF6?logoColor=white)](https://leefoot.com/tools) "
+    "· [![GitHub](https://img.shields.io/badge/-GitHub-6B7280?logoColor=white)](https://github.com/searchsolved/search-solved-public-seo)"
+)
 
 with st.expander("How to use this tool"):
-    st.markdown("""
+    st.markdown(
+        """
     **What this tool does:**
-    - Estimates keyword difficulty scores
-    - Analyzes SERP competition signals
-    - Prioritizes keywords by opportunity
+    - Retrieves keyword difficulty scores (0 to 100) via the DataForSEO Labs API
+    - Classifies search intent (informational, navigational, commercial, transactional)
+    - Grades keywords from "Very Easy" to "Very Hard"
+    - Exports a prioritised Excel workbook
 
     **How to use:**
-    1. Upload keyword list
-    2. Configure difficulty factors
-    3. Calculate difficulty scores
-    4. Export prioritized keywords
+    1. Enter your DataForSEO credentials in the sidebar (or set environment variables)
+    2. Upload a CSV containing your keyword list
+    3. Select the keyword column, location, and any filters
+    4. Review the estimated cost, then click **Run Analysis**
+    5. Download the results as Excel
 
-    **Best for:**
-    - Keyword prioritization
-    - SEO opportunity assessment
-    - Content planning decisions
-    """)
+    **Difficulty grades:**
+    - 0 to 14: Very Easy
+    - 15 to 29: Easy
+    - 30 to 49: Possible
+    - 50 to 69: Difficult
+    - 70 to 84: Hard
+    - 85 to 100: Very Hard
+    """
+    )
 
-# streamlit variables
-uploaded_file = st.file_uploader("Upload your keyword report")
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
 
-value_serp_key = st.sidebar.text_input('Enter your ValueSERP Key')
-device = st.sidebar.radio("Select the device to search Google", ('Mobile', 'Desktop', 'Tablet'))
-location_select = st.sidebar.selectbox('Select the location to search Google', (
-'United States', 'United Kingdom', 'Australia', 'India', 'Spain', 'Italy', 'Canada', 'Germany', 'Ireland', 'France',
-'Holland'))
-threads = st.sidebar.slider("Set number of threads", value=10, min_value=1, max_value=20)
-common_urls = st.sidebar.slider("Set number of common urls to match", value=3, min_value=2, max_value=5)
-max_diff = st.sidebar.slider("Set minimum keyword difficulty", value=10, min_value=0, max_value=99)
-filter_questions = st.sidebar.checkbox('Select only question keywords?', value=False)
+LOCATION_CODES = {
+    "United Kingdom": 2826,
+    "United States": 2840,
+    "Australia": 2036,
+    "Canada": 2124,
+    "Germany": 2276,
+    "France": 2250,
+    "Spain": 2724,
+    "Italy": 2380,
+    "Netherlands": 2528,
+    "India": 2356,
+    "Ireland": 2372,
+}
 
-if uploaded_file is not None:
+BATCH_SIZE = 1000
+COST_PER_KEYWORD = 0.002  # $0.001 for KD + $0.001 for intent
 
-    try:
+DIFFICULTY_GRADES = [
+    (14, "Very Easy"),
+    (29, "Easy"),
+    (49, "Possible"),
+    (69, "Difficult"),
+    (84, "Hard"),
+    (100, "Very Hard"),
+]
 
-        result = chardet.detect(uploaded_file.getvalue())
-        encoding_value = result["encoding"]
+# ---------------------------------------------------------------------------
+# Sidebar: credentials and settings
+# ---------------------------------------------------------------------------
 
-        if encoding_value == "UTF-16":
-            white_space = True
-        else:
-            white_space = False
+st.sidebar.header("DataForSEO Credentials")
 
-        df_comp = pd.read_csv(uploaded_file, encoding=encoding_value, delim_whitespace=white_space, on_bad_lines='skip')
-        number_of_rows = len(df_comp)
+dataforseo_login = st.sidebar.text_input(
+    "DataForSEO Login",
+    value=os.environ.get("DATAFORSEO_LOGIN", ""),
+    type="password",
+    help="Your DataForSEO API login. Can also be set via the DATAFORSEO_LOGIN environment variable.",
+)
 
-        if number_of_rows == 0:
-            st.caption("Your sheet seems empty!")
+dataforseo_password = st.sidebar.text_input(
+    "DataForSEO Password",
+    value=os.environ.get("DATAFORSEO_PASSWORD", ""),
+    type="password",
+    help="Your DataForSEO API password. Can also be set via the DATAFORSEO_PASSWORD environment variable.",
+)
 
-        with st.expander("View raw data", expanded=False):
-            st.write(df_comp)
+st.sidebar.header("Settings")
 
-    except UnicodeDecodeError:
-        st.warning("""The file doesn't seem to load. Check the filetype, file format and Schema""")
+location_select = st.sidebar.selectbox(
+    "Select the search location",
+    list(LOCATION_CODES.keys()),
+)
 
-else:
-    st.info("Upload a .csv or .txt file first.")
+max_diff = st.sidebar.slider(
+    "Maximum keyword difficulty to include",
+    value=100,
+    min_value=0,
+    max_value=100,
+    help="Keywords with a difficulty score above this value will be excluded from the results.",
+)
+
+filter_questions = st.sidebar.checkbox("Select only question keywords?", value=False)
+
+# ---------------------------------------------------------------------------
+# File upload
+# ---------------------------------------------------------------------------
+
+uploaded_file = st.file_uploader("Upload your keyword CSV")
+
+if uploaded_file is None:
+    st.info("Upload a .csv or .txt file to get started.")
     st.stop()
 
-with st.form(key='columns_in_form_2'):
-    st.subheader("Please Select the Keyword Column")
-    kw_col = st.selectbox('Select the Keyword column:', df_comp.columns)
+try:
+    result = chardet.detect(uploaded_file.getvalue())
+    encoding_value = result["encoding"]
 
-    submitted = st.form_submit_button('Submit')
+    if encoding_value == "UTF-16":
+        white_space = True
+    else:
+        white_space = False
 
-if submitted:
-    df_comp.rename(columns={kw_col: "Keyword"}, inplace=True)
-    if 'Difficulty' in df_comp.columns:
-        df_comp['Difficulty'] = df_comp['Difficulty'].fillna("0").astype(int)
-        df_comp = df_comp[df_comp.Difficulty <= max_diff]
+    df_upload = pd.read_csv(
+        uploaded_file,
+        encoding=encoding_value,
+        delim_whitespace=white_space,
+        on_bad_lines="skip",
+    )
+    number_of_rows = len(df_upload)
 
-    if filter_questions:
-        q_words = "who |what |where |why |when |how |is |are |does |do |can "
-        df_comp = df_comp[df_comp['Keyword'].str.contains(q_words)]
+    if number_of_rows == 0:
+        st.caption("Your file appears to be empty.")
+        st.stop()
 
-    # make the initial keyword list
-    kws = list(set(df_comp['Keyword']))
-    with st.expander("View keywords to process", expanded=False):
-        st.write(kws)
+    with st.expander("View raw data", expanded=False):
+        st.dataframe(df_upload)
 
-    # set up the request parameters
-    params = {
-        'api_key': value_serp_key
+except (UnicodeDecodeError, pd.errors.ParserError):
+    st.warning("The file could not be loaded. Please check the file type and format.")
+    st.stop()
+
+# ---------------------------------------------------------------------------
+# Column selection form
+# ---------------------------------------------------------------------------
+
+with st.form(key="column_select_form"):
+    st.subheader("Select the Keyword Column")
+    kw_col = st.selectbox("Keyword column:", df_upload.columns)
+    submitted = st.form_submit_button("Submit")
+
+if not submitted:
+    st.stop()
+
+# ---------------------------------------------------------------------------
+# Prepare keyword list
+# ---------------------------------------------------------------------------
+
+df_comp = df_upload.copy()
+df_comp.rename(columns={kw_col: "Keyword"}, inplace=True)
+
+if filter_questions:
+    q_words = r"who |what |where |why |when |how |is |are |does |do |can "
+    df_comp = df_comp[df_comp["Keyword"].str.contains(q_words, case=False, na=False)]
+
+if len(df_comp) == 0:
+    st.warning("No keywords remain after applying filters. Please adjust your settings.")
+    st.stop()
+
+# Deduplicate keywords for the API calls (preserve all rows for the final merge)
+keywords = df_comp["Keyword"].dropna().unique().tolist()
+num_keywords = len(keywords)
+num_batches = math.ceil(num_keywords / BATCH_SIZE)
+
+with st.expander("View keywords to process", expanded=False):
+    st.write(keywords)
+
+# ---------------------------------------------------------------------------
+# Cost estimate
+# ---------------------------------------------------------------------------
+
+estimated_cost = num_keywords * COST_PER_KEYWORD
+
+st.info(
+    f"**Keywords to process:** {num_keywords}  |  "
+    f"**API batches:** {num_batches}  |  "
+    f"**Estimated cost:** ${estimated_cost:.2f} "
+    f"(${COST_PER_KEYWORD:.3f} per keyword for difficulty + intent)"
+)
+
+# ---------------------------------------------------------------------------
+# Credential check
+# ---------------------------------------------------------------------------
+
+if not dataforseo_login or not dataforseo_password:
+    st.error(
+        "Please enter your DataForSEO login and password in the sidebar, "
+        "or set the DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD environment variables."
+    )
+    st.stop()
+
+# ---------------------------------------------------------------------------
+# Run button
+# ---------------------------------------------------------------------------
+
+run_analysis = st.button("Run Analysis", type="primary")
+
+if not run_analysis:
+    st.stop()
+
+
+# ---------------------------------------------------------------------------
+# Helper functions
+# ---------------------------------------------------------------------------
+
+
+def _build_headers(login: str, password: str) -> dict:
+    """Build HTTP headers with Basic auth for DataForSEO."""
+    cred = b64encode(f"{login}:{password}".encode()).decode()
+    return {
+        "Authorization": f"Basic {cred}",
+        "Content-Type": "application/json",
     }
 
-    # get account info from valueserp
-    api_result = requests.get('https://api.valueserp.com/account', params)
-    ac_response_df = json.loads(api_result.text)
-    account_result = ac_response_df.get('account_info')
 
-    # assign account variables
-    credits_remain = account_result.get('topup_credits_remaining')
-    rate_limit = account_result.get('rate_limit_per_minute')
-
-    # calculate credits required and time remaining
-    kws_req = len(kws) * 3
-    units = " seconds"
-    minute_calc = kws_req / rate_limit
-    second_calc = minute_calc * 60
-    if second_calc > 59.9:
-        second_calc = second_calc / 60
-        units = " minutes"
-
-    st.info("Keywords to Process: {} - Available Credits: {} - Rate Limit {} - Estimated Completion Time: {}{}".format(
-        kws_req, credits_remain, rate_limit, second_calc, units))
-
-    if kws_req > credits_remain:
-        st.write("Not enough credits to process batch!")
-        st.stop()
-
-    # create allintitle and phrase matches
-    df_comp['allintitle_kw_temp'] = "allintitle: " + df_comp['Keyword']
-    df_comp['quoted_kw_temp'] = '"' + df_comp['Keyword'] + '"'
-
-    # extend kw list with allintitle and phrase matches
-    kws.extend(df_comp['allintitle_kw_temp'].tolist())
-    kws.extend(df_comp['quoted_kw_temp'].tolist())
-
-    # delete the helper columns
-    del df_comp['allintitle_kw_temp']
-    del df_comp['quoted_kw_temp']
-
-    # store the main data
-    search_q = []
-    total_results = []
-
-    # store the serp cluster df data
-    link_l = []
-    query_padded_len = []
-
-    counter = 0
+def _grade_difficulty(score) -> str:
+    """Return a human-readable difficulty grade."""
+    if pd.isna(score):
+        return ""
+    score = int(score)
+    for threshold, label in DIFFICULTY_GRADES:
+        if score <= threshold:
+            return label
+    return "Very Hard"
 
 
-    def get_serp(kw):
-        global counter
-        counter += 1
-        global list_counter
-        print(f'Searching Google for: {kw}', "(", counter, "of", len(kws), ")")
+def _batch_list(items: list, batch_size: int) -> list[list]:
+    """Split a list into batches of the given size."""
+    return [items[i : i + batch_size] for i in range(0, len(items), batch_size)]
 
-        params = {
-            'api_key': value_serp_key,
-            'q': kw,
-            'location': location_select,
-            'include_fields': ['organic_results', 'search_information'],
-            'location_auto': True,
-            'device': device,
-            'output': 'json',
-            'page': '1',
-            'num': '10'
+
+def fetch_bulk_keyword_difficulty(
+    keywords_batch: list[str],
+    location_code: int,
+    headers: dict,
+) -> list[dict]:
+    """Call the DataForSEO Bulk Keyword Difficulty endpoint for one batch."""
+    url = "https://api.dataforseo.com/v3/dataforseo_labs/google/bulk_keyword_difficulty/live"
+    payload = [
+        {
+            "keywords": keywords_batch,
+            "location_code": location_code,
+            "language_code": "en",
         }
+    ]
+    response = requests.post(url, json=payload, headers=headers, timeout=120)
+    response.raise_for_status()
+    data = response.json()
 
-        response = requests.get('https://api.valueserp.com/search', params)
-        response_data = json.loads(response.text)
-        result = response_data.get('search_information')
-        total_results.append((result['total_results']))
-        search_q.append(kw)
-        query_padded_len.append(kw)
+    # Validate response structure
+    if data.get("status_code") != 20000:
+        raise RuntimeError(
+            f"DataForSEO API error: {data.get('status_message', 'Unknown error')}"
+        )
 
-        result_links = response_data.get('organic_results')
+    tasks = data.get("tasks", [])
+    if not tasks or tasks[0].get("status_code") != 20000:
+        msg = tasks[0].get("status_message", "Unknown task error") if tasks else "No tasks returned"
+        raise RuntimeError(f"DataForSEO task error: {msg}")
 
-        for var in result_links:
-            try:
-                link_l.append(var['link'])
-            except Exception:
-                link_l.append("")
-
-            max_list_len = max(len(link_l), len(query_padded_len))
-
-            if len(query_padded_len) != max_list_len:
-                diff = max_list_len - len(query_padded_len)
-                query_padded_len.extend([kw] * diff)
+    return tasks[0].get("result", []) or []
 
 
-    # use stqdm with concurrent futures
-    with stqdm(total=len(kws)) as pbar:
-        with ThreadPoolExecutor(max_workers=threads) as ex:
-            futures = [ex.submit(get_serp, url) for url in kws]
-            for future in as_completed(futures):
-                result = future.result()
-                pbar.set_description("Searching Keywords: ")
-                pbar.update(1)
+def fetch_search_intent(
+    keywords_batch: list[str],
+    location_code: int,
+    headers: dict,
+) -> list[dict]:
+    """Call the DataForSEO Search Intent endpoint for one batch."""
+    url = "https://api.dataforseo.com/v3/dataforseo_labs/google/search_intent/live"
+    payload = [
+        {
+            "keywords": keywords_batch,
+            "location_code": location_code,
+            "language_code": "en",
+        }
+    ]
+    response = requests.post(url, json=payload, headers=headers, timeout=120)
+    response.raise_for_status()
+    data = response.json()
 
-    print("Finished searching!")
-    df_results = pd.DataFrame(None)
-    df_results['Keyword'] = search_q
-    df_results['Total Results'] = total_results
+    if data.get("status_code") != 20000:
+        raise RuntimeError(
+            f"DataForSEO API error: {data.get('status_message', 'Unknown error')}"
+        )
 
-    # make two dfs from the results df to merge back into the main df vlookup style
-    try:
-        df_results_allintitle = df_results[df_results['Keyword'].str.contains("allintitle")].copy()
-    except AttributeError:
-        st.warning("No Matching Keywords After Filtering Options Set. Please Check and Try Again!")
-        st.stop()
-    df_results_phrase = df_results[df_results['Keyword'].str.contains('"')].copy()
+    tasks = data.get("tasks", [])
+    if not tasks or tasks[0].get("status_code") != 20000:
+        msg = tasks[0].get("status_message", "Unknown task error") if tasks else "No tasks returned"
+        raise RuntimeError(f"DataForSEO task error: {msg}")
 
-    # rename the column names ready for the vlookup style match
-    df_results.rename(columns={"Total Results": "Search Results"}, inplace=True)
-    df_results_phrase.rename(columns={"Total Results": "Quoted Results"}, inplace=True)
-    df_results_allintitle.rename(columns={"Total Results": "Allintitle Results"}, inplace=True)
-
-    # remove the keyword modifiers for matching
-    df_results_phrase['Keyword'] = df_results_phrase['Keyword'].apply(lambda x: x.replace('\"', ''))
-    df_results_allintitle['Keyword'] = df_results_allintitle['Keyword'].apply(lambda x: x.replace('allintitle: ', ''))
-
-    # do the vlookup merge
-    df_comp = pd.merge(df_comp, df_results[['Keyword', 'Search Results']], on='Keyword', how='left')
-    df_comp = pd.merge(df_comp, df_results_phrase[['Keyword', 'Quoted Results']], on='Keyword', how='left')
-    df_comp = pd.merge(df_comp, df_results_allintitle[['Keyword', 'Allintitle Results']], on='Keyword', how='left')
-
-    # make the cluster df
-    df_cluster = pd.DataFrame(None)
-    df_cluster["keyword"] = query_padded_len
-    df_cluster["link"] = link_l
-
-    # remove the keyword modifiers before clustering
-    df_cluster['keyword'] = df_cluster['keyword'].apply(lambda x: x.replace('\"', ''))
-    df_cluster['keyword'] = df_cluster['keyword'].apply(lambda x: x.replace('allintitle: ', ''))
-    df_cluster.drop_duplicates(subset=["keyword", "link"], keep="first", inplace=True)
-
-    # -------------- start cluster logic
-    # sort and group kws, drop any under min threshold
-    df_cluster_cluster = df_cluster.sort_values(by="keyword", ascending=True)
-    df_cluster = df_cluster.groupby('link')['keyword'].apply(','.join).reset_index()
-    df_cluster["temp_count"] = (df_cluster["keyword"].str.count(",") + 1)
-    df_cluster = df_cluster[df_cluster["temp_count"] >= common_urls]
-
-    # keep only the longest version of each keyword group
-    list1 = df_cluster['keyword']
-    substrings = {w1 for w1 in list1 for w2 in list1 if w1 in w2 and w1 != w2}
-    longest_str = set(list1) - substrings
-    longest_str = list(longest_str)
-
-    df_cluster = df_cluster[df_cluster['keyword'].isin(longest_str)]
-
-    # drop any cluster groups under the minimum threshold
-    df_cluster['temp_count'] = df_cluster['keyword'].map(df_cluster.groupby('keyword')['keyword'].count())
-    df_cluster = df_cluster[df_cluster["temp_count"] >= common_urls]
-
-    # make the cluster column & delete helper column
-    df_cluster['serp_cluster'] = df_cluster['keyword']
-
-    # explode the keyword list
-    df_cluster['keyword'] = df_cluster['keyword'].str.split(',')
-    df_cluster = df_cluster.explode('keyword')
-
-    df_cluster['temp_count'] = df_cluster['keyword'].astype(str).map(len)
-    df_cluster = df_cluster.sort_values(by="temp_count", ascending=True)
-    df_cluster['serp_cluster'] = df_cluster.groupby('serp_cluster')['keyword'].transform('first')
-    df_cluster.sort_values(['serp_cluster', "keyword"], ascending=[True, True], inplace=True)
-
-    del df_cluster['temp_count']
-    df_cluster.drop_duplicates(subset="keyword", inplace=True)
-
-    # clean the final df
-    try:
-        df_cluster['keyword'] = df_cluster['keyword'].str.strip()
-        df_cluster.drop_duplicates(subset=["keyword", "serp_cluster"], keep="first", inplace=True)
-        df_cluster.rename(columns={"keyword": "Keyword", "serp_cluster": "Serp Cluster"}, inplace=True)
-        df_comp = pd.merge(df_comp, df_cluster[['Keyword', 'Serp Cluster']], on='Keyword', how='left')
-        df_comp['Serp Cluster'] = df_comp['Serp Cluster'].fillna("zzz_no_cluster")
-    except AttributeError:
-        df_comp['Serp Cluster'] = "zzz_no_cluster"
-
-    # pop the columns to the front
-    col = df_comp.pop('Allintitle Results')
-    df_comp.insert(0, col.name, col)
-    df_comp = df_comp.sort_values(by="Allintitle Results", ascending=True)
-
-    col = df_comp.pop('Quoted Results')
-    df_comp.insert(0, col.name, col)
-    df_comp = df_comp.sort_values(by="Quoted Results", ascending=True)
-
-    col = df_comp.pop('Search Results')
-    df_comp.insert(0, col.name, col)
-    df_comp = df_comp.sort_values(by="Search Results", ascending=True)
-
-    col = df_comp.pop('Keyword')
-    df_comp.insert(0, col.name, col)
-    df_comp = df_comp.sort_values(by="Keyword", ascending=True)
-
-    col = df_comp.pop('Serp Cluster')
-    df_comp.insert(0, col.name, col)
-
-    # check if cluster size = 1 and overwrite with no_cluster
-    df_comp['cluster_count'] = df_comp['Serp Cluster'].map(df_comp.groupby('Serp Cluster')['Serp Cluster'].count())
-
-    df_comp.loc[df_comp["cluster_count"] == 1, "Serp Cluster"] = "zzz_no_cluster"
-    del df_comp['cluster_count']
-    df_comp = df_comp.sort_values(by="Serp Cluster", ascending=True)
-
-    # make question dataframe ------------------------------------------------------------------------------------------
-    q_words_filter = "who |what |where |why |when |how |is |are |does |do |can "
-    df_questions = df_comp[df_comp['Keyword'].str.contains(q_words_filter)]
-
-    # save to Excel sheet
-    dfs = [df_comp, df_questions]  # make a list of the dataframe to use as a sheet
+    return tasks[0].get("result", []) or []
 
 
-    # Function to save all dataframes to one single excel
-    @st.cache_data
-    def dfs_tabs(df_list, sheet_list, file_name):
-        output = BytesIO()
-        writer = pd.ExcelWriter(output, engine='xlsxwriter')
-        for dataframe, sheet in zip(df_list, sheet_list):
-            dataframe.to_excel(writer, sheet_name=sheet, startrow=0, startcol=0, index=False)
-        writer.close()
-        processed_data = output.getvalue()
-        return processed_data
+# ---------------------------------------------------------------------------
+# API calls
+# ---------------------------------------------------------------------------
+
+headers = _build_headers(dataforseo_login, dataforseo_password)
+location_code = LOCATION_CODES[location_select]
+batches = _batch_list(keywords, BATCH_SIZE)
+
+# Collect results
+kd_records = []  # list of {"keyword": ..., "keyword_difficulty": ...}
+intent_records = []  # list of {"keyword": ..., "keyword_intent": ..., "secondary_keyword_intents": ...}
+
+total_steps = num_batches * 2  # KD + intent for each batch
+
+try:
+    with stqdm(total=total_steps, desc="Fetching data from DataForSEO") as pbar:
+        for batch in batches:
+            # Keyword difficulty
+            pbar.set_description("Fetching keyword difficulty")
+            kd_result = fetch_bulk_keyword_difficulty(batch, location_code, headers)
+            kd_records.extend(kd_result)
+            pbar.update(1)
+
+            # Search intent
+            pbar.set_description("Fetching search intent")
+            intent_result = fetch_search_intent(batch, location_code, headers)
+            intent_records.extend(intent_result)
+            pbar.update(1)
+
+except (requests.RequestException, RuntimeError) as exc:
+    st.error(f"API request failed: {exc}")
+    st.stop()
+
+# ---------------------------------------------------------------------------
+# Build results dataframe
+# ---------------------------------------------------------------------------
+
+# Keyword difficulty
+df_kd = pd.DataFrame(kd_records)
+if "keyword" in df_kd.columns and "keyword_difficulty" in df_kd.columns:
+    df_kd = df_kd[["keyword", "keyword_difficulty"]].copy()
+    df_kd.rename(
+        columns={"keyword": "Keyword", "keyword_difficulty": "Keyword Difficulty"},
+        inplace=True,
+    )
+else:
+    st.warning("No keyword difficulty data was returned. Please check your credentials and try again.")
+    st.stop()
+
+# Search intent
+if intent_records:
+    intent_rows = []
+    for item in intent_records:
+        kw = item.get("keyword", "")
+        primary_intent = ""
+        secondary_intents = ""
+
+        ki = item.get("keyword_intent", {})
+        if ki and isinstance(ki, dict):
+            primary_intent = ki.get("label", "")
+
+        sec = item.get("secondary_keyword_intents")
+        if sec and isinstance(sec, list):
+            secondary_intents = ", ".join(
+                s.get("label", "") for s in sec if isinstance(s, dict) and s.get("label")
+            )
+
+        intent_rows.append(
+            {
+                "Keyword": kw,
+                "Search Intent": primary_intent,
+                "Secondary Intents": secondary_intents,
+            }
+        )
+
+    df_intent = pd.DataFrame(intent_rows)
+else:
+    df_intent = pd.DataFrame(columns=["Keyword", "Search Intent", "Secondary Intents"])
+
+# Merge KD and intent on keyword
+df_api = pd.merge(df_kd, df_intent, on="Keyword", how="outer")
+
+# Merge API results back into the original dataframe
+df_comp = pd.merge(df_comp, df_api, on="Keyword", how="left")
+
+# Add difficulty grade
+df_comp["Difficulty Grade"] = df_comp["Keyword Difficulty"].apply(_grade_difficulty)
+
+# Apply max difficulty filter
+df_comp["Keyword Difficulty"] = pd.to_numeric(df_comp["Keyword Difficulty"], errors="coerce")
+df_comp = df_comp[df_comp["Keyword Difficulty"].isna() | (df_comp["Keyword Difficulty"] <= max_diff)]
+
+# Reorder columns: put the key columns first, then any extras from the upload
+priority_cols = [
+    "Keyword",
+    "Keyword Difficulty",
+    "Difficulty Grade",
+    "Search Intent",
+    "Secondary Intents",
+]
+remaining_cols = [c for c in df_comp.columns if c not in priority_cols]
+df_comp = df_comp[priority_cols + remaining_cols]
+
+# Sort by difficulty ascending
+df_comp = df_comp.sort_values(by="Keyword Difficulty", ascending=True, na_position="last")
+
+# ---------------------------------------------------------------------------
+# Display results
+# ---------------------------------------------------------------------------
+
+st.subheader("Results")
+st.dataframe(df_comp, use_container_width=True)
+
+# Summary metrics
+col1, col2, col3, col4 = st.columns(4)
+with col1:
+    st.metric("Total Keywords", len(df_comp))
+with col2:
+    avg_diff = df_comp["Keyword Difficulty"].mean()
+    st.metric("Average Difficulty", f"{avg_diff:.1f}" if not pd.isna(avg_diff) else "N/A")
+with col3:
+    easy_count = len(df_comp[df_comp["Keyword Difficulty"] <= 29])
+    st.metric("Easy or Below", easy_count)
+with col4:
+    hard_count = len(df_comp[df_comp["Keyword Difficulty"] >= 70])
+    st.metric("Hard or Above", hard_count)
+
+# ---------------------------------------------------------------------------
+# Question keywords sheet
+# ---------------------------------------------------------------------------
+
+q_words_filter = r"who |what |where |why |when |how |is |are |does |do |can "
+df_questions = df_comp[df_comp["Keyword"].str.contains(q_words_filter, case=False, na=False)]
+
+# ---------------------------------------------------------------------------
+# Excel export
+# ---------------------------------------------------------------------------
 
 
-    # list of sheet names
-    sheets = ['Competitive Analysis', 'Questions Only']
+@st.cache_data
+def build_excel(df_main: pd.DataFrame, df_q: pd.DataFrame) -> bytes:
+    """Write the main and questions dataframes to an Excel workbook."""
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+        df_main.to_excel(writer, sheet_name="Keyword Analysis", index=False)
+        df_q.to_excel(writer, sheet_name="Questions Only", index=False)
+    return output.getvalue()
 
-    df_xlsx = dfs_tabs(dfs, sheets, 'competitor_analysis.xlsx')
-    st.download_button(label='Download the Results!',
-                       data=df_xlsx,
-                       file_name='df_serp_difficulty_checks.xlsx')
+
+excel_data = build_excel(df_comp, df_questions)
+
+st.download_button(
+    label="Download Results as Excel",
+    data=excel_data,
+    file_name="keyword_difficulty_analysis.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+)

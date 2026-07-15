@@ -1,16 +1,18 @@
+# Author: Lee Foot
+# Website: https://leefoot.com
 """
 People Also Ask (PAA) Scraper - Streamlit App
-Recursively extracts PAA questions from search results using ValueSERP API.
-
-Author: Lee Foot
-Website: https://www.leefoot.com
+Extracts PAA questions from search results using the DataForSEO SERP API.
+DataForSEO handles recursive PAA expansion server-side via people_also_ask_click_depth,
+so only one API call is needed per seed keyword.
 """
 
 import streamlit as st
 import pandas as pd
 import requests
-import json
 import time
+import os
+from base64 import b64encode
 from datetime import datetime
 import io
 
@@ -22,28 +24,34 @@ st.set_page_config(
 
 st.title("❓ People Also Ask (PAA) Scraper")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![Hire Me](https://img.shields.io/badge/-Hire%20Me-FF6B6B?logoColor=white)](https://www.leefoot.com/contact) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social) · [![More Tools](https://img.shields.io/badge/-More%20Tools-8B5CF6?logoColor=white)](https://leefoot.com/tools) · [![GitHub](https://img.shields.io/badge/-GitHub-6B7280?logoColor=white)](https://github.com/searchsolved/search-solved-public-seo)")
-st.markdown("Extract 'People Also Ask' questions recursively using the ValueSERP API.")
+st.markdown("Extract 'People Also Ask' questions using the DataForSEO SERP API.")
 
 with st.expander("How to use this tool"):
     st.markdown("""
     **What this tool does:**
-    - Recursively extracts PAA questions from Google search results
-    - Expands each PAA to find deeper question layers
+    - Extracts PAA questions from Google search results via DataForSEO
+    - Recursively expands each PAA box server-side (up to 4 levels deep)
     - Captures answer snippets and source URLs
+    - Only one API call per seed keyword (DataForSEO handles the recursive expansion)
 
     **How to use:**
-    1. Get a ValueSERP API key from [valueserp.com](https://www.valueserp.com/)
-    2. Enter your API key in the sidebar
+    1. Get a DataForSEO account from [dataforseo.com](https://dataforseo.com/)
+    2. Enter your login and password in the sidebar
     3. Configure search settings (location, language, device)
     4. Enter seed keywords (one per line)
     5. Click "Extract PAA Questions"
 
     **Output columns:**
     - **original_query**: Your seed keyword
-    - **level**: Depth (1 = direct PAA, 2 = PAA of PAA, etc.)
+    - **level**: Depth (1 = direct PAA, 2 = expanded PAA, etc.)
+    - **parent_query**: The query or question that produced this result
     - **question**: The PAA question text
     - **answer_snippet**: The snippet answer shown in search
-    - **source_url/title**: The answer source
+    - **source_url/source_title**: The answer source
+
+    **Cost:**
+    - Approximately $0.002 per keyword
+    - The click depth parameter does not add extra cost per level
 
     **Best for:**
     - Building comprehensive FAQ pages
@@ -52,46 +60,52 @@ with st.expander("How to use this tool"):
     - Understanding user search intent
     """)
 
+# Location codes for DataForSEO
+LOCATION_CODES = {
+    "United Kingdom": 2826,
+    "United States": 2840,
+    "Canada": 2124,
+    "Australia": 2036,
+    "Germany": 2276,
+    "France": 2250,
+    "Spain": 2724,
+    "Italy": 2380,
+    "Netherlands": 2528,
+    "Brazil": 2076,
+    "Mexico": 2484,
+    "India": 2356,
+    "Japan": 2392,
+}
+
 # Sidebar configuration
 with st.sidebar:
     st.header("API Configuration")
 
-    api_key = st.text_input(
-        "ValueSERP API Key",
+    dataforseo_login = st.text_input(
+        "DataForSEO Login",
+        value=os.environ.get("DATAFORSEO_LOGIN", ""),
         type="password",
-        help="Get your API key from https://www.valueserp.com/"
+        help="Your DataForSEO account login (email)"
     )
+
+    dataforseo_password = st.text_input(
+        "DataForSEO Password",
+        value=os.environ.get("DATAFORSEO_PASSWORD", ""),
+        type="password",
+        help="Your DataForSEO account password"
+    )
+
+    has_credentials = bool(dataforseo_login and dataforseo_password)
 
     st.markdown("---")
     st.header("Search Settings")
 
-    # Location settings
     location = st.selectbox(
         "Location",
-        options=[
-            "United States", "United Kingdom", "Canada", "Australia",
-            "Germany", "France", "Spain", "Italy", "Netherlands",
-            "Brazil", "Mexico", "India", "Japan"
-        ],
+        options=list(LOCATION_CODES.keys()),
         index=0,
         help="Location for search results"
     )
-
-    country_codes = {
-        "United States": ("us", "google.com"),
-        "United Kingdom": ("uk", "google.co.uk"),
-        "Canada": ("ca", "google.ca"),
-        "Australia": ("au", "google.com.au"),
-        "Germany": ("de", "google.de"),
-        "France": ("fr", "google.fr"),
-        "Spain": ("es", "google.es"),
-        "Italy": ("it", "google.it"),
-        "Netherlands": ("nl", "google.nl"),
-        "Brazil": ("br", "google.com.br"),
-        "Mexico": ("mx", "google.com.mx"),
-        "India": ("in", "google.co.in"),
-        "Japan": ("jp", "google.co.jp")
-    }
 
     language = st.selectbox(
         "Language",
@@ -102,7 +116,7 @@ with st.sidebar:
 
     device = st.selectbox(
         "Device",
-        options=["Desktop", "Mobile", "Tablet"],
+        options=["desktop", "mobile"],
         index=0
     )
 
@@ -110,11 +124,11 @@ with st.sidebar:
     st.header("Scrape Settings")
 
     max_depth = st.slider(
-        "Max Depth",
+        "PAA Click Depth",
         min_value=1,
-        max_value=5,
+        max_value=4,
         value=2,
-        help="How many levels deep to follow PAA questions"
+        help="How many levels deep to expand PAA questions (1-4). DataForSEO handles expansion server-side."
     )
 
     request_delay = st.slider(
@@ -123,88 +137,122 @@ with st.sidebar:
         max_value=5.0,
         value=0.5,
         step=0.5,
-        help="Delay between API requests"
+        help="Delay between API requests for each keyword"
     )
 
 
-def get_related_questions(query, api_key, location, country_code, google_domain,
-                         language, device, max_depth, delay,
-                         level=1, all_questions=None, parent=None,
-                         original_query=None, progress_callback=None):
-    """Recursively fetch related questions from ValueSERP API."""
-    if all_questions is None:
-        all_questions = []
-        original_query = query
-
-    if level > max_depth:
-        return all_questions
-
-    if progress_callback:
-        progress_callback(f"Level {level}: Querying '{query[:50]}...'")
-
-    params = {
-        'api_key': api_key,
-        'q': query,
-        'gl': country_code,
-        'hl': language,
-        'location': location,
-        'google_domain': google_domain,
-        'device': device.lower(),
-        'output': 'json',
-        'page': '1',
-        'num': '10',
-        'include_fields': 'related_questions'
+def build_auth_header(login, password):
+    """Build the Basic Auth header for DataForSEO."""
+    cred = b64encode(f"{login}:{password}".encode()).decode()
+    return {
+        "Authorization": f"Basic {cred}",
+        "Content-Type": "application/json"
     }
 
-    try:
-        response = requests.get('https://api.valueserp.com/search', params=params, timeout=30)
-        response.raise_for_status()
 
-        data = response.json()
-        questions = data.get('related_questions', [])
+def extract_paa_items(items, original_query, parent_query, level, all_questions, seen_questions):
+    """
+    Recursively extract PAA questions from the DataForSEO response items.
+    Walks through top-level items and any nested expanded_element lists.
+    """
+    if items is None:
+        return
 
-        if not questions:
-            return all_questions
+    for item in items:
+        if not isinstance(item, dict):
+            continue
 
-        for q in questions:
-            question_text = q.get('question', '')
+        # Check for PAA container at top level
+        if item.get("type") == "people_also_ask":
+            paa_questions = item.get("items", [])
+            for q in paa_questions:
+                if not isinstance(q, dict):
+                    continue
+                question_text = q.get("title", "")
+                if not question_text or question_text in seen_questions:
+                    continue
+                seen_questions.add(question_text)
 
-            if not question_text:
-                continue
-
-            question_data = {
-                'original_query': original_query,
-                'level': level,
-                'parent_query': parent if parent else query,
-                'question': question_text,
-                'answer_snippet': q.get('answer', {}).get('text', '') if isinstance(q.get('answer'), dict) else '',
-                'source_url': q.get('answer', {}).get('link', '') if isinstance(q.get('answer'), dict) else '',
-                'source_title': q.get('answer', {}).get('title', '') if isinstance(q.get('answer'), dict) else ''
-            }
-
-            # Check for duplicates
-            if not any(d.get('question') == question_text for d in all_questions):
+                question_data = {
+                    "original_query": original_query,
+                    "level": level,
+                    "parent_query": parent_query,
+                    "question": question_text,
+                    "answer_snippet": q.get("snippet", ""),
+                    "source_url": q.get("url", ""),
+                    "source_title": q.get("domain", ""),
+                }
                 all_questions.append(question_data)
 
-                # Recursively query next level
-                if level < max_depth:
-                    time.sleep(delay)
-                    get_related_questions(
-                        question_text,
-                        api_key, location, country_code, google_domain,
-                        language, device, max_depth, delay,
-                        level=level + 1,
-                        all_questions=all_questions,
-                        parent=question_text,
-                        original_query=original_query,
-                        progress_callback=progress_callback
+                # Recurse into expanded elements (deeper PAA levels)
+                expanded = q.get("expanded_element", [])
+                if expanded:
+                    extract_paa_items(
+                        expanded, original_query, question_text,
+                        level + 1, all_questions, seen_questions
                     )
+
+
+def fetch_paa_for_keyword(keyword, headers, location_code, language_code, device_type,
+                          click_depth, progress_callback=None):
+    """
+    Fetch PAA questions for a single keyword using DataForSEO.
+    One API call per keyword; DataForSEO handles recursive expansion.
+    """
+    if progress_callback:
+        progress_callback(f"Querying DataForSEO for '{keyword}'")
+
+    payload = [{
+        "keyword": keyword,
+        "location_code": location_code,
+        "language_code": language_code,
+        "device": device_type,
+        "depth": 10,
+        "people_also_ask_click_depth": click_depth,
+    }]
+
+    try:
+        response = requests.post(
+            "https://api.dataforseo.com/v3/serp/google/organic/live/advanced",
+            headers=headers,
+            json=payload,
+            timeout=60,
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        # Validate response
+        if data.get("status_code") != 20000:
+            msg = data.get("status_message", "Unknown API error")
+            if progress_callback:
+                progress_callback(f"API error: {msg}")
+            return []
+
+        tasks = data.get("tasks", [])
+        if not tasks:
+            return []
+
+        task = tasks[0]
+        if task.get("status_code") != 20000:
+            msg = task.get("status_message", "Task error")
+            if progress_callback:
+                progress_callback(f"Task error: {msg}")
+            return []
+
+        results = task.get("result", [])
+        if not results:
+            return []
+
+        items = results[0].get("items", [])
+        all_questions = []
+        seen_questions = set()
+        extract_paa_items(items, keyword, keyword, 1, all_questions, seen_questions)
+        return all_questions
 
     except requests.exceptions.RequestException as e:
         if progress_callback:
-            progress_callback(f"Error: {str(e)}")
-
-    return all_questions
+            progress_callback(f"Request error: {str(e)}")
+        return []
 
 
 # Main app
@@ -216,20 +264,27 @@ keywords_input = st.text_area(
     placeholder="Enter your seed keywords, one per line:\n\nwhat is SEO\nhow to rank on Google\nbest keyword research tools"
 )
 
+# Parse keywords for cost estimate
+keywords_for_estimate = [k.strip() for k in keywords_input.strip().split('\n') if k.strip()] if keywords_input else []
+if keywords_for_estimate:
+    estimated_cost = len(keywords_for_estimate) * 0.002
+    st.info(f"Estimated cost: **${estimated_cost:.3f}** for {len(keywords_for_estimate)} keyword(s) at ~$0.002 each")
+
 col1, col2 = st.columns([1, 3])
 with col1:
-    run_button = st.button("Extract PAA Questions", type="primary", disabled=not api_key)
+    run_button = st.button("Extract PAA Questions", type="primary", disabled=not has_credentials)
 
-if not api_key:
-    st.warning("Please enter your ValueSERP API key in the sidebar.")
+if not has_credentials:
+    st.warning("Please enter your DataForSEO login and password in the sidebar.")
 
-if run_button and keywords_input and api_key:
+if run_button and keywords_input and has_credentials:
     keywords = [k.strip() for k in keywords_input.strip().split('\n') if k.strip()]
 
     if not keywords:
         st.error("Please enter at least one keyword.")
     else:
-        country_code, google_domain = country_codes[location]
+        location_code = LOCATION_CODES[location]
+        headers = build_auth_header(dataforseo_login, dataforseo_password)
 
         all_results = []
         progress_bar = st.progress(0)
@@ -241,21 +296,22 @@ if run_button and keywords_input and api_key:
         for i, keyword in enumerate(keywords):
             update_progress(f"Processing keyword {i+1}/{len(keywords)}: {keyword}")
 
-            results = get_related_questions(
+            results = fetch_paa_for_keyword(
                 keyword,
-                api_key,
-                location,
-                country_code,
-                google_domain,
+                headers,
+                location_code,
                 language,
                 device,
                 max_depth,
-                request_delay,
                 progress_callback=update_progress
             )
 
             all_results.extend(results)
             progress_bar.progress((i + 1) / len(keywords))
+
+            # Rate limit between keywords
+            if i < len(keywords) - 1 and request_delay > 0:
+                time.sleep(request_delay)
 
         progress_bar.progress(100)
 
@@ -268,7 +324,8 @@ if run_button and keywords_input and api_key:
             columns = [c for c in columns if c in df.columns]
             df = df[columns]
 
-            st.success(f"Found {len(df):,} unique PAA questions!")
+            actual_cost = len(keywords) * 0.002
+            st.success(f"Found {len(df):,} unique PAA questions! Estimated API cost: ${actual_cost:.3f}")
 
             # Summary metrics
             col1, col2, col3, col4 = st.columns(4)
@@ -277,7 +334,6 @@ if run_button and keywords_input and api_key:
             with col2:
                 st.metric("Seed Keywords", len(keywords))
             with col3:
-                level_counts = df['level'].value_counts().sort_index()
                 st.metric("Avg Questions/Keyword", f"{len(df)/len(keywords):.1f}")
             with col4:
                 st.metric("Max Depth Used", df['level'].max())

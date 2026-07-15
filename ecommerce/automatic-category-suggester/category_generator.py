@@ -1,12 +1,12 @@
+# Author: Lee Foot
+# Website: https://leefoot.com
 ####################################################################################
 #                                                                                  #
 #  Automatic Category Page Suggester                                               #
 #                                                                                  #
-#  Analyze crawl data to suggest new category pages based on product inventory.    #
+#  Analyse crawl data to suggest new category pages based on product inventory.    #
 #                                                                                  #
 ####################################################################################
-# Author   : Lee Foot                                                              #
-# Website  : https://www.leefoot.com                                               #
 # Contact  : https://www.leefoot.com/contact                                       #
 # Email    : hello@leefoot.com                                                     #
 # LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
@@ -19,6 +19,9 @@ import re
 import string
 import chardet
 from polyfuzz import PolyFuzz
+
+import math
+import time
 
 import pandas as pd
 import requests
@@ -35,23 +38,42 @@ st.set_page_config(
 st.sidebar.title("Settings")
 
 # API Configuration
-st.sidebar.header("Keywords Everywhere API")
-kwe_key = st.sidebar.text_input(
-    'API Key',
+st.sidebar.header("DataForSEO API")
+dataforseo_login = st.sidebar.text_input(
+    'DataForSEO Login',
     type="password",
-    help="Get your API key from keywordseverywhere.com"
+    help="Your DataForSEO API login (email)"
 )
-country_kwe = st.sidebar.selectbox(
+dataforseo_password = st.sidebar.text_input(
+    'DataForSEO Password',
+    type="password",
+    help="Your DataForSEO API password"
+)
+
+LOCATION_CODES = {
+    "us": 2840,
+    "uk": 2826,
+    "au": 2036,
+    "ca": 2124,
+    "in": 2356,
+    "nz": 2554,
+    "za": 2710,
+}
+LANGUAGE_CODES = {
+    "us": "en",
+    "uk": "en",
+    "au": "en",
+    "ca": "en",
+    "in": "en",
+    "nz": "en",
+    "za": "en",
+}
+
+country_selection = st.sidebar.selectbox(
     'Country',
-    ('us', 'uk', 'au', 'ca', 'in', 'nz', 'za'),
+    list(LOCATION_CODES.keys()),
     index=0,
     help="Country for search volume data"
-)
-currency_kwe = st.sidebar.selectbox(
-    'Currency',
-    ('usd', 'gbp', 'eur', 'aud', 'cad', 'inr', 'nzd'),
-    index=0,
-    help="Currency for CPC data"
 )
 
 # Filtering Options
@@ -121,12 +143,12 @@ with st.expander("How to Use This Tool", expanded=False):
     1. **N-grams** extract 2-7 word phrases from your product H1 tags
     2. Phrases are **matched to products** to ensure inventory coverage
     3. **PolyFuzz** checks similarity to existing categories (removes duplicates)
-    4. **Keywords Everywhere** validates real search volume (optional but recommended)
+    4. **DataForSEO** validates real search volume (optional but recommended)
 
     ### Tips
-    - The Keywords Everywhere API key is optional but highly recommended
-    - Without it, you'll get all n-gram combinations (many won't have search volume)
-    - Get your API key at [keywordseverywhere.com](https://keywordseverywhere.com/)
+    - The DataForSEO API credentials are optional but highly recommended
+    - Without them, you will get all n-gram combinations (many will not have search volume)
+    - Sign up at [dataforseo.com](https://dataforseo.com/) to get your login and password
     """)
 
 st.markdown("---")
@@ -135,7 +157,6 @@ st.markdown("---")
 st.subheader("Step 1: Upload Your Screaming Frog Exports")
 
 min_search_vol = int(min_search_vol)
-data_source_kwe = 'gkp'  # gkp = google keyword planner only // cli = clickstream data + keyword planner
 
 http_or_https_gsc = "https://"  # http prefix // default = https://
 parms = "page=|p=|utm_medium|sessionid|affiliateid|sort=|order=|type=|categoryid=|itemid=|viewItems=|query" \
@@ -307,9 +328,9 @@ if submitted_crawl_btn == True:
     for i in stqdm(range(0, ngram_loop_count)):
         print("Calculating ngrams")
         while ngram_loop_count != len_product_list:
-            df_kwe = df_sf_products[
+            df_cat_products = df_sf_products[
                 df_sf_products["Parent URL"].str.contains(category_extractor_list[start_num], na=False)]
-            text = str(df_kwe["H1-1"])
+            text = str(df_cat_products["H1-1"])
 
             # clean up the corpus before ngramming
             text = "".join(c for c in text if not c.isdigit())  # removes all numbers
@@ -403,12 +424,6 @@ if submitted_crawl_btn == True:
     if enable_fuzzy_product_match:
         df_ngrams = df_ngrams[df_ngrams["Matching Products (Fuzzy)"] >= min_product_match_fuzzy]
 
-    rows = df_ngrams.shape[0]
-    ngram_loop_count = 1
-    start = 1
-    end = 100
-    df_data = []
-
     # ------------------------ fuzz match suggested keywords to existing categories ----------------------------------------
 
     df_ngrams = df_ngrams[df_ngrams["Keyword"].notna()]  # Only Keep Rows which are not NaN
@@ -423,97 +438,101 @@ if submitted_crawl_btn == True:
     df_ngrams.rename(columns={"To": "Matched Category", "clicks": "Clicks", "impressions": "Impressions"},
                      inplace=True)
 
-    if kwe_key != "":
-        # -------------------------- check available keywords everywhere credits------------------------------------------------
+    if dataforseo_login and dataforseo_password:
+        # -------------------------- estimate DataForSEO cost ------------------------------------------------
 
         df_ngrams.drop_duplicates(subset=["Keyword"], keep="first", inplace=True)
-        creds_required = df_ngrams.shape[0]
+        total_keywords = df_ngrams.shape[0]
+        batch_size = 700
+        num_requests = math.ceil(total_keywords / batch_size)
 
-        my_headers = {
-            'Accept': 'application/json',
-            'Authorization': 'Bearer ' + kwe_key
-        }
-        response = requests.get('https://api.keywordseverywhere.com/v1/account/credits', headers=my_headers)
-        if response.status_code == 200:
-            creds_available = response.content.decode('utf-8')
-            creds_available = creds_available.split()
-            creds_available = int(creds_available[1])
-            st.write(f"This operation will require {creds_required:,} Keywords Everywhere API credits. You have {creds_available:,} credits remaining.")
-            if creds_available < creds_required:
-                st.write("Not enough keywords everywhere credits available!")
-                st.stop
-        else:
-            st.write("An error occurred\n\n", response.content.decode('utf-8'))
+        st.write(
+            f"Fetching search volume for {total_keywords:,} keywords in {num_requests} "
+            f"API request(s). DataForSEO charges per request, not per keyword."
+        )
 
-        # ---------------------- get search volume with keywords everywhere -----------------------------------------------------
+        # ---------------------- get search volume with DataForSEO -----------------------------------------------------
 
-        loops = int(creds_required / 100)
-        if loops == 1:
-            loops += 1
-        fixed_loops = loops * 100  # fixes the total loop counter displayed value
-        ngram_loop_count_100 = ngram_loop_count * 100
+        location_code = LOCATION_CODES[country_selection]
+        language_code = LANGUAGE_CODES[country_selection]
+        all_keywords = list(df_ngrams["Keyword"])
+        df_data = []
 
-        st.write("Fetching search volume & CPC data from Keywords Everywhere...")
-        for i in stqdm(range(0, loops)):
+        st.write("Fetching search volume and CPC data from DataForSEO...")
+        for batch_idx in stqdm(range(0, num_requests)):
+            batch_start = batch_idx * batch_size
+            batch_end = batch_start + batch_size
+            batch_keywords = all_keywords[batch_start:batch_end]
 
-            while ngram_loop_count != loops:
-                keywords = list(df_ngrams["Keyword"][start:end])
-                keywords_set = set(keywords)
-                keywords = list(keywords_set)
-                my_data = {
-                    'country': country_kwe,
-                    'currency': currency_kwe,
-                    'dataSource': data_source_kwe,
-                    'kw[]': keywords
-                }
-                my_headers = {
-                    'Accept': 'application/json',
-                    'Authorization': 'Bearer ' + kwe_key
-                }
+            if not batch_keywords:
+                break
+
+            payload = [{
+                "keywords": batch_keywords,
+                "location_code": location_code,
+                "language_code": language_code,
+            }]
+
+            try:
                 response = requests.post(
-                    'https://api.keywordseverywhere.com/v1/get_keyword_data', data=my_data, headers=my_headers)
-                try:
-                    keywords_data = response.json()['data']
-                except KeyError:
-                    print("Couldn't retrieve data from Keywords Everywhere. Check credits...")
-                    pass
+                    "https://api.dataforseo.com/v3/keywords_data/google_ads/search_volume/live",
+                    json=payload,
+                    auth=(dataforseo_login, dataforseo_password),
+                    timeout=60,
+                )
+                response.raise_for_status()
+                resp_json = response.json()
 
-                vol = []
-                cpc = []
+                tasks = resp_json.get("tasks", [])
+                for task in tasks:
+                    results = task.get("result") or []
+                    for item in results:
+                        kw = item.get("keyword", "")
+                        sv = item.get("search_volume") or 0
+                        cpc_val = item.get("cpc") or 0.0
+                        competition = item.get("competition") or ""
+                        competition_idx = item.get("competition_index") or 0
+                        row = {
+                            "Keyword": kw,
+                            "Search Volume": sv,
+                            "CPC": cpc_val,
+                            "Competition": competition,
+                            "Competition Index": competition_idx,
+                        }
+                        df_data.append(row)
 
-                for element in keywords_data:
-                    vol.append(element["vol"])
-                    cpc.append(element["cpc"]["value"])
+            except requests.exceptions.RequestException as e:
+                st.error(f"DataForSEO API error on batch {batch_idx + 1}: {e}")
+                continue
 
-                rows = zip(keywords, vol, cpc)
-                df_kwe = pd.DataFrame(rows, columns=["Keyword", "Search Volume", "CPC"])
-                data = df_kwe
-                df_data.append(data)
-                start = start + 100
-                end = end + 100
-                ngram_loop_count += +1
-                ngram_loop_count_100 += 100
+            # Rate limit: wait between batches (max 12 requests per minute)
+            if batch_idx < num_requests - 1:
+                time.sleep(5)
+
+        if not df_data:
+            st.error("No data returned from DataForSEO. Check your credentials and try again.")
+            st.stop()
 
         st.success("Got search volume and CPC data successfully!")
 
-        df_kwe = pd.concat(df_data)
-        df_kwe["Search Volume"] = df_kwe["Search Volume"].astype(int)
-        df_kwe["CPC"] = df_kwe["CPC"].astype(float)
-        df_kwe = df_kwe[df_kwe["Search Volume"] > min_search_vol]
-        df_kwe = df_kwe[df_kwe["CPC"] > min_cpc]
-        df_kwe = pd.merge(df_kwe, df_ngrams, on="Keyword", how='left')
-        df_kwe = df_kwe.sort_values(by="Parent Category", ascending=True)
+        df_vol = pd.DataFrame(df_data)
+        df_vol["Search Volume"] = df_vol["Search Volume"].astype(int)
+        df_vol["CPC"] = df_vol["CPC"].astype(float)
+        df_vol = df_vol[df_vol["Search Volume"] > min_search_vol]
+        df_vol = df_vol[df_vol["CPC"] > min_cpc]
+        df_vol = pd.merge(df_vol, df_ngrams, on="Keyword", how="left")
+        df_vol = df_vol.sort_values(by="Parent Category", ascending=True)
 
         # ------------------------------------- clean up the final dataframe ---------------------------------------------------
 
-        df_kwe["Similarity"] = df_kwe["Similarity"] * 100
-        df_kwe.fillna({"Similarity": 0}, inplace=True)
-        df_kwe["Similarity"] = df_kwe["Similarity"].astype(int)
-        df_kwe = df_kwe[df_kwe["Similarity"] <= min_sim_match]
-        df_kwe["Matched Category"] = df_kwe["Matched Category"].str.lower()
-        df_kwe.drop_duplicates(subset=["Matched Category", "Keyword"], keep="first", inplace=True)
+        df_vol["Similarity"] = df_vol["Similarity"] * 100
+        df_vol.fillna({"Similarity": 0}, inplace=True)
+        df_vol["Similarity"] = df_vol["Similarity"].astype(int)
+        df_vol = df_vol[df_vol["Similarity"] <= min_sim_match]
+        df_vol["Matched Category"] = df_vol["Matched Category"].str.lower()
+        df_vol.drop_duplicates(subset=["Matched Category", "Keyword"], keep="first", inplace=True)
     else:
-        df_kwe = df_ngrams
+        df_vol = df_ngrams
 
     cols = (
         "Parent Category",
@@ -525,33 +544,33 @@ if submitted_crawl_btn == True:
         "Similarity",
         "Matched Category",
     )
-    df_kwe = df_kwe.reindex(columns=cols)
+    df_vol = df_vol.reindex(columns=cols)
 
     # --------------------------- keep the longest word and discard the fragments ------------------------------------------
 
     if keep_longest_word == True:
         st.write("Keeping longest word and discarding fragments...")
 
-        list1 = df_kwe["Keyword"]
+        list1 = df_vol["Keyword"]
         substrings = {w1 for w1 in list1 for w2 in list1 if w1 in w2 and w1 != w2}
         longest_word = set(list1) - substrings
         longest_word = list(longest_word)
         shortest_word_list = list(set(list1) - set(longest_word))
         with st.expander(f"View {len(shortest_word_list)} discarded fragments"):
             st.write(shortest_word_list)
-        df_kwe = df_kwe[~df_kwe['Keyword'].isin(shortest_word_list)]
+        df_vol = df_vol[~df_vol['Keyword'].isin(shortest_word_list)]
 
     # ------------------------------ merge in page title for matched category ----------------------------------------------
 
     df_mini = df_internal_html[["H1-1", "Title 1"]]
     df_mini = df_mini.rename(columns={"H1-1": "Matched Category", "Title 1": "Matched Category Page Title"})
-    df_kwe = pd.merge(df_kwe, df_mini[['Matched Category', 'Matched Category Page Title']], on='Matched Category',
+    df_vol = pd.merge(df_vol, df_mini[['Matched Category', 'Matched Category Page Title']], on='Matched Category',
                       how='left')
 
     # ---------------------- remove keyword suggestions if matched to an existing category in any order --------------------
 
-    df_kwe['Matched Category Page Title Lower'] = df_kwe['Matched Category Page Title'].str.lower()
-    df_kwe = df_kwe.astype({"Keyword": "str", "Matched Category": "str", "Matched Category Page Title Lower": "str"})
+    df_vol['Matched Category Page Title Lower'] = df_vol['Matched Category Page Title'].str.lower()
+    df_vol = df_vol.astype({"Keyword": "str", "Matched Category": "str", "Matched Category Page Title Lower": "str"})
     col = "Keyword"
 
 
@@ -561,16 +580,16 @@ if submitted_crawl_btn == True:
         return A.intersection(B) == A
 
 
-    df_kwe['KW Matched'] = df_kwe.apply(ismatch, axis=1)
+    df_vol['KW Matched'] = df_vol.apply(ismatch, axis=1)
 
     # --------------------------------------------- handling pluralised words ------------------------------------------
 
-    df_kwe["Keyword + s"] = df_kwe["Keyword"] + "s"  # make new temp column to run the same check on the pluralised word
+    df_vol["Keyword + s"] = df_vol["Keyword"] + "s"  # make new temp column to run the same check on the pluralised word
     col = "Keyword + s"  # updates the column to run function on
-    df_kwe['KW Matched 2'] = df_kwe.apply(ismatch, axis=1)
-    df_kwe = df_kwe[~df_kwe["KW Matched"].isin([True])]  # drop rows which are matched
-    df_kwe = df_kwe[~df_kwe["KW Matched 2"].isin([True])]  # drop rows which are matched
-    df_kwe.drop_duplicates(subset=["Parent Category", "Keyword"], keep="first",
+    df_vol['KW Matched 2'] = df_vol.apply(ismatch, axis=1)
+    df_vol = df_vol[~df_vol["KW Matched"].isin([True])]  # drop rows which are matched
+    df_vol = df_vol[~df_vol["KW Matched 2"].isin([True])]  # drop rows which are matched
+    df_vol.drop_duplicates(subset=["Parent Category", "Keyword"], keep="first",
                            inplace=True)  # drop if both values dupes
 
     # ---------------------- Set the Final Column Order ------------------------------------------------------------------
@@ -586,31 +605,31 @@ if submitted_crawl_btn == True:
         "Similarity",
         "Matched Category Page Title",
     )
-    df_kwe = df_kwe.reindex(columns=cols)
+    df_vol = df_vol.reindex(columns=cols)
 
     if enable_fuzzy_product_match == False:
-        del df_kwe['Matching Products (Fuzzy)']
-    if kwe_key == "":
-        del df_kwe['Search Volume']
-        del df_kwe['CPC']
+        del df_vol['Matching Products (Fuzzy)']
+    if not dataforseo_login or not dataforseo_password:
+        del df_vol['Search Volume']
+        del df_vol['CPC']
 
     # ---------------------- Export Final Dataframe to CSV -------------------------------------------------------------
 
-    keyword_volume_count = df_kwe.shape[0]
-    df_kwe.sort_values(["Parent Category", "Keyword"], ascending=[True, True], inplace=True)
+    keyword_volume_count = df_vol.shape[0]
+    df_vol.sort_values(["Parent Category", "Keyword"], ascending=[True, True], inplace=True)
 
     st.markdown("---")
     st.subheader("Results")
     st.success(f"Found {keyword_volume_count:,} category suggestions!")
 
     # Show preview
-    st.dataframe(df_kwe, use_container_width=True)
+    st.dataframe(df_vol, use_container_width=True)
 
     @st.cache_data
     def convert_df(df):  # IMPORTANT: Cache the conversion to prevent computation on every rerun
         return df.to_csv(index=False).encode('utf-8')
 
-    csv = convert_df(df_kwe)
+    csv = convert_df(df_vol)
     st.download_button(
         label="Download Category Suggestions (CSV)",
         data=csv,

@@ -1,29 +1,17 @@
-####################################################################################
-#                                                                                  #
-#  Related Searches Tree Builder                                                   #
-#                                                                                  #
-#  Build hierarchical trees of related searches using ValueSERP API.               #
-#                                                                                  #
-####################################################################################
-# Author   : Lee Foot                                                              #
-# Website  : https://www.leefoot.com                                                   #
-# Contact  : https://www.leefoot.com/contact                                           #
-# Email    : hello@leefoot.com                                                     #
-# LinkedIn : https://www.linkedin.com/in/lee-foot/                                 #
-# Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                       #
-####################################################################################
+# Author: Lee Foot
+# Website: https://leefoot.com
 
 """
 Related Searches Tree Builder
 
-Builds hierarchical trees of related searches from Google using ValueSERP API.
-Recursively explores related searches to a configurable depth.
-Exports to DOT format for visualization.
+Builds hierarchical trees of related searches from Google using the DataForSEO
+SERP API. Recursively explores related searches to a configurable depth.
+Exports to DOT format for visualisation.
 
 Features:
 - Enter seed keyword(s) to explore
 - Configurable crawl depth and max results
-- Tree visualization in Streamlit
+- Tree visualisation in Streamlit
 - Export to DOT format for Graphviz
 - Export relationships to CSV
 """
@@ -31,8 +19,8 @@ Features:
 import streamlit as st
 import pandas as pd
 import requests
-import json
-from io import BytesIO
+import os
+from base64 import b64encode
 
 st.set_page_config(page_title="Related Searches Tree", page_icon="🌳", layout="wide")
 
@@ -44,47 +32,63 @@ with st.expander("How to use this tool"):
     **What this tool does:**
     - Discovers related searches from Google for any keyword
     - Builds a hierarchical tree showing search relationships
-    - Visualizes keyword expansion opportunities
+    - Visualises keyword expansion opportunities
 
     **Requirements:**
-    - ValueSERP API key (get one at [valueserp.com](https://www.valueserp.com/))
+    - DataForSEO account (get one at [dataforseo.com](https://dataforseo.com/))
 
     **How to use:**
-    1. Enter your ValueSERP API key in the sidebar
+    1. Enter your DataForSEO login and password in the sidebar
     2. Enter a seed keyword
     3. Set the crawl depth (how many levels deep to explore)
     4. Click "Build Tree" to start
-    5. View and export the tree visualization
+    5. View and export the tree visualisation
 
     **Note:** Each API call fetches related searches for one keyword.
     Higher depths use more API credits exponentially.
+    Cost is approximately $0.002 per keyword.
     """)
+
+# Location code mapping
+LOCATION_CODES = {
+    "United Kingdom": 2826,
+    "United States": 2840,
+    "Australia": 2036,
+    "Canada": 2124,
+    "Germany": 2276,
+    "France": 2250,
+    "Spain": 2724,
+    "Italy": 2380,
+    "Netherlands": 2528,
+    "India": 2356,
+    "Ireland": 2372,
+}
 
 # Sidebar settings
 st.sidebar.header("API Settings")
 
-api_key = st.sidebar.text_input(
-    "ValueSERP API Key",
+dataforseo_login = st.sidebar.text_input(
+    "DataForSEO Login",
     type="password",
-    help="Your API key from valueserp.com"
+    value=os.environ.get('DATAFORSEO_LOGIN', ''),
+    help="Your login from dataforseo.com"
 )
+
+dataforseo_password = st.sidebar.text_input(
+    "DataForSEO Password",
+    type="password",
+    value=os.environ.get('DATAFORSEO_PASSWORD', ''),
+    help="Your password from dataforseo.com"
+)
+
+has_credentials = bool(dataforseo_login and dataforseo_password)
 
 st.sidebar.markdown("---")
 st.sidebar.header("Search Settings")
 
 location = st.sidebar.selectbox(
     "Location",
-    [
-        "United Kingdom",
-        "United States",
-        "Australia",
-        "Canada",
-        "Germany",
-        "France",
-        "Spain",
-        "Italy",
-        "Netherlands"
-    ],
+    list(LOCATION_CODES.keys()),
     index=0
 )
 
@@ -105,28 +109,54 @@ max_results = st.sidebar.slider(
 )
 
 
-def get_related_searches(keyword, api_key, location):
-    """Fetch related searches for a keyword from ValueSERP."""
-    params = {
-        'api_key': api_key,
-        'q': keyword,
-        'location': location,
-        'num': '10'
+def _build_auth_headers(login, password):
+    """Build DataForSEO Basic auth headers."""
+    cred = b64encode(f"{login}:{password}".encode()).decode()
+    return {
+        'Authorization': f'Basic {cred}',
+        'Content-Type': 'application/json'
     }
 
+
+def get_related_searches(keyword, login, password, location_code):
+    """Fetch related searches for a keyword from DataForSEO SERP API."""
+    headers = _build_auth_headers(login, password)
+    payload = [{
+        "keyword": keyword,
+        "location_code": location_code,
+        "language_code": "en",
+        "device": "desktop",
+        "depth": 10
+    }]
+
     try:
-        response = requests.get('https://api.valueserp.com/search', params=params)
+        response = requests.post(
+            'https://api.dataforseo.com/v3/serp/google/organic/live/advanced',
+            headers=headers,
+            json=payload,
+            timeout=60
+        )
         data = response.json()
 
-        related = data.get('related_searches', [])
-        return [r['query'] for r in related] if related else []
+        if data.get("status_code") != 20000:
+            msg = data.get("status_message", "Unknown error")
+            st.warning(f"API error for '{keyword}': {msg}")
+            return []
+
+        items = data["tasks"][0]["result"][0]["items"]
+        related = []
+        for item in items:
+            if item["type"] == "related_searches":
+                for rs in item.get("items", []):
+                    related.append(rs["title"])
+        return related
 
     except Exception as e:
         st.warning(f"Error fetching related searches for '{keyword}': {str(e)}")
         return []
 
 
-def build_tree(seed_keywords, api_key, location, max_depth, max_results, progress_callback=None):
+def build_tree(seed_keywords, login, password, location_code, max_depth, max_results_per_kw, progress_callback=None):
     """Build a tree of related searches."""
     relationships = {'Parent': [], 'Child': []}
     visited = set()
@@ -145,9 +175,9 @@ def build_tree(seed_keywords, api_key, location, max_depth, max_results, progres
         if progress_callback:
             progress_callback(f"Depth {depth}: Exploring '{keyword}' ({total_queries} queries)")
 
-        related = get_related_searches(keyword, api_key, location)
+        related = get_related_searches(keyword, login, password, location_code)
 
-        for r in related[:max_results]:
+        for r in related[:max_results_per_kw]:
             r_lower = r.lower()
             if r_lower not in visited:
                 relationships['Parent'].append(keyword.lower())
@@ -164,10 +194,6 @@ def create_ascii_tree(relationships, root_keywords):
     df = pd.DataFrame(relationships)
     if df.empty:
         return "No relationships found"
-
-    # Find all roots (parents that are not children)
-    all_children = set(df['Child'])
-    roots = [kw.lower() for kw in root_keywords]
 
     def render_node(node, prefix="", is_last=True, rendered=None):
         if rendered is None:
@@ -187,6 +213,7 @@ def create_ascii_tree(relationships, root_keywords):
 
         return result
 
+    roots = [kw.lower() for kw in root_keywords]
     tree_output = ""
     for i, root in enumerate(roots):
         is_last = (i == len(roots) - 1)
@@ -233,16 +260,18 @@ seed_keywords = [kw.strip() for kw in keyword_input.strip().split('\n') if kw.st
 if seed_keywords:
     st.info(f"Ready to explore {len(seed_keywords)} seed keyword(s)")
 
-    # Estimate API calls
+    # Estimate API calls and cost
     est_calls = sum(max_results ** i for i in range(crawl_depth + 1)) * len(seed_keywords)
-    st.caption(f"Estimated API calls: ~{est_calls}")
+    est_cost = est_calls * 0.002
+    st.caption(f"Estimated API calls: ~{est_calls} (approx. ${est_cost:.2f})")
 
-if st.button("Build Tree", type="primary", disabled=not api_key or not seed_keywords):
-    if not api_key:
-        st.error("Please enter your ValueSERP API key")
+if st.button("Build Tree", type="primary", disabled=not has_credentials or not seed_keywords):
+    if not has_credentials:
+        st.error("Please enter your DataForSEO login and password")
     elif not seed_keywords:
         st.error("Please enter at least one seed keyword")
     else:
+        location_code = LOCATION_CODES[location]
         status_text = st.empty()
         progress_bar = st.progress(0)
 
@@ -252,8 +281,9 @@ if st.button("Build Tree", type="primary", disabled=not api_key or not seed_keyw
         with st.spinner("Building related searches tree..."):
             relationships = build_tree(
                 seed_keywords,
-                api_key,
-                location,
+                dataforseo_login,
+                dataforseo_password,
+                location_code,
                 crawl_depth,
                 max_results,
                 update_progress
@@ -294,7 +324,7 @@ if 'tree_df' in st.session_state:
     with col3:
         st.metric("Seed Keywords", len(seeds))
 
-    # Tree visualization
+    # Tree visualisation
     st.subheader("Tree Structure")
 
     tree_text = create_ascii_tree(relationships, seeds)
@@ -340,11 +370,11 @@ if 'tree_df' in st.session_state:
             mime="text/csv"
         )
 
-    st.info("**Tip:** Import the DOT file into [Graphviz Online](https://dreampuf.github.io/GraphvizOnline/) for interactive visualization")
+    st.info("**Tip:** Import the DOT file into [Graphviz Online](https://dreampuf.github.io/GraphvizOnline/) for interactive visualisation")
 
 else:
-    if not api_key:
-        st.warning("Enter your ValueSERP API key in the sidebar to get started")
+    if not has_credentials:
+        st.warning("Enter your DataForSEO login and password in the sidebar to get started")
 
     st.subheader("Example Output")
     example_tree = """

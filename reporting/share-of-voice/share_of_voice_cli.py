@@ -1,14 +1,14 @@
-#!/usr/bin/env python3
+# Author: Lee Foot
+# Website: https://leefoot.com
+
 """
 Share of Voice Calculator - CLI Version
 
 Calculate organic traffic share using ranking positions and CTR curves.
+Processes local CSV files containing ranking data.
 
 Usage:
     python share_of_voice_cli.py --input rankings.csv
-
-Author: Lee Foot
-Website: https://www.leefoot.com
 """
 
 import argparse
@@ -68,7 +68,7 @@ def main():
     print(f"Loading: {args.input}")
     try:
         df = pd.read_csv(args.input, encoding='utf-8')
-    except:
+    except Exception:
         df = pd.read_csv(args.input, encoding='latin-1')
     print(f"  Loaded {len(df):,} rows")
 

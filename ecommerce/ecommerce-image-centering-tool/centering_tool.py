@@ -434,15 +434,16 @@ if uploaded_files:
 else:
     st.info("Please upload images to begin processing")
 
-    # Example image
+    # Example images, kept beside the script so the preview never depends on an outside host
+    EXAMPLES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "examples")
     st.subheader("How it works")
     cols = st.columns(2)
     with cols[0]:
         st.markdown("**Original Product Image**")
-        st.image("https://via.placeholder.com/400x400.png?text=Original+Product+Image", use_container_width=True)
+        st.image(os.path.join(EXAMPLES, "original.png"), use_container_width=True)
     with cols[1]:
         st.markdown("**Centered Product Image**")
-        st.image("https://via.placeholder.com/400x400.png?text=Centered+Product+Image", use_container_width=True)
+        st.image(os.path.join(EXAMPLES, "centered.png"), use_container_width=True)
 
     st.markdown("""
     1. Upload your product images

@@ -55,7 +55,7 @@ The tool uses computer vision techniques to:
 
 | Original | Processed |
 |----------|-----------|
-| ![Original](https://via.placeholder.com/200x200.png?text=Original) | ![Processed](https://via.placeholder.com/200x200.png?text=Centered) |
+| ![Original](https://placeholder.photo/200x200.png?text=Original) | ![Processed](https://placeholder.photo/200x200.png?text=Centered) |
 
 ## Author
 

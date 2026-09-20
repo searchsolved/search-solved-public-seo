@@ -439,10 +439,10 @@ else:
     cols = st.columns(2)
     with cols[0]:
         st.markdown("**Original Product Image**")
-        st.image("https://via.placeholder.com/400x400.png?text=Original+Product+Image", use_container_width=True)
+        st.image("https://placeholder.photo/400x400.png?text=Original+Product+Image", use_container_width=True)
     with cols[1]:
         st.markdown("**Centered Product Image**")
-        st.image("https://via.placeholder.com/400x400.png?text=Centered+Product+Image", use_container_width=True)
+        st.image("https://placeholder.photo/400x400.png?text=Centered+Product+Image", use_container_width=True)
 
     st.markdown("""
     1. Upload your product images

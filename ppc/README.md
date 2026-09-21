@@ -4,6 +4,13 @@ Tools for optimizing Google Ads campaigns, extracting insights from Search Term 
 
 ## Tools Overview
 
+### ⚡ **PPC vs Organic Overlap**
+Compare a Google Ads search terms report with a GSC queries export.
+- **Use Case**: Finding ad spend on terms with strong organic rankings, paid/organic gap analysis
+- **Input**: Google Ads Search Term Report CSV, GSC queries export CSV
+- **Output**: Venn diagram, savings opportunities list, overlap/paid-only/organic-only CSVs
+- **Features**: Brand term tagging, configurable organic position threshold, sample dataset included
+
 ### 💰 **AdWords Tool Set**
 Two-in-one Google Ads toolkit for keyword extraction and bid optimization.
 - **Use Case**: PPC campaign optimization, keyword mining, bid management

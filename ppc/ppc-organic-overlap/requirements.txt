@@ -1,0 +1,4 @@
+streamlit>=1.40
+pandas>=2.2.0
+matplotlib>=3.8
+matplotlib-venn>=1.1

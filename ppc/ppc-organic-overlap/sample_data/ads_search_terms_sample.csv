@@ -1,0 +1,28 @@
+Search terms report
+"August 1, 2026 - August 31, 2026"
+Search term,Match type,Added/Excluded,Campaign,Ad group,Impr.,Clicks,CTR,Currency code,Avg. CPC,Cost,Conversions,All conv. value
+Grandview hotel,Exact match,Added,Brand - Search,Brand Core,"22,000","3,100",14.09%,USD,1.50,"4,650.00",260.00,"91,000.00"
+grandview resort,Exact match,Added,Brand - Search,Brand Core,"9,800","1,450",14.80%,USD,1.40,"2,030.00",120.00,"42,500.00"
+grandview hotel deals,Exact match,Added,Brand - Search,Brand Core,"6,200",880,14.19%,USD,1.85,"1,628.00",74.00,"25,900.00"
+grandview hotel booking,Exact match,Added,Brand - Search,Brand Core,"4,100",610,14.88%,USD,1.95,"1,189.50",58.00,"20,300.00"
+grandview spa,Exact match,Added,Brand - Search,Brand Core,"2,900",420,14.48%,USD,1.25,525.00,22.00,"4,400.00"
+grandview buffet,Exact match,Added,Brand - Search,Brand Core,"2,400",380,15.83%,USD,1.10,418.00,18.00,"1,260.00"
+grandview rooms,Exact match,Added,Brand - Search,Brand Core,"1,900",300,15.79%,USD,1.60,480.00,26.00,"9,100.00"
+grandview pool,Exact match,Added,Brand - Search,Brand Core,"1,100",160,14.55%,USD,0.95,152.00,6.00,900.00
+luxury resort downtown,Phrase match,Added,Generic - Hotels,Non-brand Core,"5,400",620,11.48%,USD,2.60,"1,612.00",31.00,"10,850.00"
+hotel with rooftop pool,Phrase match,Added,Generic - Hotels,Non-brand Core,"4,800",510,10.62%,USD,2.20,"1,122.00",19.00,"6,650.00"
+spa hotel weekend deals,Phrase match,Added,Generic - Hotels,Non-brand Core,"3,600",410,11.39%,USD,2.45,"1,004.50",17.00,"5,950.00"
+family resort with waterpark,Phrase match,Added,Generic - Hotels,Non-brand Core,"3,100",350,11.29%,USD,2.10,735.00,12.00,"4,200.00"
+hotel wedding venue,Phrase match,Added,Generic - Hotels,Non-brand Core,"1,800",190,10.56%,USD,3.10,589.00,5.00,"12,500.00"
+hotel restaurant fine dining,Phrase match,Added,Generic - Hotels,Non-brand Core,900,105,11.67%,USD,1.75,183.75,4.00,640.00
+cheap hotel tonight,Phrase match,Added,Generic - Hotels,Non-brand Core,"8,900",940,10.56%,USD,1.65,"1,551.00",21.00,"3,150.00"
+last minute hotel deals,Phrase match,Added,Generic - Hotels,Non-brand Core,"7,400",820,11.08%,USD,1.90,"1,558.00",26.00,"4,550.00"
+5 star hotel offers,Phrase match,Added,Generic - Hotels,Non-brand Core,"5,100",560,10.98%,USD,2.75,"1,540.00",18.00,"6,300.00"
+hotels near convention center,Phrase match,Added,Generic - Hotels,Non-brand Core,"4,300",470,10.93%,USD,2.35,"1,104.50",15.00,"5,250.00"
+resort day pass,Phrase match,Added,Generic - Hotels,Non-brand Core,"2,600",310,11.92%,USD,1.30,403.00,9.00,720.00
+hotel with casino,Phrase match,Added,Generic - Hotels,Non-brand Core,"2,200",240,10.91%,USD,2.05,492.00,8.00,"2,800.00"
+penthouse suite hotel,Phrase match,Added,Generic - Hotels,Non-brand Core,"1,300",140,10.77%,USD,3.40,476.00,4.00,"6,100.00"
+hotel gift card,Phrase match,Added,Generic - Hotels,Non-brand Core,800,95,11.88%,USD,1.15,109.25,6.00,900.00
+free hotel vouchers,Broad match,Excluded,Generic - Hotels,Non-brand Core,"1,900",0,0.00%,USD,0.00,0.00,0.00,0.00
+Total: Search terms,,,,,"102,600","13,060",12.73%,USD,,"23,552.50",779.00,"265,920.00"
+Total: Account,,,,,"102,600","13,060",12.73%,USD,,"23,552.50",779.00,"265,920.00"

@@ -229,11 +229,12 @@ Try these tools directly in your browser — no installation required:
 |------|-------------|------|
 | [Map Site Searches to Pages](./site-search/map-site-searches-to-landing-pages) | Match internal site searches to best landing pages using TF-IDF | Colab |
 
-### PPC (1 tool)
+### PPC (2 tools)
 
 | Tool | Description | Type |
 |------|-------------|------|
 | [AdWords Tools](./ppc/adwords-tools) | MPN Extractor and Bid Calculator for Google Ads campaigns | Streamlit |
+| [PPC vs Organic Overlap](./ppc/ppc-organic-overlap) | Venn diagram of paid vs organic keyword overlap with a savings opportunities view | Streamlit |
 
 ### Other (2 tools)
 

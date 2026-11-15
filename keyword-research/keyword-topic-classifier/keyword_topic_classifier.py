@@ -52,10 +52,10 @@ with st.sidebar:
 
     if provider == "Anthropic (Claude)":
         api_key = st.text_input("Anthropic API Key", type="password")
-        model = st.selectbox("Model", ["claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5"])
+        model = st.selectbox("Model", ["claude-haiku-5-5", "claude-sonnet-5-5"])
     else:
         api_key = st.text_input("OpenAI API Key", type="password")
-        model = st.selectbox("Model", ["gpt-4o-mini", "gpt-4o", "gpt-4.1"])
+        model = st.selectbox("Model", ["gpt-6-luna", "gpt-6.1-terra"])
 
     st.header("⚙️ Settings")
     batch_size = st.slider("Keywords per batch", 10, 50, 30)
@@ -219,7 +219,8 @@ def classify_keywords_openai(client, model, keywords):
                     "content": f"Classify these keywords into themes and subthemes:\n\n{', '.join(keywords)}"
                 }
             ],
-            response_format=response_format
+            response_format=response_format,
+            reasoning_effort="low",
         )
 
         return json.loads(completion.choices[0].message.content), None

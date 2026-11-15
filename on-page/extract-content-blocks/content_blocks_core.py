@@ -18,8 +18,12 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
-MODEL = "claude-haiku-4-5-20251001"
-MAX_TOKENS = 4000
+CLAUDE_MODELS = ["claude-haiku-5-5", "claude-sonnet-5-5"]
+MODEL = "claude-haiku-5-5"
+# Thinking counts against this cap, so it leaves room for the model's
+# reasoning as well as the JSON reply.
+MAX_TOKENS = 16000
+EFFORT = "medium"
 # Filtered HTML longer than this is cut before it is sent to the model.
 MAX_HTML_CHARS = 200_000
 COLUMNS = ["url", "name", "xpath", "notes"]
@@ -116,6 +120,7 @@ def extract_blocks(client, html_content, model=MODEL, max_html_chars=MAX_HTML_CH
     response = client.messages.create(
         model=model,
         max_tokens=MAX_TOKENS,
+        output_config={"effort": EFFORT},
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": prompt}],
     )

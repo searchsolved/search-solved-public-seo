@@ -10,7 +10,7 @@ Automatically identify the best CSS selector for a web page's main content area 
 - Deduplicates near-identical paragraphs
 - Extracts internal links from the content
 - Supports any OpenAI-compatible API (local LLMs, OpenRouter, etc.)
-- Model selector (default: gpt-4o-mini)
+- Model selector (default: gpt-6-luna; OpenAI models are gpt-6-luna and gpt-6.1-terra)
 
 ## Usage
 
@@ -36,7 +36,7 @@ python auto_css_selector_detector_cli.py --url https://example.com/page
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--url` | (required) | URL to analyse |
-| `--model` | `gpt-4o-mini` | Model name |
+| `--model` | `gpt-6-luna` | Model name (`gpt-6-luna` or `gpt-6.1-terra` on OpenAI, or a local model name) |
 | `--base-url` | `https://api.openai.com/v1` | API base URL (change for local LLMs) |
 
 ## How It Works

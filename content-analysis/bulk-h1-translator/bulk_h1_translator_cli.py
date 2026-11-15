@@ -13,7 +13,7 @@ Usage:
     # OpenAI
     export OPENAI_API_KEY=your-key
     python bulk_h1_translator_cli.py --input crawl.csv \
-        --base-url https://api.openai.com/v1 --model gpt-4o-mini
+        --base-url https://api.openai.com/v1 --model gpt-6-luna
 
 Author: Lee Foot
 Website: https://www.leefoot.com
@@ -61,6 +61,25 @@ SYSTEM_PROMPT = ("You are a translator that always responds with a valid JSON "
                  "object containing only the translated text.")
 
 
+# OpenAI models offered by every tool in this repository. Local and other
+# OpenAI-compatible servers take their own model name instead.
+OPENAI_MODELS = ["gpt-6-luna", "gpt-6.1-terra"]
+MAX_TOKENS = 500
+
+
+def request_params(model):
+    """Sampling and length parameters for a translation request.
+
+    OpenAI's gpt-6 models are reasoning models: they take reasoning_effort and
+    max_completion_tokens (which also has to cover the model's reasoning) and
+    do not accept temperature. Local and other OpenAI-compatible servers may
+    reject those parameters, so they keep temperature and max_tokens.
+    """
+    if str(model).strip().lower().startswith("gpt-6"):
+        return {"reasoning_effort": "low", "max_completion_tokens": max(4000, MAX_TOKENS * 4)}
+    return {"temperature": 0.0, "max_tokens": MAX_TOKENS}
+
+
 def create_translation_prompt(h1, language):
     """Build the translation prompt for a single row."""
     prompt = f"""Translate the following text from {language} to English.
@@ -82,9 +101,8 @@ def translate_h1(client, model, prompt, retries=3):
                     {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.0,
-                max_tokens=500,
-                response_format=RESPONSE_FORMAT
+                response_format=RESPONSE_FORMAT,
+                **request_params(model),
             )
             return json.loads(response.choices[0].message.content)
         except json.JSONDecodeError as e:
@@ -117,8 +135,8 @@ def main():
                              '(default: http://localhost:11434/v1 for Ollama; use http://localhost:1234/v1 for LM Studio)')
     parser.add_argument('--model', default='local-model',
                         help='Model name (default: local-model; Ollama uses '
-                             'whichever model is loaded, for OpenAI use e.g. '
-                             'gpt-4o-mini)')
+                             'whichever model is loaded; for OpenAI use '
+                             'gpt-6-luna or gpt-6.1-terra)')
     parser.add_argument('--retries', type=int, default=3,
                         help='Attempts per H1 before recording an error '
                              '(default: 3)')

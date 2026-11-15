@@ -25,6 +25,7 @@ from datetime import datetime
 from anthropic import Anthropic
 
 from content_blocks_core import (
+    CLAUDE_MODELS,
     COLUMNS,
     MAX_HTML_CHARS,
     MODEL,
@@ -61,7 +62,7 @@ def parse_args():
     parser.add_argument("--limit", type=int, default=None, help="Process only the first N URLs (use 2 for a test run)")
     parser.add_argument("--save-every", type=int, default=50, help="Save a batch file every N rows (default: 50)")
     parser.add_argument("--delay", type=float, default=1.0, help="Seconds to wait before each page fetch (default: 1)")
-    parser.add_argument("--model", default=MODEL, help=f"Claude model (default: {MODEL})")
+    parser.add_argument("--model", default=MODEL, choices=CLAUDE_MODELS, help=f"Claude model (default: {MODEL})")
     parser.add_argument(
         "--max-html-chars", type=int, default=MAX_HTML_CHARS,
         help=f"Cut the filtered HTML at this many characters (default: {MAX_HTML_CHARS})",

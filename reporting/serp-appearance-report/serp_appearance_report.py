@@ -1,17 +1,28 @@
 """
-SERP Appearance Report - Parse ValueSERP Batch JSON
-Filters organic results from ValueSERP batch exports to those containing
-your domain and reports the query, position, title and snippet for each
-appearance.
+SERP Appearance Report - Live Google Results via DataForSEO
+Fetches live Google results for your keyword list from the DataForSEO SERP
+API and reports the query, position, link, title and snippet for every
+organic appearance of your domain.
 
 Author: Lee Foot
+Website: https://leefoot.com
 """
 
+import os
 from io import BytesIO
 
 import streamlit as st
 
-from serp_appearance_core import extract_appearances, load_json_bytes, results_to_dataframe
+from serp_appearance_core import (
+    DEVICES,
+    LOCATIONS,
+    estimate_cost,
+    keywords_from_bytes,
+    normalise_domain,
+    parse_keyword_lines,
+    results_to_dataframe,
+    run_report,
+)
 
 st.set_page_config(
     page_title="SERP Appearance Report",
@@ -25,68 +36,147 @@ st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-
 with st.expander("How to use this tool"):
     st.markdown("""
     **What this tool does:**
-    - Parses ValueSERP batch mode JSON exports
-    - Filters organic results to those containing your domain
-    - Reports the query, position, title and snippet for each appearance
+    - Fetches the live Google results for each of your keywords using the DataForSEO SERP API
+    - Keeps the organic results on your domain (subdomains included)
+    - Reports the query, position, link, title and snippet for each appearance
+
+    **Requirements:**
+    - DataForSEO account (sign up at [dataforseo.com](https://dataforseo.com/))
 
     **How to use:**
-    1. Run a batch of searches in ValueSERP and download the JSON result sets
-    2. Upload one or more JSON files below
+    1. Enter your DataForSEO login and password in the sidebar
+    2. Choose the location, device and number of results per keyword
     3. Enter your domain (e.g. example.com)
-    4. Review the results table and download the CSV
+    4. Paste your keywords (one per line) or upload a CSV with a keyword column
+    5. Check the estimated cost, click "Fetch SERPs", then download the CSV
 
     **Best for:**
     - Checking how your site appears in the SERPs for your top queries
     - Auditing titles and snippets at scale
-    - Building a SERP appearance report from rank tracking batches
+    - Building a SERP appearance report from your Google Search Console top queries
     """)
 
-st.markdown("""
-Upload ValueSERP batch JSON exports and enter a domain to see every organic
-appearance, with the query, position, title and snippet for each result.
-""")
+# Sidebar settings
+st.sidebar.header("API Settings")
 
+dataforseo_login = st.sidebar.text_input(
+    "DataForSEO Login",
+    type="password",
+    value=os.environ.get('DATAFORSEO_LOGIN', ''),
+    help="Your login from dataforseo.com"
+)
+
+dataforseo_password = st.sidebar.text_input(
+    "DataForSEO Password",
+    type="password",
+    value=os.environ.get('DATAFORSEO_PASSWORD', ''),
+    help="Your password from dataforseo.com"
+)
+
+st.sidebar.markdown("---")
+st.sidebar.header("Search Settings")
+
+location = st.sidebar.selectbox("Location", list(LOCATIONS.keys()), index=0)
+
+device = st.sidebar.selectbox("Device", [d.title() for d in DEVICES], index=0)
+st.sidebar.caption("DataForSEO supports desktop and mobile results only.")
+
+depth = st.sidebar.slider(
+    "Results per keyword",
+    min_value=10,
+    max_value=100,
+    value=10,
+    step=10,
+    help="Number of Google results to fetch per keyword. DataForSEO bills per 10 results."
+)
+
+delay = st.sidebar.slider(
+    "Seconds between requests",
+    min_value=0.5,
+    max_value=5.0,
+    value=2.0,
+    step=0.5,
+    help="Requests are sent one at a time with this pause between them"
+)
+
+# Main inputs
 domain = st.text_input(
-    "Domain to filter by",
+    "Your domain",
     placeholder="example.com",
-    help="Organic results are kept when the result URL contains this domain"
+    help="Organic results on this domain or its subdomains are reported"
 )
 
-uploaded_files = st.file_uploader(
-    "Upload ValueSERP batch JSON file(s)",
-    type=['json'],
-    accept_multiple_files=True,
-    help="Upload one or more JSON result set files downloaded from a ValueSERP batch"
-)
+input_method = st.radio("Keywords", ["Paste keywords", "Upload CSV"], horizontal=True)
 
-if uploaded_files and domain.strip():
-    all_results = []
-    all_warnings = []
+keywords = []
+if input_method == "Paste keywords":
+    keyword_text = st.text_area(
+        "Keywords (one per line)",
+        height=150,
+        placeholder="seo tools\nkeyword research\ncontent marketing"
+    )
+    keywords = parse_keyword_lines(keyword_text) if keyword_text else []
+else:
+    uploaded_file = st.file_uploader(
+        "Upload a CSV of keywords",
+        type=['csv', 'txt'],
+        help="Uses the column named keyword, keywords, query, queries, search term or "
+             "top queries; otherwise the first column. A .txt file with one keyword per line also works."
+    )
+    if uploaded_file is not None:
+        try:
+            keywords = keywords_from_bytes(uploaded_file.getvalue(), uploaded_file.name)
+        except Exception as e:
+            st.error(f"Could not read {uploaded_file.name}: {e}")
 
-    with st.spinner("Parsing JSON files..."):
-        for uploaded_file in uploaded_files:
-            try:
-                data = load_json_bytes(uploaded_file.getvalue())
-            except ValueError as e:
-                st.error(f"Could not read {uploaded_file.name}: {e}")
-                continue
+has_credentials = bool(dataforseo_login and dataforseo_password)
+has_domain = bool(normalise_domain(domain))
 
-            results, warnings = extract_appearances(data, domain)
-            all_results.extend(results)
-            all_warnings.extend(f"{uploaded_file.name}: {w}" for w in warnings)
+if keywords:
+    estimated_cost = estimate_cost(len(keywords), depth)
+    st.info(f"Ready to fetch {len(keywords)} keyword(s) at {depth} results each. "
+            f"Estimated cost: ${estimated_cost:.3f}")
 
-    for warning in all_warnings:
-        st.warning(warning)
+if st.button("Fetch SERPs", type="primary",
+             disabled=not has_credentials or not keywords or not has_domain):
+    location_code, language_code = LOCATIONS[location]
+    progress_bar = st.progress(0)
+    status_text = st.empty()
 
-    df = results_to_dataframe(all_results)
+    def update_progress(done, total, keyword):
+        progress_bar.progress(done / total if total else 1.0)
+        status_text.text(f"Fetching SERP {done + 1}/{total}: {keyword}" if keyword else "")
+
+    rows, warnings, total_cost = run_report(
+        keywords, domain, dataforseo_login, dataforseo_password,
+        location_code, language_code,
+        device=device.lower(), depth=depth, delay=delay,
+        progress_callback=update_progress
+    )
+
+    st.session_state['appearance_df'] = results_to_dataframe(rows)
+    st.session_state['appearance_warnings'] = warnings
+    st.session_state['appearance_cost'] = total_cost
+    st.session_state['appearance_domain'] = normalise_domain(domain)
+    st.session_state['appearance_keywords'] = len(keywords)
+
+if 'appearance_df' in st.session_state:
+    df = st.session_state['appearance_df']
+    warnings = st.session_state['appearance_warnings']
 
     st.subheader("Results")
-    st.success(f"Found **{len(df)}** appearances of **{domain.strip()}** "
-               f"across {len(uploaded_files)} file(s).")
+    st.success(f"Found **{len(df)}** appearances of **{st.session_state['appearance_domain']}** "
+               f"across {st.session_state['appearance_keywords']} keyword(s).")
+    st.caption(f"Cost reported by DataForSEO: ${st.session_state['appearance_cost']:.4f}")
+
+    if warnings:
+        with st.expander(f"{len(warnings)} keyword(s) had issues"):
+            for warning in warnings:
+                st.text(warning)
 
     if df.empty:
-        st.info("No organic results contained that domain. Check the domain "
-                "spelling and that the files are ValueSERP batch result sets.")
+        st.info("No organic results were on that domain. Check the domain spelling, "
+                "or fetch more results per keyword.")
     else:
         st.dataframe(df, use_container_width=True)
 
@@ -102,20 +192,20 @@ if uploaded_files and domain.strip():
         )
 
 else:
-    st.info("👆 Upload at least one ValueSERP batch JSON file and enter a domain to get started.")
+    if not has_credentials:
+        st.warning("Enter your DataForSEO login and password in the sidebar to get started")
 
     st.markdown("""
-    ### Expected JSON Format
-    Each file should be a ValueSERP batch result set: a JSON array where each
-    item contains a `result` object with `search_parameters` (including the
-    query `q`) and an `organic_results` array. A single (non-array) result
-    object also works.
-
     ### How it Works
-    1. Upload one or more batch JSON exports
-    2. The tool loops through every search in each file
-    3. Organic results whose URL contains your domain are kept
+    1. Enter your domain and your keywords
+    2. The tool fetches the live Google results for each keyword, one request at a time
+    3. Organic results on your domain (or its subdomains) are kept
     4. The output lists the query, position, link, title and snippet per appearance
+
+    ### Keyword CSV Format
+    Any CSV with a column named `keyword`, `keywords`, `query`, `queries`,
+    `search term` or `top queries` (any case). A Google Search Console
+    queries export works as is. Without one of those names, the first column is used.
 
     ### Use Cases
     - Reviewing how your top queries render in the SERPs

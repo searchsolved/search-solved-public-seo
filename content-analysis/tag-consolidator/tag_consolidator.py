@@ -1,7 +1,7 @@
 """
 Tag Consolidator - Core Module
 
-Uses OpenAI's GPT models to consolidate granular secondary tags into broader,
+Uses OpenAI's gpt-6 models (gpt-6-luna by default) to consolidate granular secondary tags into broader,
 generic categories. Tags are grouped by their primary tag and each group is
 sent to the API in a single call, so related tags are consolidated together.
 
@@ -18,7 +18,8 @@ import json
 import pandas as pd
 from openai import OpenAI
 
-DEFAULT_MODEL = "gpt-4o-mini"
+OPENAI_MODELS = ["gpt-6-luna", "gpt-6.1-terra"]
+DEFAULT_MODEL = "gpt-6-luna"
 DEFAULT_PRIMARY_COLUMN = "Primary Tag"
 DEFAULT_SECONDARY_COLUMN = "Secondary Tag"
 GENERIC_TAG_COLUMN = "Generic Tag"
@@ -51,6 +52,7 @@ def call_openai_api(client, prompt, model=DEFAULT_MODEL):
         ],
         model=model,
         response_format={"type": "json_object"},
+        reasoning_effort="low",
     )
     return chat_completion
 

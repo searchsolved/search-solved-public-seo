@@ -5,7 +5,7 @@
 #  Classify keywords/queries into Google's 4 micro-moments using OpenAI.           #
 #                                                                                  #
 ####################################################################################
-# Author   : Lee Foot                                                              #
+# Author: Lee Foot                                                                 #
 # Website  : https://www.leefoot.com                                                   #
 # Contact  : https://www.leefoot.com/contact                                           #
 # Email    : hello@leefoot.com                                                     #
@@ -88,7 +88,7 @@ batch_size = st.sidebar.slider(
 
 model = st.sidebar.selectbox(
     "Model",
-    ["gpt-4o-mini", "gpt-4o", "gpt-4.1"],
+    ["gpt-6-luna", "gpt-6.1-terra"],
     index=0,
     help="GPT model to use"
 )
@@ -147,8 +147,8 @@ Include ALL keywords in your response."""
             model=model,
             messages=messages,
             response_format={"type": "json_object"},
-            temperature=0,
-            max_tokens=4000
+            max_completion_tokens=16000,  # room for the model's reasoning as well as the reply
+            reasoning_effort="low",
         )
 
         response_content = completion.choices[0].message.content

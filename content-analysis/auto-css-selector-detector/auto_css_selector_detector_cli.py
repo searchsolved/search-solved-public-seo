@@ -10,7 +10,7 @@ using an LLM, then extracts and converts the content to Markdown.
 Usage:
     export OPENAI_API_KEY=sk-...
     python auto_css_selector_detector_cli.py --url https://example.com/page
-    python auto_css_selector_detector_cli.py --url https://example.com/page --model gpt-4o
+    python auto_css_selector_detector_cli.py --url https://example.com/page --model gpt-6.1-terra
     python auto_css_selector_detector_cli.py --url https://example.com/page --base-url http://localhost:1234/v1
 
 Author: Lee Foot
@@ -21,7 +21,7 @@ import argparse
 import os
 import sys
 
-from auto_css_selector_detector import detect_and_extract
+from auto_css_selector_detector import DEFAULT_MODEL, OPENAI_MODELS, detect_and_extract
 
 
 def main():
@@ -35,8 +35,12 @@ def main():
     )
     parser.add_argument(
         "--model",
-        default="gpt-4o-mini",
-        help="Model name to use (default: gpt-4o-mini).",
+        default=DEFAULT_MODEL,
+        help=(
+            f"Model name to use (default: {DEFAULT_MODEL}). OpenAI models: "
+            f"{', '.join(OPENAI_MODELS)}. For a local or other compatible server, "
+            "use its own model name."
+        ),
     )
     parser.add_argument(
         "--base-url",

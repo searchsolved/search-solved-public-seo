@@ -5,7 +5,7 @@
 #  Use GPT to generate hierarchical sitemap structures from keywords.              #
 #                                                                                  #
 ####################################################################################
-# Author   : Lee Foot                                                              #
+# Author: Lee Foot                                                                 #
 # Website  : https://www.leefoot.com                                                   #
 # Contact  : https://www.leefoot.com/contact                                           #
 # Email    : hello@leefoot.com                                                     #
@@ -90,7 +90,7 @@ max_depth = st.sidebar.slider(
 
 model = st.sidebar.selectbox(
     "Model",
-    ["gpt-4o-mini", "gpt-4o", "gpt-4.1"],
+    ["gpt-6-luna", "gpt-6.1-terra"],
     index=0,
     help="GPT model to use (mini is cheaper)"
 )
@@ -156,8 +156,8 @@ Return ONLY the JSON, no explanations."""
             model=model,
             messages=messages,
             response_format={"type": "json_object"},
-            temperature=0,
-            max_tokens=4000
+            max_completion_tokens=16000,  # room for the model's reasoning as well as the reply
+            reasoning_effort="low",
         )
 
         response_content = completion.choices[0].message.content

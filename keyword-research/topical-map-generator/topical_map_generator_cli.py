@@ -58,7 +58,7 @@ Return JSON format with:
                 {"role": "system", "content": "You are an SEO expert that organizes keywords into topical maps. Output JSON only."},
                 {"role": "user", "content": prompt_content}
             ],
-            temperature=0.7
+            reasoning_effort="low",
         )
         content = response.choices[0].message.content
         return json.loads(content), None
@@ -101,7 +101,7 @@ def main():
     parser.add_argument('--output', default='topical_map.csv', help='Output CSV path')
     parser.add_argument('--api-key', help='OpenAI API key (or set OPENAI_API_KEY env var)')
     parser.add_argument('--keyword-col', default='keyword', help='Keyword column name')
-    parser.add_argument('--model', default='gpt-4o-mini', choices=['gpt-4o-mini', 'gpt-4o', 'gpt-4.1'], help='OpenAI model')
+    parser.add_argument('--model', default='gpt-6.1-terra', choices=['gpt-6.1-terra', 'gpt-6-luna'], help='OpenAI model (default: gpt-6.1-terra)')
     parser.add_argument('--depth', type=int, default=4, help='Hierarchy depth (2-5)')
     parser.add_argument('--json-output', help='Optional: save raw JSON output')
 

@@ -51,10 +51,10 @@ with st.sidebar:
 
     if provider == "Anthropic (Claude)":
         api_key = st.text_input("Anthropic API Key", type="password")
-        model = st.selectbox("Model", ["claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5"])
+        model = st.selectbox("Model", ["claude-sonnet-5-5", "claude-haiku-5-5"])
     else:
         api_key = st.text_input("OpenAI API Key", type="password")
-        model = st.selectbox("Model", ["gpt-4o", "gpt-4o-mini"])
+        model = st.selectbox("Model", ["gpt-6.1-terra", "gpt-6-luna"])
 
     st.header("Optional: Firecrawl")
     firecrawl_key = st.text_input("Firecrawl API Key", type="password", help="For fetching content from URLs")
@@ -341,7 +341,8 @@ Create the {format_config['name']} now:"""
                     {"role": "system", "content": f"You are an expert content strategist who repurposes content for different platforms. {voice_instruction}"},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=2000
+                max_completion_tokens=8000,  # room for the model's reasoning as well as the reply
+                reasoning_effort="low",
             )
             return completion.choices[0].message.content, None
     except Exception as e:

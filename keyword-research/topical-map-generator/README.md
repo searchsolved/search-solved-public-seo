@@ -2,10 +2,10 @@
 
 ## Features
 
-Organize keywords into hierarchical topical maps for content strategy planning using GPT-4o.
+Organize keywords into hierarchical topical maps for content strategy planning using OpenAI's gpt-6 models (gpt-6.1-terra by default, or gpt-6-luna).
 
 - Streamlit web interface + CLI version
-- GPT-4o powered organization
+- Powered by gpt-6.1-terra by default (gpt-6-luna is faster and cheaper)
 - Hierarchical topic structure
 - Content strategy planning
 - Pillar and cluster mapping

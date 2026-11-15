@@ -2,16 +2,43 @@
 
 ## Features
 
-Extract related keywords and "People Also Ask" questions from Google SERPs using the ValueSERP API.
+Find related keywords by splitting the titles of the pages that rank on Google for a seed keyword, using the DataForSEO SERP API.
 
 - Streamlit web interface
-- Extracts related searches from Google
-- Finds PAA (People Also Ask) questions
-- Great for content expansion and dual-optimization
+- Fetches the live Google organic results for your seed keyword (region and device selectable)
+- Splits each ranking title into phrases and counts how many titles use each phrase
+- Scores each phrase for similarity to the seed keyword
+- Bar chart and CSV download
+- Great for content expansion and dual optimisation
 
 ## Requirements
 
-- ValueSERP API key (100 free searches available at www.valueserp.com)
+- DataForSEO account (sign up at [dataforseo.com](https://dataforseo.com/))
+- Enter your DataForSEO login and password in the sidebar, or set the `DATAFORSEO_LOGIN` and `DATAFORSEO_PASSWORD` environment variables to prefill them
+
+## Usage
+
+```bash
+pip install -r requirements.txt
+streamlit run serp_keyword_extractor.py
+```
+
+1. Enter your DataForSEO login and password in the sidebar
+2. Choose the region, device (desktop or mobile) and the number of results to analyse
+3. Enter a seed keyword and click Submit
+
+## Cost
+
+Each search is one call to the DataForSEO SERP API (Google Organic, Live Advanced). DataForSEO bills per 10 results, so the default of 20 results is estimated at $0.004 per search. The estimate is shown in the sidebar before you run, and the cost DataForSEO reports is shown after each search.
+
+## Output
+
+| Column | Description |
+| --- | --- |
+| query | Your seed keyword |
+| extracted_keywords | A phrase taken from the ranking titles |
+| serp_frequency | Number of times the phrase appears across the ranking titles |
+| similarity | Fuzzy partial match score (0 to 100) between the phrase and the seed keyword |
 
 ## Author
 

@@ -57,10 +57,10 @@ with st.sidebar:
 
     if provider == "Anthropic (Claude)":
         ai_key = st.text_input("Anthropic API Key", type="password")
-        model = st.selectbox("Model", ["claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5"])
+        model = st.selectbox("Model", ["claude-sonnet-5-5", "claude-haiku-5-5"])
     else:
         ai_key = st.text_input("OpenAI API Key", type="password")
-        model = st.selectbox("Model", ["gpt-4o", "gpt-4o-mini", "gpt-4.1"])
+        model = st.selectbox("Model", ["gpt-6.1-terra", "gpt-6-luna"])
 
     st.header("Review Settings")
     review_type = st.selectbox("Review Focus", [
@@ -267,8 +267,8 @@ Create the annotated version maintaining the original document structure while p
                 {"role": "system", "content": "You are an expert content reviewer providing detailed, actionable feedback."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=8000,
-            temperature=0.1
+            max_completion_tokens=32000,  # room for the model's reasoning as well as the review
+            reasoning_effort="medium",
         )
         return completion.choices[0].message.content, None
     except Exception as e:

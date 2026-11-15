@@ -24,6 +24,8 @@ import sys
 import pandas as pd
 from tqdm import tqdm
 from product_attribute_extractor import (
+    DEFAULT_MODEL,
+    OPENAI_MODELS,
     create_client,
     extract_attributes,
     sort_columns_by_frequency,
@@ -51,8 +53,12 @@ def main():
     )
     parser.add_argument(
         "--model", "-m",
-        default="gpt-4o-mini",
-        help="Model identifier (default: gpt-4o-mini).",
+        default=DEFAULT_MODEL,
+        help=(
+            f"Model identifier (default: {DEFAULT_MODEL}). OpenAI models: "
+            f"{', '.join(OPENAI_MODELS)}. For a local or other compatible server, "
+            "use its own model name."
+        ),
     )
     parser.add_argument(
         "--base-url",

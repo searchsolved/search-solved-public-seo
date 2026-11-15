@@ -21,6 +21,24 @@ import requests
 from bs4 import BeautifulSoup
 from openai import OpenAI
 
+# OpenAI models offered by every tool in this repository. Any other
+# OpenAI-compatible server (local LLMs, OpenRouter and so on) takes its own
+# model name instead.
+OPENAI_MODELS = ["gpt-6-luna", "gpt-6.1-terra"]
+DEFAULT_MODEL = "gpt-6-luna"
+
+
+def reasoning_params(model, effort="low"):
+    """Extra request parameters for OpenAI's gpt-6 reasoning models.
+
+    gpt-6 models take reasoning_effort and do not accept temperature. Local
+    and other OpenAI-compatible servers may reject reasoning_effort, so it is
+    only sent when the model name starts with "gpt-6".
+    """
+    if str(model).strip().lower().startswith("gpt-6"):
+        return {"reasoning_effort": effort}
+    return {}
+
 
 def create_client(api_key, base_url="https://api.openai.com/v1"):
     """Create an OpenAI-compatible API client."""
@@ -425,6 +443,7 @@ Provide your answer as a JSON object with the following keys:
             },
             {"role": "user", "content": prompt},
         ],
+        **reasoning_params(model),
     )
 
     result = json.loads(response.choices[0].message.content)
@@ -451,7 +470,7 @@ Provide your answer as a JSON object with the following keys:
     return result
 
 
-def detect_and_extract(url, api_key, model="gpt-4o-mini", base_url="https://api.openai.com/v1"):
+def detect_and_extract(url, api_key, model=DEFAULT_MODEL, base_url="https://api.openai.com/v1"):
     """
     Main entry point: fetch a URL, detect the content selector via LLM,
     and extract the main content as markdown.

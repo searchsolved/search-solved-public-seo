@@ -12,7 +12,7 @@ Website: https://leefoot.com
 
 import streamlit as st
 
-from auto_css_selector_detector import detect_and_extract
+from auto_css_selector_detector import DEFAULT_MODEL, OPENAI_MODELS, detect_and_extract
 
 st.set_page_config(
     page_title="Auto CSS Selector Detector",
@@ -56,8 +56,12 @@ api_key = st.sidebar.text_input(
 
 model = st.sidebar.text_input(
     "Model",
-    value="gpt-4o-mini",
-    help="Model name to use for selector detection.",
+    value=DEFAULT_MODEL,
+    help=(
+        "Model name to use for selector detection. OpenAI models: "
+        + ", ".join(OPENAI_MODELS)
+        + ". For a local or other compatible server, use its own model name."
+    ),
 )
 
 base_url = st.sidebar.text_input(

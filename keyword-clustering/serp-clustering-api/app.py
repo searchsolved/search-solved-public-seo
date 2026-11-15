@@ -1,3 +1,6 @@
+# Author: Lee Foot
+# Website: https://leefoot.com
+
 ####################################################################################
 #                                                                                  #
 #  SERP Clustering API                                                             #
@@ -17,13 +20,18 @@
 SERP Clustering API
 
 A FastAPI service that clusters keywords based on common SERP URLs.
-Upload a CSV file with ValueSERP export data and receive clustered results.
+Upload a CSV with one row per keyword and ranking URL (for example a
+DataForSEO SERP export) and receive clustered results.
 
 Usage:
     uvicorn app:app --reload
 
 Endpoint:
     POST /cluster-serps - Upload CSV file, returns JSON clusters
+        file           CSV upload (required)
+        keyword_column form field, name of the keyword column (default: keyword)
+        url_column     form field, name of the ranking URL column (default: url)
+        common_urls    query parameter, minimum shared URLs to form a cluster (default: 4)
 
 Requirements:
     pip install fastapi uvicorn pandas python-multipart
@@ -31,13 +39,13 @@ Requirements:
 
 import pandas as pd
 from collections import defaultdict
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from typing import List, Dict, Any
 
 app = FastAPI(
     title="SERP Clustering API",
-    description="Cluster keywords based on common SERP URLs from ValueSERP exports",
-    version="1.0.0",
+    description="Cluster keywords based on common SERP URLs from a keyword and URL CSV export",
+    version="1.1.0",
 )
 
 
@@ -46,47 +54,37 @@ async def root():
     """Root endpoint with API information."""
     return {
         "name": "SERP Clustering API",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "author": "Lee Foot",
         "website": "https://www.leefoot.com",
         "endpoints": {
-            "/cluster-serps": "POST - Upload ValueSERP CSV for clustering"
+            "/cluster-serps": "POST - Upload a keyword and URL CSV for clustering"
         }
     }
 
 
-@app.post("/cluster-serps")
-async def cluster_serps(
-    file: UploadFile = File(...),
-    common_urls: int = 4
-) -> Dict[str, Any]:
+def cluster_keywords(df: pd.DataFrame, common_urls: int = 4) -> Dict[str, Any]:
     """
-    Cluster keywords based on common SERP URLs.
+    Cluster keywords that share ranking URLs.
 
     Args:
-        file: CSV file with ValueSERP export columns:
-              - search.q (query)
-              - result.organic_results.link (ranking URL)
-        common_urls: Minimum number of common URLs to form a cluster (default: 4)
+        df: DataFrame with exactly two columns, keyword first and ranking URL second
+        common_urls: Minimum number of common URLs to form a cluster
 
     Returns:
-        JSON object with clustered keywords
+        JSON-ready dict with clustered keywords
     """
-    # Load the CSV data from the uploaded file
-    df = pd.read_csv(
-        file.file,
-        usecols=["search.q", "result.organic_results.link"],
-        dtype=str
-    )
+    query_col, link_col = df.columns[0], df.columns[1]
 
     # Clean and deduplicate
-    df = df.drop_duplicates(subset=["search.q", "result.organic_results.link"])
-    df["search.q"] = df["search.q"].str.lower()
+    df = df.dropna(subset=[query_col, link_col])
+    df = df.drop_duplicates(subset=[query_col, link_col])
+    df[query_col] = df[query_col].str.lower()
 
     # Build link and query maps
     link_map = defaultdict(set)
     query_map = defaultdict(set)
-    for query, link in df.values:
+    for query, link in df[[query_col, link_col]].values:
         link_map[link].add(query)
         query_map[query].add(link)
 
@@ -153,6 +151,46 @@ async def cluster_serps(
         "total_clusters": len(clusters),
         "common_urls_threshold": common_urls
     }
+
+
+@app.post("/cluster-serps")
+async def cluster_serps(
+    file: UploadFile = File(...),
+    keyword_column: str = Form("keyword"),
+    url_column: str = Form("url"),
+    common_urls: int = 4
+) -> Dict[str, Any]:
+    """
+    Cluster keywords based on common SERP URLs.
+
+    Args:
+        file: CSV file with one row per keyword and ranking URL
+        keyword_column: Name of the keyword column (form field, default: keyword)
+        url_column: Name of the ranking URL column (form field, default: url)
+        common_urls: Minimum number of common URLs to form a cluster (default: 4)
+
+    Returns:
+        JSON object with clustered keywords
+    """
+    if keyword_column == url_column:
+        raise HTTPException(status_code=400, detail="keyword_column and url_column must be different columns.")
+
+    # Load the CSV data from the uploaded file
+    try:
+        df = pd.read_csv(file.file, dtype=str)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Could not read the CSV file: {e}")
+
+    missing = [col for col in (keyword_column, url_column) if col not in df.columns]
+    if missing:
+        raise HTTPException(
+            status_code=400,
+            detail=(f"Column(s) not found: {', '.join(missing)}. "
+                    f"Columns in the file: {', '.join(map(str, df.columns))}. "
+                    "Set keyword_column and url_column to match your file.")
+        )
+
+    return cluster_keywords(df[[keyword_column, url_column]].copy(), common_urls)
 
 
 if __name__ == "__main__":

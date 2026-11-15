@@ -38,10 +38,11 @@ import anthropic
 import pandas as pd
 import streamlit as st
 
-DEFAULT_MODEL = "claude-haiku-4-5"
+CLAUDE_MODELS = ["claude-haiku-5-5", "claude-sonnet-5-5"]
+DEFAULT_MODEL = "claude-haiku-5-5"
 OUTPUT_COLUMN = "H1_Simplified"
 
-PROMPT_TEMPLATE = """Convert this H1 into a natural Google search query. Remove marketing language, step counts, and promotional words. Focus on the core search intent.
+PROMPT_TEMPLATE = """Convert this H1 into a natural Google search query. Remove marketing language, step counts, and promotional words. Focus on the core search intent. Reply with one search query only, on a single line.
 
 H1: "{h1_text}"
 
@@ -85,10 +86,11 @@ api_key = st.sidebar.text_input(
     help="Your Anthropic API key. Used only for this session and never stored.",
 )
 
-model = st.sidebar.text_input(
+model = st.sidebar.selectbox(
     "Model",
-    value=DEFAULT_MODEL,
-    help="Anthropic model to use. Haiku is fast and cheap, which suits this task well.",
+    CLAUDE_MODELS,
+    index=CLAUDE_MODELS.index(DEFAULT_MODEL),
+    help="Claude model to use. Haiku is fast and cheap, which suits this task well.",
 )
 
 st.sidebar.markdown("---")
@@ -104,17 +106,31 @@ delay = st.sidebar.slider(
 )
 
 
+def claude_text(message):
+    """Return the reply text from a Claude response.
+
+    Current Claude models can return thinking blocks before the text, so the
+    reply is read by block type, not by position. Raises if the model declined.
+    """
+    if message.stop_reason == "refusal":
+        raise RuntimeError("Claude declined this request. Try a different H1 or another model.")
+    return "".join(block.text for block in message.content if block.type == "text")
+
+
 def simplify_h1(client, h1_text, model_name):
     """Simplify a single H1 into a natural search query. Returns (result, error)."""
     try:
         message = client.messages.create(
             model=model_name,
-            max_tokens=200,
+            max_tokens=4000,  # room for the model's thinking as well as the reply
+            output_config={"effort": "low"},
             messages=[
                 {"role": "user", "content": PROMPT_TEMPLATE.format(h1_text=h1_text)}
             ],
         )
-        simplified = message.content[0].text.strip()
+        simplified = claude_text(message).strip()
+        # Keep only the first line: the model sometimes adds an alternative after a blank line
+        simplified = next((line for line in simplified.splitlines() if line.strip()), "")
         # Remove any remaining quotation marks or extra formatting
         simplified = simplified.replace('"', "").replace("'", "").strip()
         return simplified, None

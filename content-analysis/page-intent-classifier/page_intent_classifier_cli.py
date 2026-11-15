@@ -83,8 +83,8 @@ def classify_intent(client, model, content):
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": content}
             ],
-            temperature=0.3,
-            max_tokens=150,
+            max_completion_tokens=4000,  # room for the model's reasoning as well as the reply
+            reasoning_effort="low",
             response_format={"type": "json_object"}
         )
 
@@ -103,8 +103,9 @@ def main():
     parser.add_argument('--urls', required=True, help='File with URLs (one per line)')
     parser.add_argument('--output', default='page_intent.csv',
                         help='Output CSV path (default: page_intent.csv)')
-    parser.add_argument('--model', default='gpt-4o-mini',
-                        help='OpenAI model (default: gpt-4o-mini)')
+    parser.add_argument('--model', default='gpt-6-luna',
+                        choices=['gpt-6-luna', 'gpt-6.1-terra'],
+                        help='OpenAI model (default: gpt-6-luna)')
     parser.add_argument('--selector', default='',
                         help='CSS selector for content (optional)')
     parser.add_argument('--max-chars', type=int, default=3000,

@@ -106,7 +106,8 @@ def analyze_article(article_text, client, model):
         completion = client.chat.completions.create(
             model=model,
             messages=messages,
-            response_format=response_format
+            response_format=response_format,
+            reasoning_effort="low",
         )
         return json.loads(completion.choices[0].message.content), None
     except Exception as e:
@@ -160,7 +161,7 @@ with st.sidebar:
 
     model = st.selectbox(
         "Model",
-        ["gpt-4o-mini", "gpt-4o", "gpt-4.1"],
+        ["gpt-6-luna", "gpt-6.1-terra"],
         help="Select the OpenAI model to use"
     )
 

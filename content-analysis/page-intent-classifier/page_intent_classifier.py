@@ -5,7 +5,7 @@
 #  Use OpenAI to classify page intent and expected user actions.                   #
 #                                                                                  #
 ####################################################################################
-# Author   : Lee Foot                                                              #
+# Author: Lee Foot                                                                 #
 # Website  : https://www.leefoot.com                                                   #
 # Contact  : https://www.leefoot.com/contact                                           #
 # Email    : hello@leefoot.com                                                     #
@@ -76,9 +76,9 @@ with st.expander("How to use this tool"):
     - OpenAI API key (get one at platform.openai.com)
     - List of URLs to analyze
 
-    **Cost estimate:**
-    - GPT-3.5-turbo: ~$0.001-0.002 per page
-    - GPT-4o-mini: ~$0.0015-0.003 per page
+    **Cost:**
+    - One API call per page. The cost depends on the model and the page length;
+      gpt-6-luna is the lowest-cost option. See OpenAI's pricing page for current rates.
     """)
 
 # Sidebar settings
@@ -92,8 +92,8 @@ api_key = st.sidebar.text_input(
 
 model = st.sidebar.selectbox(
     "Model",
-    ["gpt-4o-mini", "gpt-4o", "gpt-4.1"],
-    help="GPT-4o-mini is recommended for cost-effectiveness"
+    ["gpt-6-luna", "gpt-6.1-terra"],
+    help="gpt-6-luna is recommended for cost-effectiveness"
 )
 
 st.sidebar.markdown("---")
@@ -232,8 +232,8 @@ def classify_intent(client, model_name, content):
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": content}
             ],
-            temperature=0.3,
-            max_tokens=150,
+            max_completion_tokens=4000,  # room for the model's reasoning as well as the reply
+            reasoning_effort="low",
             response_format={"type": "json_object"}
         )
 

@@ -19,6 +19,23 @@ from openai import OpenAI
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
+# OpenAI models offered by every tool in this repository. Local and other
+# OpenAI-compatible servers take their own model name instead.
+OPENAI_MODELS = ["gpt-6-luna", "gpt-6.1-terra"]
+DEFAULT_MODEL = "gpt-6-luna"
+
+
+def reasoning_params(model, effort="low"):
+    """Extra request parameters for OpenAI's gpt-6 reasoning models.
+
+    gpt-6 models take reasoning_effort and do not accept temperature. Local
+    and other OpenAI-compatible servers may reject reasoning_effort, so it is
+    only sent when the model name starts with "gpt-6".
+    """
+    if str(model).strip().lower().startswith("gpt-6"):
+        return {"reasoning_effort": effort}
+    return {}
+
 # Few-shot examples using generic e-commerce products
 FEW_SHOT_EXAMPLES = [
     {
@@ -140,6 +157,7 @@ def extract_attributes(client, model, product_text, known_attributes):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": product_text},
             ],
+            **reasoning_params(model),
         )
         raw = safe_parse_json(response.choices[0].message.content)
 

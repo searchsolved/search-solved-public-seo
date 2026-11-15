@@ -70,8 +70,9 @@ def main():
     parser.add_argument('--review-column', required=True, help='Name of review text column')
     parser.add_argument('--id-column', default=None,
                         help='Name of ID column (optional, auto-generates if not specified)')
-    parser.add_argument('--model', default='gpt-4o-mini',
-                        help='OpenAI model (default: gpt-4o-mini)')
+    parser.add_argument('--model', default='gpt-6-luna',
+                        choices=['gpt-6-luna', 'gpt-6.1-terra'],
+                        help='OpenAI model (default: gpt-6-luna)')
     parser.add_argument('--batch-size', type=int, default=5,
                         help='Reviews per API call (default: 5)')
     parser.add_argument('--delay', type=float, default=1.0,
@@ -144,7 +145,7 @@ def main():
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content}
                 ],
-                temperature=0.3,
+                reasoning_effort="low",
                 response_format={"type": "json_object"}
             )
 

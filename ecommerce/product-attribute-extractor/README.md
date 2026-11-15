@@ -7,7 +7,7 @@ Extract structured product attributes from titles and descriptions using any Ope
 - Streamlit web interface + CLI version
 - Iterative attribute discovery (new attributes are learnt from earlier products)
 - Works with OpenAI, Azure OpenAI, or any local LLM with an OpenAI-compatible API
-- Configurable model and base URL (defaults to gpt-4o-mini)
+- Configurable model and base URL (defaults to gpt-6-luna; OpenAI models are gpt-6-luna and gpt-6.1-terra)
 - Outputs enriched CSV with one column per discovered attribute
 - Columns sorted by population frequency
 

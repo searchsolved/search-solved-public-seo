@@ -66,7 +66,7 @@ python product_title_optimizer.py \
 | `--category-col` | Column for categories | `Categories` |
 | `--api-key` | OpenAI API key | `OPENAI_API_KEY` env var |
 | `--base-url` | Custom API URL (for local LLMs) | None |
-| `--model` | Model to use | `gpt-4o` |
+| `--model` | Model to use: `gpt-6.1-terra` or `gpt-6-luna` on OpenAI, or a local model name | `gpt-6.1-terra` |
 | `--batch-size` | Titles per API call | `20` |
 | `--limit` | Limit products (0 = no limit) | `0` |
 

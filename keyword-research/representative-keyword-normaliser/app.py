@@ -51,7 +51,7 @@ with st.sidebar:
                                   "or https://api.openai.com/v1 for OpenAI.")
     model = st.text_input("Model", value=DEFAULT_MODEL,
                           help="Model name as exposed by your endpoint, e.g. a local Llama "
-                               "model in Ollama or gpt-4o-mini on OpenAI.")
+                               "model in Ollama, or gpt-6-luna or gpt-6.1-terra on OpenAI.")
     api_key = st.text_input("API Key", type="password", value="",
                             help="Leave blank for local servers such as Ollama.")
 

@@ -1,3 +1,6 @@
+# Author: Lee Foot
+# Website: https://leefoot.com
+
 ####################################################################################
 # Author   : Lee Foot                                                              #
 # Website  : https://www.leefoot.com                                               #
@@ -8,9 +11,11 @@ import streamlit as st
 
 st.set_page_config(page_title="SERP Entity Extractor", page_icon="mag",
                    layout="wide")
+import os
+from base64 import b64encode
+
 import pandas as pd
 import requests
-import json
 from dandelion import DataTXT
 import trafilatura
 from trafilatura import extract
@@ -21,11 +26,51 @@ from stqdm import stqdm
 newconfig = use_config()
 newconfig.set("DEFAULT", "EXTRACTION_TIMEOUT", "0")
 
+DATAFORSEO_ENDPOINT = 'https://api.dataforseo.com/v3/serp/google/organic/live/advanced'
+
+# Region name -> (DataForSEO location_code, language_code)
+LOCATIONS = {
+    "United Kingdom": (2826, "en"),
+    "United States": (2840, "en"),
+    "Australia": (2036, "en"),
+    "Brazil": (2076, "pt"),
+    "France": (2250, "fr"),
+    "Canada": (2124, "en"),
+    "Germany": (2276, "de"),
+    "Italy": (2380, "it"),
+    "Spain": (2724, "es"),
+    "New Zealand": (2554, "en"),
+}
+
+
+def parse_organic_results(response_data):
+    """Return the organic items from a DataForSEO SERP response.
+
+    Raises ValueError with a readable message when the API reports an error
+    or the response has no result.
+    """
+    if not isinstance(response_data, dict):
+        raise ValueError("Unexpected response from DataForSEO")
+    if response_data.get('status_code') != 20000:
+        raise ValueError(f"API Error: {response_data.get('status_message', 'Unknown error')}")
+    try:
+        task = response_data["tasks"][0]
+    except (KeyError, TypeError, IndexError):
+        raise ValueError("No task returned by DataForSEO")
+    if task.get('status_code') != 20000:
+        raise ValueError(f"Task Error: {task.get('status_message', 'Unknown error')}")
+    try:
+        items = task["result"][0]["items"] or []
+    except (KeyError, TypeError, IndexError):
+        raise ValueError("No search results found")
+    return [item for item in items if item.get("type") == "organic"]
+
+
 with st.expander("How do I use this app?"):
     st.write("""
-        1. You will need an API key from www.ValueSERP.com - they offer 100 searches for free
+        1. You will need a DataForSEO account from dataforseo.com (pay as you go)
         2. You will need an API key from dandelion.eu - 1,000 free requests per day
-        3. Enter your API keys, enter a seed keyword, and click submit
+        3. Enter your DataForSEO login and password and your Dandelion key, enter a seed keyword, and click submit
         4. This data can be used to optimize pages / expand on existing content""")
 
 st.title("SERP Entity Extractor")
@@ -39,9 +84,9 @@ with st.expander("How to use this tool"):
     - Compares entity coverage across rankings
 
     **How to use:**
-    1. Enter search queries or upload SERP data
-    2. Select the number of results to analyze
-    3. Extract and compare entities
+    1. Enter your DataForSEO login and password and your Dandelion.eu key in the sidebar
+    2. Choose the region, device and number of results pages to analyse
+    3. Enter a seed keyword and click Submit
     4. Identify entity gaps vs competitors
 
     **Best for:**
@@ -52,23 +97,26 @@ with st.expander("How to use this tool"):
 
 # streamlit variables
 q = st.text_input('Input Your Search Keyword')
-value_serp_key = st.sidebar.text_input('Input your ValueSERP API Key')
+
+dataforseo_login = st.sidebar.text_input(
+    'DataForSEO Login',
+    type='password',
+    value=os.environ.get('DATAFORSEO_LOGIN', ''),
+    help="Your login from dataforseo.com"
+)
+
+dataforseo_password = st.sidebar.text_input(
+    'DataForSEO Password',
+    type='password',
+    value=os.environ.get('DATAFORSEO_PASSWORD', ''),
+    help="Your password from dataforseo.com"
+)
+
 dandelion_key = st.sidebar.text_input('Input your Dandelion.eu API Key')
 
 location_select = st.sidebar.selectbox(
     "Select The Region To Search Google From",
-    (
-        "United Kingdom",
-        "United States",
-        "Australia",
-        "Brazil",
-        "France",
-        "Canada",
-        "Germany",
-        "Italy",
-        "Spain",
-        "New Zealand",
-    ),
+    list(LOCATIONS.keys()),
 )
 
 device_select = st.sidebar.selectbox(
@@ -76,13 +124,17 @@ device_select = st.sidebar.selectbox(
     (
         "Desktop",
         "Mobile",
-        "Tablet",
     ),
 )
+st.sidebar.caption("Tablet is no longer offered: DataForSEO only supports desktop and mobile results.")
 
 accuracy = st.sidebar.slider("Set Entity Accuracy", min_value=10, max_value=100, value=80)
 num_pages = st.sidebar.slider("Set Number of Pages to Analyse", min_value=1, max_value=10, value=1)
 top_entities = st.sidebar.slider("Set The Number of Entities to Display", min_value=5, max_value=25, value=15)
+
+# Show estimated cost (DataForSEO bills per page of 10 results)
+estimated_cost = 0.002 * num_pages
+st.sidebar.caption(f"Estimated DataForSEO cost per search: ${estimated_cost:.3f}")
 
 accuracy = accuracy / 100
 num_pages = num_pages * 10
@@ -110,31 +162,60 @@ if submitted:
         st.info("Missing Dandelion.eu API key! Please visit www.dandelion.eu to get your free API key")
         st.stop()
 
+    if not dataforseo_login or not dataforseo_password:
+        st.error("Please enter your DataForSEO login and password in the sidebar")
+        st.stop()
+
+    if not q:
+        st.info("No results returned. Did you enter a keyword to search?")
+        st.stop()
+
     st.write("Searching Google for: %s" % q)
 
-    params = {
-        'api_key': value_serp_key,
-        'q': q,
-        'location': location_select,
-        'include_fields': 'organic_results',
-        'location_auto': True,
-        'device': device_select,
-        'output': 'json',
-        'page': '1',
-        'num': num_pages
+    cred = b64encode(f"{dataforseo_login}:{dataforseo_password}".encode()).decode()
+    headers = {
+        'Authorization': f'Basic {cred}',
+        'Content-Type': 'application/json'
     }
 
-    response = requests.get('https://api.valueserp.com/search', params)
-    response_data = json.loads(response.text)
-    result = response_data.get('organic_results')
+    location_code, language_code = LOCATIONS[location_select]
+    payload = [{
+        "keyword": q,
+        "location_code": location_code,
+        "language_code": language_code,
+        "device": device_select.lower(),
+        "depth": num_pages
+    }]
 
     try:
-        for var in result:
-                serp_title.append(var['title'])
-                link.append(var['link'])
-                query.append(q)
-    except TypeError:
-        st.info("No results returned. Did you enter a keyword to search?")
+        with st.spinner('Fetching SERP data...'):
+            response = requests.post(DATAFORSEO_ENDPOINT, headers=headers, json=payload, timeout=60)
+            response_data = response.json()
+    except requests.exceptions.RequestException as e:
+        st.error(f"Request failed: {str(e)}")
+        st.stop()
+    except ValueError:
+        st.error("Failed to parse API response. Please check your DataForSEO login and password.")
+        st.stop()
+
+    try:
+        result = parse_organic_results(response_data)
+    except ValueError as e:
+        st.error(str(e))
+        st.stop()
+
+    if response_data.get('cost') is not None:
+        st.caption(f"Cost reported by DataForSEO: ${response_data['cost']:.4f}")
+
+    for var in result:
+        if not var.get('url'):
+            continue
+        serp_title.append(var.get('title') or '')
+        link.append(var['url'])
+        query.append(q)
+
+    if not link:
+        st.info("No organic results found for this keyword.")
         st.stop()
 
     # make the serp df

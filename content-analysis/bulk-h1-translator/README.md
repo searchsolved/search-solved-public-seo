@@ -37,7 +37,7 @@ python bulk_h1_translator_cli.py --input crawl.csv --output translated.csv
 
 ## Usage with OpenAI
 
-**Streamlit:** set the base URL to `https://api.openai.com/v1`, enter your API key and a model name such as `gpt-4o-mini` in the sidebar.
+**Streamlit:** set the base URL to `https://api.openai.com/v1`, enter your API key and `gpt-6-luna` or `gpt-6.1-terra` as the model name in the sidebar.
 
 **CLI:**
 ```bash
@@ -46,7 +46,7 @@ python bulk_h1_translator_cli.py \
     --input crawl.csv \
     --output translated.csv \
     --base-url https://api.openai.com/v1 \
-    --model gpt-4o-mini
+    --model gpt-6-luna
 ```
 
 Any other OpenAI-compatible provider works the same way: set `--base-url`, `--model` and `OPENAI_API_KEY` accordingly.

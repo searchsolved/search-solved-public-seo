@@ -48,7 +48,7 @@ with st.sidebar:
     api_key = st.text_input("OpenAI API Key", type="password")
 
     st.header("⚙️ Settings")
-    model = st.selectbox("Model", ["gpt-4o-mini", "gpt-4o", "gpt-4.1"], index=0)
+    model = st.selectbox("Model", ["gpt-6-luna", "gpt-6.1-terra"])
     batch_size = st.slider("Batch size", 1, 20, 10, help="Number of anchor texts to evaluate per API call")
 
     st.header("📊 Rating Scale")
@@ -144,7 +144,8 @@ DO NOT include explanations in your assessment."""
                 {"role": "system", "content": system_message},
                 {"role": "user", "content": user_content}
             ],
-            response_format=response_format
+            response_format=response_format,
+            reasoning_effort="low",
         )
 
         result = json.loads(completion.choices[0].message.content)

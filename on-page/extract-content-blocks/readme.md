@@ -15,7 +15,7 @@ There are two ways to run it. Both use the same code (`content_blocks_core.py`) 
 
 1. Fetches each page.
 2. Removes `script`, `style`, `noscript`, `meta`, `link`, `header`, `footer` and `nav` elements. Blocks inside the header, footer or nav are therefore never returned.
-3. Sends the remaining HTML to Claude Haiku 4.5 (`claude-haiku-4-5-20251001`), cut at 200,000 characters if the page is longer.
+3. Sends the remaining HTML to Claude Haiku 5.5 (`claude-haiku-5-5`) at medium effort, cut at 200,000 characters if the page is longer. The command line script can use `claude-sonnet-5-5` instead.
 4. Reads the JSON array of blocks from the reply. Entries without an XPath are dropped.
 5. Counts how many rows share each XPath and gives each XPath one name (the first one seen).
 
@@ -51,7 +51,7 @@ python extract_content_blocks.py --input urls.txt --output-dir output
 | `--limit` | all | Process only the first N URLs. Use `--limit 2` for a test run |
 | `--save-every` | 50 | Save a batch file every N rows |
 | `--delay` | 1 | Seconds to wait before each page fetch |
-| `--model` | `claude-haiku-4-5-20251001` | Claude model |
+| `--model` | `claude-haiku-5-5` | Claude model: `claude-haiku-5-5` or `claude-sonnet-5-5` |
 | `--max-html-chars` | 200000 | Cut the filtered HTML at this many characters |
 
 The key is read from the `ANTHROPIC_API_KEY` environment variable. It is never stored in the script.
@@ -76,7 +76,7 @@ The command line script combines only the rows from the current run. Batch files
 
 ## Cost
 
-One API call per page. The cost depends on page size: the two pages used for testing (Python documentation, about 21,000 and 42,000 input tokens) cost roughly 2.5 and 5 US cents at Claude Haiku 4.5 prices ($1 per million input tokens, $5 per million output tokens). Run `--limit 2` first to see token counts for your own pages.
+One API call per page. The cost depends on page size. Claude Haiku 5.5 is priced at $0.10 per million input tokens and $0.50 per million output tokens when the prompt is 100,000 tokens or fewer, and $0.50 and $2.50 above that. The model's thinking is billed as output tokens. Run `--limit 2` first to see token counts for your own pages.
 
 ## Errors
 

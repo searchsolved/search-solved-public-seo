@@ -24,7 +24,7 @@ st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-
 with st.expander("How to use this tool"):
     st.markdown("""
     **What this tool does:**
-    - Rewrites meta descriptions using AI (GPT-4)
+    - Rewrites meta descriptions using AI (OpenAI gpt-6-luna or gpt-6.1-terra)
     - Optimizes length for desktop and mobile displays
     - Applies customizable tone and style settings
 
@@ -47,7 +47,7 @@ with st.sidebar:
     api_key = st.text_input("OpenAI API Key", type="password")
 
     st.header("⚙️ Settings")
-    model = st.selectbox("Model", ["gpt-4o-mini", "gpt-4o", "gpt-4.1"], index=0)
+    model = st.selectbox("Model", ["gpt-6-luna", "gpt-6.1-terra"])
 
     st.header("📏 Length Settings")
     max_desktop = st.slider("Desktop max chars", 140, 170, 160)
@@ -149,7 +149,7 @@ Return ONLY the rewritten meta description, no quotes or explanation."""
         completion = client.chat.completions.create(
             model=model,
             messages=messages,
-            temperature=0.7
+            reasoning_effort="low",
         )
         result = completion.choices[0].message.content.strip()
         # Remove any surrounding quotes

@@ -2,10 +2,10 @@
 
 ## Features
 
-Score meta descriptions on key SEO criteria including length, relevance, and CTR potential using GPT-4 analysis.
+Score meta descriptions on key SEO criteria including length, relevance, and CTR potential using OpenAI's gpt-6 models (gpt-6-luna by default, or gpt-6.1-terra).
 
 - Streamlit web interface
-- GPT-4 powered analysis
+- Powered by OpenAI gpt-6-luna or gpt-6.1-terra
 - Score on length optimization
 - Relevance assessment
 - CTR potential rating

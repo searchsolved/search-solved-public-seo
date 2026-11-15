@@ -1,3 +1,6 @@
+# Author: Lee Foot
+# Website: https://leefoot.com
+
 ####################################################################################
 #                                                                                  #
 #  Entity Extraction App                                                           #
@@ -35,7 +38,7 @@ st.markdown(
 
     **API Requirements:**
 
-    - **SERPs page**: Requires [ValueSERP API Key](https://www.valueserp.com/pricing) (PAYG pricing)
+    - **SERPs page**: Requires a [DataForSEO](https://dataforseo.com/) login and password (pay as you go, about $0.002 per page of 10 results)
     - **All pages**: Requires free [Dandelion.eu API Key](https://dandelion.eu/) (1,000 free requests/day)
 
     **Select a page from the sidebar** to get started!

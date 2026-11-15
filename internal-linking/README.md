@@ -12,11 +12,11 @@ Automatically find internal linking opportunities based on anchor text matching.
 - **Features**: Fuzzy matching, bulk processing, relevance scoring
 
 ### 🎯 **Anchor Text Relevance Checker**
-Assess anchor text relevance for internal linking using AI (GPT-4).
+Assess anchor text relevance for internal linking using AI (OpenAI gpt-6-luna or gpt-6.1-terra).
 - **Use Case**: Internal link audits, anchor text optimization
 - **Input**: Anchor text and target page pairs, OpenAI API key
 - **Output**: Relevance ratings (High/Medium/Fail/Typo) with explanations
-- **Features**: GPT-4 relevance scoring, suggested improvements, batch processing
+- **Features**: GPT relevance scoring, suggested improvements, batch processing
 
 ## Use Cases
 
@@ -59,7 +59,7 @@ streamlit run anchor_text_relevance_checker.py
 
 ### **Anchor Text Relevance Checker**
 - CSV with anchor text and target URL pairs
-- OpenAI API key for GPT-4 analysis
+- OpenAI API key
 
 ## Output Formats
 

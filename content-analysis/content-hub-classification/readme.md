@@ -4,7 +4,7 @@ Classify article content into content hub categories using OpenAI's GPT models. 
 
 ## Features
 
-- AI-powered content classification using GPT-4o-mini
+- AI-powered content classification using gpt-6-luna by default (gpt-6.1-terra also available)
 - Extracts primary topic and content hub category
 - Identifies key subtopics within the content
 - Suggests recommended products based on content
@@ -89,12 +89,12 @@ The tool returns structured JSON:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MODEL` | `gpt-4o-mini` | OpenAI model to use |
+| `MODEL` | `gpt-6-luna` | OpenAI model to use: `gpt-6-luna` or `gpt-6.1-terra` |
 | `SAVE_PATH` | `./content_analysis_output.csv` | Output CSV path |
 
 ## Cost
 
-Uses GPT-4o-mini which is cost-effective for classification tasks. Check [OpenAI pricing](https://openai.com/pricing) for current rates.
+Defaults to gpt-6-luna, the lowest-cost of the three OpenAI models, which suits classification tasks. Check [OpenAI pricing](https://openai.com/pricing) for current rates.
 
 ## Security
 

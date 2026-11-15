@@ -76,7 +76,7 @@ Try these tools directly in your browser — no installation required:
 | [Gist Summary Generator](./content-analysis/gist-summary-generator) | Create "At a glance" bullet summaries from articles using Claude or GPT | Streamlit |
 | [Keyword Extractor (LLM)](./content-analysis/keyword-extractor-llm) | Extract and categorize keywords from content using OpenAI or Anthropic APIs | Streamlit |
 | [Keyword to Page Mapper](./content-analysis/keyword-to-page-mapper) | Semantically match competitor keywords to existing pages | Streamlit |
-| [Meta Description Grader](./content-analysis/meta-description-grader) | Score meta descriptions on SEO criteria using GPT-4 analysis | Streamlit |
+| [Meta Description Grader](./content-analysis/meta-description-grader) | Score meta descriptions on SEO criteria using GPT | Streamlit |
 | [Meta Description Rewriter](./content-analysis/meta-description-rewriter) | Rewrite meta descriptions using AI with length optimization | Streamlit |
 | [N-gram SERP Extractor](./content-analysis/ngram-serp-extractor) | Extract page title and content n-grams from SERP results via ValueSERP | Streamlit |
 | [OpenAI Entity Visualizer](./content-analysis/openai-entity-visualizer) | Interactive entity extraction visualization using OpenAI | Streamlit |
@@ -104,7 +104,7 @@ Try these tools directly in your browser — no installation required:
 | [Question Extraction GSC](./keyword-research/question-extraction-gsc) | Extract question-type keywords from Google Search Console data | Python |
 | [Related Searches Tree](./keyword-research/related-searches-tree) | Build hierarchical trees of related searches from Google | Streamlit |
 | [SERP Keyword Extractor](./keyword-research/serp-keyword-extractor) | Extract PAA questions and related searches via ValueSERP API | Streamlit |
-| [Topical Map Generator](./keyword-research/topical-map-generator) | Organize keywords into hierarchical topical maps using GPT-4o | Streamlit |
+| [Topical Map Generator](./keyword-research/topical-map-generator) | Organize keywords into hierarchical topical maps using GPT | Streamlit |
 
 ### eCommerce SEO (15 tools)
 

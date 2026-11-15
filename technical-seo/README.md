@@ -18,7 +18,7 @@ Generate regex patterns from plain English descriptions for SEO tasks.
 - **Use Case**: GSC filters, .htaccess redirects, Screaming Frog extraction
 - **Input**: Plain English description, test strings
 - **Output**: Regex patterns with platform-specific syntax
-- **Features**: Claude and GPT-4 support, live testing, preset patterns
+- **Features**: Claude and GPT support, live testing, preset patterns
 
 #### 📋 **Schema Markup Generator**
 Generate structured data markup for various schema types.

@@ -30,6 +30,7 @@ from tag_consolidator import (
     DEFAULT_PRIMARY_COLUMN,
     DEFAULT_SECONDARY_COLUMN,
     GENERIC_TAG_COLUMN,
+    OPENAI_MODELS,
     consolidate_tags,
 )
 
@@ -47,6 +48,7 @@ def main():
     parser.add_argument(
         "--model",
         default=DEFAULT_MODEL,
+        choices=OPENAI_MODELS,
         help=f"OpenAI model (default: {DEFAULT_MODEL})",
     )
     parser.add_argument(

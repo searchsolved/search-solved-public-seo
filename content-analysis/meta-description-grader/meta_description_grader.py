@@ -1,6 +1,6 @@
 """
 Meta Description Grader - Streamlit App
-Score and compare meta descriptions using GPT-4 on key SEO criteria.
+Score and compare meta descriptions using OpenAI gpt-6 models on key SEO criteria.
 
 Author: Lee Foot
 Website: https://www.leefoot.com
@@ -49,7 +49,7 @@ with st.sidebar:
     api_key = st.text_input("OpenAI API Key", type="password", help="Your OpenAI API key")
 
     st.header("⚙️ Settings")
-    model = st.selectbox("Model", ["gpt-4o-mini", "gpt-4o", "gpt-4.1"], index=0)
+    model = st.selectbox("Model", ["gpt-6-luna", "gpt-6.1-terra"])
 
     st.header("📊 Scoring Criteria")
     st.markdown("""
@@ -118,7 +118,8 @@ Score each component from 0-10."""
         completion = client.chat.completions.create(
             model=model,
             messages=messages,
-            response_format=response_format
+            response_format=response_format,
+            reasoning_effort="low",
         )
         result = json.loads(completion.choices[0].message.content)
         return result["scores"], None

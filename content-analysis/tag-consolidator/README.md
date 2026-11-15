@@ -40,7 +40,7 @@ streamlit run tag_consolidator_app.py
 ```
 
 1. Enter your OpenAI API key in the sidebar
-2. Choose a model (gpt-4o-mini is the default and is recommended for cost)
+2. Choose a model: gpt-6-luna (the default and recommended for cost) or gpt-6.1-terra
 3. Upload your CSV and select the primary and secondary tag columns
 4. Click "Consolidate Tags" and download the results
 
@@ -59,7 +59,7 @@ Options:
 |---|---|---|
 | `--input` | (required) | Input CSV with tags |
 | `--output` | `consolidated_tags.csv` | Output CSV path |
-| `--model` | `gpt-4o-mini` | OpenAI model |
+| `--model` | `gpt-6-luna` | OpenAI model: `gpt-6-luna` or `gpt-6.1-terra` |
 | `--primary-column` | `Primary Tag` | Name of the primary tag column |
 | `--secondary-column` | `Secondary Tag` | Name of the secondary tag column |
 

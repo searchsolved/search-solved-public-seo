@@ -51,10 +51,10 @@ with st.sidebar:
 
     if provider == "OpenAI (GPT)":
         api_key = st.text_input("OpenAI API Key", type="password")
-        model = st.selectbox("Model", ["gpt-4o-mini", "gpt-4o", "gpt-4.1"])
+        model = st.selectbox("Model", ["gpt-6-luna", "gpt-6.1-terra"])
     else:
         api_key = st.text_input("Anthropic API Key", type="password")
-        model = st.selectbox("Model", ["claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5"])
+        model = st.selectbox("Model", ["claude-haiku-5-5", "claude-sonnet-5-5"])
 
     st.header("Extraction Settings")
     min_word_count = st.slider("Minimum words per keyword", 2, 5, 2)
@@ -123,7 +123,8 @@ Return only keywords that appear verbatim in the content."""
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            response_format=response_format
+            response_format=response_format,
+            reasoning_effort="low",
         )
         result = json.loads(completion.choices[0].message.content)
 

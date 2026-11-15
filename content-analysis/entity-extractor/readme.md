@@ -7,7 +7,7 @@ A multi-page Streamlit app for extracting named entities from various sources us
 Three extraction modes:
 
 ### 1. SERPs
-- Search Google for a keyword
+- Search Google for a keyword (region and device, desktop or mobile, selectable)
 - Extract content from top-ranking pages
 - Identify common entities across the SERP
 - Visualize entity frequency
@@ -34,9 +34,10 @@ pip install -r requirements.txt
 - Free tier: 1,000 requests/day
 - Sign up at [dandelion.eu](https://dandelion.eu/)
 
-### ValueSERP (Required for SERPs page only)
-- PAYG pricing, no expiration
-- Sign up at [valueserp.com](https://www.valueserp.com/)
+### DataForSEO (Required for SERPs page only)
+- Pay as you go; the SERPs page uses the Google Organic Live Advanced endpoint, billed per page of 10 results (estimated at $0.002 per page, shown in the sidebar before you run)
+- Sign up at [dataforseo.com](https://dataforseo.com/)
+- Enter your login and password in the sidebar, or set `DATAFORSEO_LOGIN` and `DATAFORSEO_PASSWORD` to prefill them
 
 ## Usage
 
@@ -45,7 +46,7 @@ pip install -r requirements.txt
    streamlit run Home.py
    ```
 
-2. **Enter your API keys** in the sidebar
+2. **Enter your API keys** in the sidebar (DataForSEO login and password for the SERPs page, Dandelion.eu key for every page)
 
 3. **Select a page** from the sidebar:
    - SERPs - Search and extract from Google results

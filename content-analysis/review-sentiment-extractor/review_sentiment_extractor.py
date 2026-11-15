@@ -5,7 +5,7 @@
 #  Use OpenAI to extract positive and negative sentiments from reviews.            #
 #                                                                                  #
 ####################################################################################
-# Author   : Lee Foot                                                              #
+# Author: Lee Foot                                                                 #
 # Website  : https://www.leefoot.com                                                   #
 # Contact  : https://www.leefoot.com/contact                                           #
 # Email    : hello@leefoot.com                                                     #
@@ -71,9 +71,9 @@ with st.expander("How to use this tool"):
     - Negative sentiment summary
     - Overall sentiment classification
 
-    **Cost estimate:**
-    - GPT-3.5-turbo: ~$0.001-0.002 per review
-    - GPT-4o-mini: ~$0.0015-0.003 per review
+    **Cost:**
+    - Depends on the model and review length; gpt-6-luna is the lowest-cost
+      option. See OpenAI's pricing page for current rates.
     - Batch processing reduces costs
 
     **Tips:**
@@ -93,8 +93,8 @@ api_key = st.sidebar.text_input(
 
 model = st.sidebar.selectbox(
     "Model",
-    ["gpt-4o-mini", "gpt-4o", "gpt-4.1"],
-    help="GPT-4o-mini is recommended for cost-effectiveness"
+    ["gpt-6-luna", "gpt-6.1-terra"],
+    help="gpt-6-luna is recommended for cost-effectiveness"
 )
 
 st.sidebar.markdown("---")
@@ -274,7 +274,7 @@ if review_file is not None:
                             {"role": "system", "content": system_prompt},
                             {"role": "user", "content": user_content}
                         ],
-                        temperature=0.3,
+                        reasoning_effort="low",
                         response_format={"type": "json_object"}
                     )
 

@@ -53,7 +53,7 @@ with st.expander("How to use this tool"):
     - A CSV with at least one column containing review text
 
     **Tips:**
-    - gpt-4o-mini is recommended for cost-effectiveness
+    - gpt-6-luna is recommended for cost-effectiveness
     - Larger batch sizes reduce the number of API calls but increase token usage per call
     - After tagging, use the **Tag Consolidator** tool to group granular tags into broader categories
     """)
@@ -69,8 +69,8 @@ api_key = st.sidebar.text_input(
 
 model = st.sidebar.selectbox(
     "Model",
-    ["gpt-4o-mini", "gpt-4o", "gpt-4.1"],
-    help="gpt-4o-mini is recommended for cost-effectiveness",
+    ["gpt-6-luna", "gpt-6.1-terra"],
+    help="gpt-6-luna is recommended for cost-effectiveness",
 )
 
 batch_size = st.sidebar.number_input(

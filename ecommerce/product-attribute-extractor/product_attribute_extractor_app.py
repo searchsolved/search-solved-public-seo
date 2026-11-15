@@ -14,6 +14,8 @@ Website: https://leefoot.com
 import streamlit as st
 import pandas as pd
 from product_attribute_extractor import (
+    DEFAULT_MODEL,
+    OPENAI_MODELS,
     create_client,
     extract_attributes,
     sort_columns_by_frequency,
@@ -82,8 +84,11 @@ base_url = st.sidebar.text_input(
 
 model = st.sidebar.text_input(
     "Model",
-    value="gpt-4o-mini",
-    help="Model identifier. Use gpt-4o-mini for cost-effective extraction.",
+    value=DEFAULT_MODEL,
+    help=(
+        "Model identifier. OpenAI models: " + ", ".join(OPENAI_MODELS)
+        + " (gpt-6-luna is the most cost-effective). For a local server, use its own model name."
+    ),
 )
 
 # --- File upload ---

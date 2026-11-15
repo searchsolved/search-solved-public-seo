@@ -65,8 +65,8 @@ api_key = st.sidebar.text_input(
 
 model = st.sidebar.selectbox(
     "Model",
-    ["gpt-4o-mini", "gpt-4o", "gpt-4.1"],
-    help="GPT-4o-mini is recommended for cost-effectiveness",
+    ["gpt-6-luna", "gpt-6.1-terra"],
+    help="gpt-6-luna is recommended for cost-effectiveness",
 )
 
 # File upload

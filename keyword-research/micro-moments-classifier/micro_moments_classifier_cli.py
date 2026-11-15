@@ -64,8 +64,8 @@ Include ALL keywords in your response."""
             model=model,
             messages=messages,
             response_format={"type": "json_object"},
-            temperature=0,
-            max_tokens=4000
+            max_completion_tokens=16000,  # room for the model's reasoning as well as the reply
+            reasoning_effort="low",
         )
 
         response_content = completion.choices[0].message.content
@@ -90,9 +90,9 @@ def main():
                         help='Keyword column name (default: keyword)')
     parser.add_argument('--batch-size', type=int, default=50,
                         help='Keywords per API call (default: 50)')
-    parser.add_argument('--model', default='gpt-4o-mini',
-                        choices=['gpt-4o-mini', 'gpt-4o', 'gpt-4.1'],
-                        help='OpenAI model (default: gpt-4o-mini)')
+    parser.add_argument('--model', default='gpt-6-luna',
+                        choices=['gpt-6-luna', 'gpt-6.1-terra'],
+                        help='OpenAI model (default: gpt-6-luna)')
     parser.add_argument('--no-confidence', action='store_true',
                         help='Skip confidence scores')
 

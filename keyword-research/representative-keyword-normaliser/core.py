@@ -21,6 +21,10 @@ DEFAULT_BASE_URL = "http://127.0.0.1:11434/v1"
 DEFAULT_MODEL = "qwen2.5:7b"
 DEFAULT_API_KEY = "not-needed"  # Local servers such as Ollama do not require a key
 
+# OpenAI models offered by every tool in this repository, for use with
+# https://api.openai.com/v1. The local default model above is unchanged.
+OPENAI_MODELS = ["gpt-6-luna", "gpt-6.1-terra"]
+
 SYSTEM_PROMPT = (
     "You are a keyword research assistant. "
     "Provide only the requested keyword in the specified JSON format."
@@ -45,6 +49,18 @@ RESPONSE_FORMAT = {
 
 class UnableToParseJSONError(Exception):
     pass
+
+
+def reasoning_params(model, effort="low"):
+    """Extra request parameters for OpenAI's gpt-6 reasoning models.
+
+    gpt-6 models take reasoning_effort and do not accept temperature. Local
+    and other OpenAI-compatible servers may reject reasoning_effort, so it is
+    only sent when the model name starts with "gpt-6".
+    """
+    if str(model).strip().lower().startswith("gpt-6"):
+        return {"reasoning_effort": effort}
+    return {}
 
 
 def build_client(base_url=DEFAULT_BASE_URL, api_key=DEFAULT_API_KEY):
@@ -86,6 +102,7 @@ def process_keyword(keyword, client, model=DEFAULT_MODEL):
             model=model,
             messages=messages,
             response_format=RESPONSE_FORMAT,
+            **reasoning_params(model),
         )
 
         response_content = completion.choices[0].message.content

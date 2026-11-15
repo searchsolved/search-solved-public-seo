@@ -16,7 +16,7 @@ Usage:
 
     # Custom column and model
     python h1_to_query_simplifier_cli.py --input h1s.csv --output out.csv \
-        --column "H1-1" --model claude-haiku-4-5
+        --column "H1-1" --model claude-sonnet-5-5
 
 Author: Lee Foot
 Website: https://www.leefoot.com
@@ -35,14 +35,26 @@ from tqdm import tqdm
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "claude-haiku-4-5"
+CLAUDE_MODELS = ["claude-haiku-5-5", "claude-sonnet-5-5"]
+DEFAULT_MODEL = "claude-haiku-5-5"
 OUTPUT_COLUMN = "H1_Simplified"
 
-PROMPT_TEMPLATE = """Convert this H1 into a natural Google search query. Remove marketing language, step counts, and promotional words. Focus on the core search intent.
+PROMPT_TEMPLATE = """Convert this H1 into a natural Google search query. Remove marketing language, step counts, and promotional words. Focus on the core search intent. Reply with one search query only, on a single line.
 
 H1: "{h1_text}"
 
 Search query:"""
+
+
+def claude_text(message):
+    """Return the reply text from a Claude response.
+
+    Current Claude models can return thinking blocks before the text, so the
+    reply is read by block type, not by position. Raises if the model declined.
+    """
+    if message.stop_reason == "refusal":
+        raise RuntimeError("Claude declined this request.")
+    return "".join(block.text for block in message.content if block.type == "text")
 
 
 def simplify_h1(client, h1_text, model):
@@ -50,12 +62,15 @@ def simplify_h1(client, h1_text, model):
     try:
         message = client.messages.create(
             model=model,
-            max_tokens=200,
+            max_tokens=4000,  # room for the model's thinking as well as the reply
+            output_config={"effort": "low"},
             messages=[
                 {"role": "user", "content": PROMPT_TEMPLATE.format(h1_text=h1_text)}
             ],
         )
-        simplified = message.content[0].text.strip()
+        simplified = claude_text(message).strip()
+        # Keep only the first line: the model sometimes adds an alternative after a blank line
+        simplified = next((line for line in simplified.splitlines() if line.strip()), "")
         # Remove any remaining quotation marks or extra formatting
         simplified = simplified.replace('"', "").replace("'", "").strip()
         return simplified
@@ -173,7 +188,8 @@ def main():
     parser.add_argument(
         "--model",
         default=DEFAULT_MODEL,
-        help=f"Anthropic model to use (default: {DEFAULT_MODEL})",
+        choices=CLAUDE_MODELS,
+        help=f"Claude model to use (default: {DEFAULT_MODEL})",
     )
     parser.add_argument(
         "--save-frequency",

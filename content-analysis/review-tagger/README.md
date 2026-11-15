@@ -48,7 +48,7 @@ streamlit run review_tagger_app.py
 ```
 
 1. Enter your OpenAI API key in the sidebar
-2. Choose a model (gpt-4o-mini is the default and recommended for cost)
+2. Choose a model: gpt-6-luna (the default and recommended for cost) or gpt-6.1-terra
 3. Upload your CSV and select the column containing review text
 4. Adjust the batch size if needed (default: 25 reviews per API call)
 5. Click "Tag Reviews" and download the results
@@ -69,7 +69,7 @@ Options:
 | `--input` | (required) | Input CSV with reviews |
 | `--output` | `tagged_reviews.csv` | Output CSV path |
 | `--column` | `Review` | Name of the review text column |
-| `--model` | `gpt-4o-mini` | OpenAI model |
+| `--model` | `gpt-6-luna` | OpenAI model: `gpt-6-luna` or `gpt-6.1-terra` |
 | `--batch-size` | `25` | Number of reviews per API call |
 
 ## Pairing with Tag Consolidator

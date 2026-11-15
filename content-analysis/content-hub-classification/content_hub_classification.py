@@ -5,7 +5,7 @@
 #  Classify article content into content hub categories using OpenAI GPT.          #
 #                                                                                  #
 ####################################################################################
-# Author   : Lee Foot                                                              #
+# Author: Lee Foot                                                                 #
 # Website  : https://www.leefoot.com                                               #
 # Contact  : https://www.leefoot.com/contact                                       #
 # Email    : hello@leefoot.com                                                     #
@@ -40,7 +40,7 @@ import pandas as pd
 from openai import OpenAI
 
 # Configuration
-MODEL = "gpt-4o-mini"  # OpenAI model to use
+MODEL = "gpt-6-luna"  # OpenAI model: gpt-6-luna or gpt-6.1-terra
 SAVE_PATH = os.path.join(os.getcwd(), 'content_analysis_output.csv')
 
 # Get API key from environment variable
@@ -137,7 +137,8 @@ def analyze_article(article_text):
         completion = client.chat.completions.create(
             model=MODEL,
             messages=messages,
-            response_format=response_format
+            response_format=response_format,
+            reasoning_effort="low",
         )
 
         # Parse and return the response

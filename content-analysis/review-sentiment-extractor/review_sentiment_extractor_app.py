@@ -115,7 +115,7 @@ def process_reviews(df, review_col, id_col, client, model, batch_size, delay,
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_content}
                 ],
-                temperature=0.3,
+                reasoning_effort="low",
                 response_format={"type": "json_object"}
             )
 
@@ -152,7 +152,7 @@ with st.sidebar:
 
     model = st.selectbox(
         "Model",
-        ["gpt-4o-mini", "gpt-4o", "gpt-4.1"],
+        ["gpt-6-luna", "gpt-6.1-terra"],
         help="Select the OpenAI model to use"
     )
 

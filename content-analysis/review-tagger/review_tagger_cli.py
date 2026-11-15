@@ -29,6 +29,7 @@ from review_tagger import (
     DEFAULT_BATCH_SIZE,
     DEFAULT_COLUMN,
     DEFAULT_MODEL,
+    OPENAI_MODELS,
     tag_reviews,
 )
 
@@ -51,6 +52,7 @@ def main():
     parser.add_argument(
         "--model",
         default=DEFAULT_MODEL,
+        choices=OPENAI_MODELS,
         help=f"OpenAI model (default: {DEFAULT_MODEL})",
     )
     parser.add_argument(

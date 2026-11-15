@@ -46,7 +46,7 @@ with st.expander("How to use this tool"):
     - Editorial calendar development
     """)
 st.markdown("""
-Use AI (GPT-4o) to organize keywords into hierarchical topical maps.
+Use AI (OpenAI gpt-6.1-terra by default) to organize keywords into hierarchical topical maps.
 Great for content strategy planning and building comprehensive topic coverage.
 """)
 
@@ -71,16 +71,15 @@ api_key = st.sidebar.text_input(
 
 # Model selection
 model_options = {
-    'gpt-4o': 'GPT-4o (Recommended)',
-    'gpt-4o-mini': 'GPT-4o Mini (Faster/Cheaper)',
-    'gpt-4.1': 'GPT-4.1 (Latest)'
+    'gpt-6.1-terra': 'gpt-6.1-terra (Recommended)',
+    'gpt-6-luna': 'gpt-6-luna (Faster/Cheaper)'
 }
 
 selected_model = st.sidebar.selectbox(
     "AI Model",
     options=list(model_options.keys()),
     format_func=lambda x: model_options[x],
-    help="GPT-4o provides best results for topical mapping"
+    help="gpt-6.1-terra gives a good balance of quality and cost for topical mapping"
 )
 
 # Hierarchy depth
@@ -145,7 +144,7 @@ The output should be in JSON format with the following structure:
                 },
                 {"role": "user", "content": prompt_content}
             ],
-            temperature=0.7
+            reasoning_effort="low",
         )
 
         content = response.choices[0].message.content

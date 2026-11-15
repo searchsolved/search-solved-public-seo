@@ -51,10 +51,12 @@ Start the Ollama with a model loaded and the defaults will work as-is. No API ke
 
 ### OpenAI
 
+Use `gpt-6-luna` (lower cost) or `gpt-6.1-terra`.
+
 ```bash
 export OPENAI_API_KEY=your-key
 python cli.py --input keywords.csv --output normalised.csv \
-    --base-url https://api.openai.com/v1 --model gpt-4o-mini
+    --base-url https://api.openai.com/v1 --model gpt-6-luna
 ```
 
 ## Output

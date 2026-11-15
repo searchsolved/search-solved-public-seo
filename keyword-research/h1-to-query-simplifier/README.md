@@ -36,7 +36,7 @@ Options:
 | `--input` | required | Path to the input CSV |
 | `--output` | required | Path to the output CSV (also used to resume) |
 | `--column` | `H1-1` | Column containing the H1 text |
-| `--model` | `claude-haiku-4-5` | Anthropic model to use |
+| `--model` | `claude-haiku-5-5` | Claude model to use: `claude-haiku-5-5` or `claude-sonnet-5-5` |
 | `--save-frequency` | `10` | Save progress every N processed rows |
 | `--delay` | `0.1` | Delay in seconds between API requests |
 

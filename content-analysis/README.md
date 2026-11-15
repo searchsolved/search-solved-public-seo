@@ -11,7 +11,7 @@ Extract and visualize named entities using GPT with beautiful D3.js circle packi
 - **Use Case**: Content entity analysis and visualization
 - **Input**: Text content or URLs
 - **Output**: Interactive D3.js circle packing visualization with entity labels
-- **Features**: GPT-3.5/GPT-4 extraction, SpaCy-style labels, Wikipedia URLs
+- **Features**: GPT extraction (gpt-6-luna or gpt-6.1-terra), SpaCy-style labels, Wikipedia URLs
 
 #### 🌍 **Bulk H1 Translator**
 Translate H1 headings to English in bulk using a local LLM or any OpenAI-compatible API.
@@ -32,7 +32,7 @@ Review web content and get AI-powered annotations with improvement suggestions.
 - **Use Case**: Content audits, SEO optimization suggestions
 - **Input**: URLs, Firecrawl API key, Claude/OpenAI API key
 - **Output**: Annotated reviews with inline suggestions
-- **Features**: Firecrawl integration, Claude or GPT-4 review, SEO/UX/conversion tips
+- **Features**: Firecrawl integration, Claude or GPT review, SEO/UX/conversion tips
 
 #### 🔑 **Keyword Extractor (LLM)**
 Extract and categorize keywords from content for internal linking opportunities.
@@ -46,28 +46,28 @@ Create "At a glance" bullet point summaries from articles using AI.
 - **Use Case**: Featured snippets, newsletters, content previews
 - **Input**: Article URLs or text
 - **Output**: Concise bullet point summaries
-- **Features**: Claude or GPT-4 summaries, configurable bullet count
+- **Features**: Claude or GPT summaries, configurable bullet count
 
 #### 🔄 **Content Repurposer**
 Transform blog posts into social media, email, video scripts, and more.
 - **Use Case**: Multi-channel content distribution
 - **Input**: Blog post URL or content
 - **Output**: 10 different content formats (Twitter threads, LinkedIn posts, etc.)
-- **Features**: Claude and GPT-4 support, platform-specific optimization
+- **Features**: Claude and GPT support, platform-specific optimization
 
 #### 📊 **Meta Description Grader**
-Score and compare meta descriptions using GPT-4 on key SEO criteria.
+Score and compare meta descriptions using GPT on key SEO criteria.
 - **Use Case**: Meta description optimization, team training
 - **Input**: Meta descriptions to analyze
 - **Output**: Scores for emotional hook, benefit statement, active voice, urgency
-- **Features**: GPT-4 powered grading, actionable feedback
+- **Features**: GPT-powered grading, actionable feedback
 
 #### ✏️ **Meta Description Rewriter**
 Rewrite meta descriptions using AI with proper length optimization.
 - **Use Case**: Bulk meta description optimization
 - **Input**: Existing meta descriptions
 - **Output**: Optimized meta descriptions for desktop and mobile
-- **Features**: GPT-4 rewriting, length targets, SEO best practices
+- **Features**: GPT rewriting, length targets, SEO best practices
 
 #### 🎯 **Page Intent Classifier**
 Use OpenAI to classify page intent and expected user actions.
@@ -220,9 +220,9 @@ pip install scikit-learn                 # TF-IDF matching
 ```
 
 ### **LLM Configuration**
-- Support for GPT-3.5, GPT-4, and GPT-4o
-- Support for Claude 3 models
-- Configurable temperature and token limits
+- OpenAI tools offer gpt-6-luna and gpt-6.1-terra
+- Claude tools offer claude-haiku-5-5 and claude-sonnet-5-5
+- Simple jobs (tagging, classifying, extracting, short rewrites) default to the cheaper model; long-form writing and whole-article review default to the mid-tier model
 - Batch processing for efficiency
 
 ## Best Practices

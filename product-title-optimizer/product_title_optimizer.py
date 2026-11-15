@@ -14,8 +14,14 @@ Optimizes product titles to follow consistent word order while preserving all in
 
 Usage:
     python product_title_optimizer.py --input products.csv --output optimized.csv
-    python product_title_optimizer.py --input products.csv --api-key YOUR_KEY --model gpt-4o
+    python product_title_optimizer.py --input products.csv --api-key YOUR_KEY --model gpt-6-luna
     python product_title_optimizer.py --input products.csv --base-url http://localhost:1234/v1  # Local LLM
+
+OpenAI models: gpt-6.1-terra (default) or gpt-6-luna. With --base-url, use the
+model name your server exposes.
+
+Author: Lee Foot
+Website: https://www.leefoot.com
 """
 
 import argparse
@@ -41,6 +47,24 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# OpenAI models offered for this tool, default first. Local servers set with
+# --base-url take their own model name instead.
+OPENAI_MODELS = ["gpt-6.1-terra", "gpt-6-luna"]
+DEFAULT_MODEL = "gpt-6.1-terra"
+
+
+def request_params(model, max_tokens):
+    """Length and reasoning parameters for a chat completions request.
+
+    OpenAI's gpt-6 models are reasoning models: they take reasoning_effort and
+    max_completion_tokens, and the reasoning counts against that cap, so it is
+    set to four times the old max_tokens. Local and other OpenAI-compatible
+    servers may reject those parameters, so they keep max_tokens.
+    """
+    if str(model).strip().lower().startswith("gpt-6"):
+        return {"reasoning_effort": "low", "max_completion_tokens": max(4000, max_tokens * 4)}
+    return {"max_tokens": max_tokens}
+
 
 def get_client(api_key, base_url):
     """Initialize OpenAI client."""
@@ -56,10 +80,15 @@ def get_client(api_key, base_url):
         raise ValueError("No API key provided. Use --api-key or set OPENAI_API_KEY environment variable")
 
 
-def num_tokens_from_string(text, model="gpt-4"):
-    """Returns the number of tokens in a text string."""
+def num_tokens_from_string(text, encoding_name="cl100k_base"):
+    """Returns the number of tokens in a text string.
+
+    Uses a named tiktoken encoding rather than a model name, because tiktoken
+    does not know every model name (the gpt-6 models included). cl100k_base
+    is the encoding the GPT-4 family used, so counts match earlier versions.
+    """
     try:
-        encoding = tiktoken.encoding_for_model(model)
+        encoding = tiktoken.get_encoding(encoding_name)
         return len(encoding.encode(text))
     except Exception:
         return len(text.split()) * 1.3  # Rough estimate
@@ -110,8 +139,8 @@ Product titles to analyze:
                 {"role": "system", "content": "You are a product title template creator that always responds with a valid JSON object."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=max_tokens,
-            response_format={"type": "json_object"}
+            response_format={"type": "json_object"},
+            **request_params(model, max_tokens),
         )
 
         json_str = extract_json(response.choices[0].message.content)
@@ -165,8 +194,8 @@ IMPORTANT: Ensure that ALL numbers, measurements, and specific details from the 
                     {"role": "system", "content": "You are a product title optimizer that always responds with a valid JSON object."},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=max_tokens,
-                response_format={"type": "json_object"}
+                response_format={"type": "json_object"},
+                **request_params(model, max_tokens),
             )
 
             json_str = extract_json(response.choices[0].message.content)
@@ -298,8 +327,11 @@ def main():
     )
     parser.add_argument(
         "--model",
-        default="gpt-4o",
-        help="Model to use (default: gpt-4o)"
+        default=DEFAULT_MODEL,
+        help=(
+            f"Model to use (default: {DEFAULT_MODEL}). OpenAI models: "
+            f"{', '.join(OPENAI_MODELS)}. With --base-url, use your server's model name."
+        )
     )
     parser.add_argument(
         "--batch-size",

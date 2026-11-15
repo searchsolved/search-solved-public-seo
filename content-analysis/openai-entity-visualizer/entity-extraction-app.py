@@ -1,3 +1,15 @@
+# Author   : Lee Foot
+# Website  : https://leefoot.com
+"""
+Entity Extraction & Visualisation App
+
+Extracts named entities from text with an OpenAI model (gpt-6-luna or
+gpt-6.1-terra) and shows them in a D3 circle packing chart.
+
+Author: Lee Foot
+Website: https://leefoot.com
+"""
+
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
@@ -49,7 +61,7 @@ with st.expander("User Guide"):
 
 # Constants for OpenAI model and token limits
 api_key = st.text_input("Enter your OpenAI API key:", type="password")
-model = st.selectbox("Choose the model:", ["gpt-4o-mini", "gpt-4o"])
+model = st.selectbox("Choose the model:", ["gpt-6-luna", "gpt-6.1-terra"])
 max_tokens = st.slider("Maximum Tokens:", min_value=500, max_value=2000, value=1000, step=100)
 input_text = st.text_area("Enter your text here:", height=150)
 
@@ -140,8 +152,10 @@ def batch_process_and_create_dataframe(input_text, client):
     Returns:
     pandas.DataFrame: A DataFrame containing the results of the entity recognition process.
     """
-    # Initialize the tokenizer
-    enc = tiktoken.encoding_for_model(model)
+    # Initialize the tokenizer. tiktoken does not know the gpt-6 model names,
+    # so the o200k_base encoding (used by OpenAI's recent models) is used to
+    # split the text into batches. Batch sizes are approximate.
+    enc = tiktoken.get_encoding("o200k_base")
 
     # Tokenize the input text
     tokens = enc.encode(input_text)
@@ -184,7 +198,8 @@ def batch_process_and_create_dataframe(input_text, client):
                     "role": "user",
                     "content": batch_text
                 }
-            ]
+            ],
+            reasoning_effort="low",
         )
         # Extract and store the response
         batch_response = json.loads(response.choices[0].message.content)

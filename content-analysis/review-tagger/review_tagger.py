@@ -1,7 +1,7 @@
 """
 Review Tagger - Core Module
 
-Uses OpenAI's GPT models to assign a one or two-word descriptive tag to each
+Uses OpenAI's gpt-6 models (gpt-6-luna by default) to assign a one or two-word descriptive tag to each
 review in a dataset. Reviews are sent in batches to keep token usage efficient
 and the model returns a JSON mapping of row IDs to tags.
 
@@ -15,7 +15,8 @@ import time
 import pandas as pd
 from openai import OpenAI
 
-DEFAULT_MODEL = "gpt-4o-mini"
+OPENAI_MODELS = ["gpt-6-luna", "gpt-6.1-terra"]
+DEFAULT_MODEL = "gpt-6-luna"
 DEFAULT_BATCH_SIZE = 25
 DEFAULT_COLUMN = "Review"
 MAX_RETRIES = 3
@@ -108,6 +109,7 @@ def _call_with_retries(client, messages, model):
                 model=model,
                 messages=messages,
                 response_format={"type": "json_object"},
+                reasoning_effort="low",
                 timeout=60,
             )
 

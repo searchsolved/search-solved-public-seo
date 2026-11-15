@@ -1,5 +1,22 @@
+"""
+Content Duplication Finder - Streamlit App
+
+Finds near-duplicate pages by comparing the main copy of every page with
+every other page, using PolyFuzz TF-IDF matching.
+
+Author: Lee Foot
+Website: https://www.leefoot.com
+"""
+
 import streamlit as st
 import pandas as pd
+import matplotlib
+import matplotlib.cm
+
+# PolyFuzz imports matplotlib.cm.get_cmap, which matplotlib 3.9 removed.
+if not hasattr(matplotlib.cm, "get_cmap"):
+    matplotlib.cm.get_cmap = matplotlib.colormaps.get_cmap
+
 from polyfuzz import PolyFuzz
 from io import BytesIO
 
@@ -68,13 +85,15 @@ if uploaded_file is not None:
 
         if st.button("🔍 Find Duplicates", type="primary"):
             with st.spinner("Analyzing content similarity... This may take a few minutes for large sites."):
-                # Make lists for comparison
+                # Compare every page's copy with every other page's copy.
+                # Passing one list tells PolyFuzz to leave out each page's match
+                # with itself. Passing the same list twice made every page match
+                # itself, so no duplicates were ever reported.
                 from_list = list(df_clean['Copy 1'])
-                to_list = list(df_clean['Copy 1'])
 
                 # Do the matching with PolyFuzz
                 model = PolyFuzz("TF-IDF")
-                model.match(from_list, to_list)
+                model.match(from_list)
 
                 # Group the matches
                 model.group(link_min_similarity=group_similarity)

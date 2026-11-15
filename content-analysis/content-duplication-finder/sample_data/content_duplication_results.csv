@@ -1,0 +1,9 @@
+Source URL,Matched URL,Similarity,Duplicate Cluster Name,Pages in Cluster
+https://www.yourstore.example/stores/skipton,https://www.yourstore.example/stores/leeds,0.654,York Running Shop,5
+https://www.yourstore.example/stores/leeds,https://www.yourstore.example/stores/york,0.845,York Running Shop,5
+https://www.yourstore.example/stores/harrogate,https://www.yourstore.example/stores/leeds,0.692,York Running Shop,5
+https://www.yourstore.example/stores/sheffield,https://www.yourstore.example/stores/leeds,0.807,York Running Shop,5
+https://www.yourstore.example/stores/york,https://www.yourstore.example/stores/leeds,0.845,York Running Shop,5
+https://www.yourstore.example/guides/how-to-choose-trail-shoes,https://www.yourstore.example/guides/running-shoe-buying-guide,0.888,How to Choose Running Shoes,3
+https://www.yourstore.example/guides/how-to-choose-running-shoes,https://www.yourstore.example/guides/running-shoe-buying-guide,0.982,How to Choose Running Shoes,3
+https://www.yourstore.example/guides/running-shoe-buying-guide,https://www.yourstore.example/guides/how-to-choose-running-shoes,0.982,How to Choose Running Shoes,3

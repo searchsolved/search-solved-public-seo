@@ -1,3 +1,5 @@
+# Author: Lee Foot
+# Website: https://www.leefoot.com
 ####################################################################################
 # Author   : Lee Foot                                                              #
 # Website  : https://www.leefoot.com                                               #
@@ -20,6 +22,13 @@ import pandas as pd
 import requests as req
 import waybackpy
 from bs4 import BeautifulSoup
+import matplotlib
+import matplotlib.cm
+
+# PolyFuzz imports matplotlib.cm.get_cmap, which matplotlib 3.9 removed.
+if not hasattr(matplotlib.cm, "get_cmap"):
+    matplotlib.cm.get_cmap = matplotlib.colormaps.get_cmap
+
 from polyfuzz import PolyFuzz
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry

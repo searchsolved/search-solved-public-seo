@@ -1,3 +1,5 @@
+# Author: Lee Foot
+# Website: https://www.leefoot.com
 ####################################################################################
 #                                                                                  #
 #  Keyword-to-Page Mapper                                                          #
@@ -97,6 +99,13 @@ transformer_model = st.sidebar.selectbox(
 def load_models(model_name):
     """Load PolyFuzz and embedding models."""
     try:
+        import matplotlib
+        import matplotlib.cm
+
+        # PolyFuzz imports matplotlib.cm.get_cmap, which matplotlib 3.9 removed.
+        if not hasattr(matplotlib.cm, "get_cmap"):
+            matplotlib.cm.get_cmap = matplotlib.colormaps.get_cmap
+
         from polyfuzz import PolyFuzz
         from polyfuzz.models import SentenceEmbeddings
         from sentence_transformers import SentenceTransformer

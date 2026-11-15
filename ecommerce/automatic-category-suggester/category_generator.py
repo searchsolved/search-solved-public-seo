@@ -18,6 +18,13 @@ import collections
 import re
 import string
 import chardet
+import matplotlib
+import matplotlib.cm
+
+# PolyFuzz imports matplotlib.cm.get_cmap, which matplotlib 3.9 removed.
+if not hasattr(matplotlib.cm, "get_cmap"):
+    matplotlib.cm.get_cmap = matplotlib.colormaps.get_cmap
+
 from polyfuzz import PolyFuzz
 
 import math

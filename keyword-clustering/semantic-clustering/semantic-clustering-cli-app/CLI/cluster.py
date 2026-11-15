@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Author: Lee Foot
+# Website: https://www.leefoot.com
 ####################################################################################
 # Author   : Lee Foot                                                              #
 # Website  : https://www.leefoot.com                                               #
@@ -20,6 +22,13 @@ import pandas as pd
 import plotly.express as px
 import plotly.io as pio
 import typer
+import matplotlib
+import matplotlib.cm
+
+# PolyFuzz imports matplotlib.cm.get_cmap, which matplotlib 3.9 removed.
+if not hasattr(matplotlib.cm, "get_cmap"):
+    matplotlib.cm.get_cmap = matplotlib.colormaps.get_cmap
+
 from polyfuzz import PolyFuzz
 from polyfuzz.models import SentenceEmbeddings
 from rich import print

@@ -9,10 +9,14 @@ Website: https://www.leefoot.com
 
 import streamlit as st
 import pandas as pd
-import requests
-from bs4 import BeautifulSoup
-import json
 import time
+
+from content_blocks_core import (
+    add_frequency,
+    blocks_to_frame,
+    extract_from_url,
+    xpath_reference,
+)
 
 try:
     from anthropic import Anthropic
@@ -32,15 +36,15 @@ st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-
 with st.expander("How to use this tool"):
     st.markdown("""
     **What this tool does:**
-    - Extracts structured content blocks from pages
-    - Identifies headers, paragraphs, lists
-    - Maps content structure for analysis
+    - Fetches each page and removes scripts, styles, header, footer and nav
+    - Asks Claude to name the major content blocks and give an XPath for each
+    - Counts how often each XPath appears across the pages
 
     **How to use:**
-    1. Upload URLs or paste HTML
-    2. Configure extraction options
+    1. Enter your Anthropic API key in the sidebar
+    2. Enter one URL, paste several, or upload a CSV and pick the URL column
     3. Extract content blocks
-    4. Download structured output
+    4. Download the results, with or without the frequency column
 
     **Best for:**
     - Content structure audits
@@ -50,99 +54,24 @@ with st.expander("How to use this tool"):
 st.markdown("Use AI to identify content blocks and their XPath selectors from web pages.")
 
 
-def fetch_webpage(url, timeout=30):
-    """Fetch webpage content."""
-    try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-        response = requests.get(url, headers=headers, timeout=timeout)
-        response.raise_for_status()
-        return response.text, None
-    except Exception as e:
-        return None, str(e)
-
-
-def filter_html(html_content):
-    """Remove scripts, styles, header, footer, nav to reduce tokens."""
-    soup = BeautifulSoup(html_content, 'html.parser')
-
-    for tag in soup(['script', 'style', 'noscript', 'meta', 'link', 'header', 'footer', 'nav']):
-        tag.decompose()
-
-    return str(soup)
-
-
-def extract_blocks(html_content, client):
-    """Call Claude to extract content blocks with XPath."""
-    prompt = f"""Analyze this HTML and identify major content blocks/sections.
-
-For each block provide:
-- name: descriptive name
-- xpath: robust XPath expression to select this element
-- notes: brief description
-
-Focus on main content areas (hero sections, feature blocks, carousels). Skip small utility elements.
-
-Return ONLY a JSON array with this exact format:
-[
-  {{"name": "Hero Section", "xpath": "//div[@class='hero']", "notes": "Main hero banner"}},
-  {{"name": "Features", "xpath": "//section[@class='features']", "notes": "Feature grid"}}
-]
-
-HTML:
-{html_content[:50000]}
-"""
-
-    try:
-        response = client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=4000,
-            system=[{
-                "type": "text",
-                "text": "You are an expert web scraper. Extract content blocks and provide XPath selectors. Return only valid JSON."
-            }],
-            messages=[{"role": "user", "content": prompt}]
-        )
-
-        content = response.content[0].text
-
-        # Extract JSON
-        start = content.find('[')
-        end = content.rfind(']') + 1
-        if start != -1 and end > start:
-            return json.loads(content[start:end]), None
-
-        return [], "No JSON found in response"
-    except json.JSONDecodeError as e:
-        return [], f"JSON error: {str(e)}"
-    except Exception as e:
-        return [], str(e)
-
-
 def process_urls(urls, client, progress_bar, status_text):
-    """Process multiple URLs."""
-    all_blocks = []
+    """Process multiple URLs. Returns (results DataFrame, list of (url, error))."""
+    all_rows = []
+    errors = []
 
     for i, url in enumerate(urls):
         progress_bar.progress((i + 1) / len(urls))
         status_text.text(f"Processing {i + 1}/{len(urls)}: {url[:50]}...")
 
-        html, error = fetch_webpage(url)
-        if error:
-            continue
-
-        filtered = filter_html(html)
-        blocks, error = extract_blocks(filtered, client)
-
-        if blocks:
-            for block in blocks:
-                block['url'] = url
-                all_blocks.append(block)
+        try:
+            rows, info = extract_from_url(client, url)
+            all_rows.extend(rows)
+        except Exception as e:
+            errors.append((url, str(e)))
 
         time.sleep(1)  # Rate limiting
 
-    return pd.DataFrame(all_blocks)
+    return blocks_to_frame(all_rows), errors
 
 
 # Sidebar
@@ -225,10 +154,15 @@ if urls and api_key:
         progress_bar = st.progress(0)
         status_text = st.empty()
 
-        results_df = process_urls(urls, client, progress_bar, status_text)
+        results_df, errors = process_urls(urls, client, progress_bar, status_text)
 
         progress_bar.empty()
         status_text.empty()
+
+        if errors:
+            with st.expander(f"{len(errors)} URL(s) could not be processed"):
+                for failed_url, message in errors:
+                    st.markdown(f"- {failed_url}: {message}")
 
         if len(results_df) > 0:
             st.success(f"✅ Extracted {len(results_df)} content blocks from {len(urls)} URLs!")
@@ -244,6 +178,17 @@ if urls and api_key:
                     "📥 Download Results CSV",
                     data=csv,
                     file_name="content_blocks.csv",
+                    mime="text/csv",
+                    use_container_width=True
+                )
+
+                # Same file the command line script writes: one name per XPath
+                # and a frequency column, sorted by frequency.
+                combined_csv = add_frequency(results_df).to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    "📥 Download With Frequency CSV",
+                    data=combined_csv,
+                    file_name="combined_output_with_frequency.csv",
                     mime="text/csv",
                     use_container_width=True
                 )
@@ -280,18 +225,8 @@ if urls and api_key:
             with tab3:
                 st.subheader("Unique XPaths Reference")
 
-                # Create deduped reference
-                xpath_ref = (
-                    results_df.groupby('xpath')
-                    .agg({
-                        'name': 'first',
-                        'notes': 'first',
-                        'url': 'count'
-                    })
-                    .reset_index()
-                    .rename(columns={'url': 'frequency'})
-                    .sort_values('frequency', ascending=False)
-                )
+                # One row per XPath with its first name, notes and frequency
+                xpath_ref = xpath_reference(results_df)
 
                 st.dataframe(xpath_ref, use_container_width=True, height=400)
 

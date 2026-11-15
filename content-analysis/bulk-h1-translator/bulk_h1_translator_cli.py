@@ -45,13 +45,14 @@ RESPONSE_FORMAT = {
     "type": "json_schema",
     "json_schema": {
         "name": "translation_response",
-        "strict": "true",
+        "strict": True,
         "schema": {
             "type": "object",
             "properties": {
                 "translated_h1": {"type": "string"}
             },
-            "required": ["translated_h1"]
+            "required": ["translated_h1"],
+            "additionalProperties": False
         }
     }
 }

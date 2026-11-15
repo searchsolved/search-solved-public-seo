@@ -49,12 +49,33 @@ NON_CONTENT_TAGS = ["nav", "header", "footer", "aside", "script", "style"]
 NON_CONTENT_WORDS = ["nav", "menu", "sidebar", "footer", "header"]
 
 
-def is_non_content(element):
-    """True for navigation, header, footer and sidebar elements."""
+def has_non_content_name(element):
+    """True when a class or id names navigation, a menu, sidebar, header or footer.
+
+    Matches whole words within the name ("main-nav", "navbar", "site-header"),
+    not letters inside another word ("canvas").
+    """
+    names = " ".join(element.get("class") or []) + " " + (element.get("id") or "")
+    tokens = re.split(r"[^a-z0-9]+", names.lower())
+    return any(
+        token.startswith(word) for token in tokens for word in NON_CONTENT_WORDS
+    )
+
+
+def is_non_content(element, context_text_length=0):
+    """True for navigation, header, footer and sidebar elements.
+
+    An element that holds more than half of the surrounding text is never
+    treated as non-content, whatever its class says: layout wrappers are often
+    named after the sidebar they contain ("layout-with-sidebar").
+    """
     if element.name in NON_CONTENT_TAGS:
         return True
-    names = " ".join(element.get("class") or []) + " " + (element.get("id") or "")
-    return any(word in names.lower() for word in NON_CONTENT_WORDS)
+    if not has_non_content_name(element):
+        return False
+    if context_text_length and len(element.get_text(strip=True)) > context_text_length * 0.5:
+        return False
+    return True
 
 
 def content_soup(element):
@@ -119,10 +140,11 @@ def find_most_specific_selector(html, initial_selector, min_share=0.8):
         if total == 0:
             break
 
+        current_length = len(current.get_text(strip=True))
         children = [
             child
             for child in current.find_all(CONTAINER_TAGS, recursive=False)
-            if not is_non_content(child)
+            if not is_non_content(child, current_length)
         ]
         if not children:
             break
@@ -157,25 +179,15 @@ def clean_content(html):
     """Remove navigation, headers, footers, and other non-content elements."""
     soup = BeautifulSoup(html, "html.parser")
 
-    for elem in soup(["nav", "header", "footer", "aside", "script", "style"]):
+    for elem in soup(NON_CONTENT_TAGS):
         elem.decompose()
 
-    for elem in soup.find_all(
-        class_=lambda x: x
-        and any(
-            word in x.lower()
-            for word in ["nav", "menu", "sidebar", "footer", "header"]
-        )
-    ):
-        elem.decompose()
-
-    for elem in soup.find_all(
-        id=lambda x: x
-        and any(
-            word in x.lower()
-            for word in ["nav", "menu", "sidebar", "footer", "header"]
-        )
-    ):
+    total = len(soup.get_text(strip=True))
+    for elem in soup.find_all(has_non_content_name):
+        if elem.decomposed:
+            continue
+        if not is_non_content(elem, total):
+            continue
         elem.decompose()
 
     return str(soup)
@@ -286,8 +298,9 @@ def summarize_page(html):
         return []
 
     summaries = []
+    body_length = len(body.get_text(strip=True))
     for child in body.find_all(CONTAINER_TAGS, recursive=False):
-        if is_non_content(child):
+        if is_non_content(child, body_length):
             continue
         text = content_text(child)
         if not text:
@@ -308,6 +321,16 @@ def summarize_page(html):
 
     summaries.sort(key=lambda x: x["text_length"], reverse=True)
     return summaries
+
+
+def _selects_element(html, selector):
+    """True when the selector is valid and matches an element on the page."""
+    if not selector:
+        return False
+    try:
+        return BeautifulSoup(html, "html.parser").select_one(selector) is not None
+    except Exception:
+        return False
 
 
 def select_content_html(html, result):
@@ -351,6 +374,21 @@ def ask_llm(client, model, summaries, html, url):
     h.ignore_emphasis = False
     h.body_width = 0
 
+    if not summaries:
+        # Nothing to choose from (for example a page with no body), so do not
+        # spend an LLM call: extract with the heuristic alone.
+        result = {
+            "selector": None,
+            "specific_selector": None,
+            "reasoning": "No content containers were found on the page.",
+        }
+        main_content_html, extraction_source = select_content_html(html, result)
+        result["extraction_source"] = extraction_source
+        markdown_text = h.handle(main_content_html)
+        result["links"] = extract_links(markdown_text, url)
+        result["extracted_text"] = remove_html_tags(clean_text(markdown_text))
+        return result
+
     truncated_summaries = [
         {
             **s,
@@ -390,6 +428,16 @@ Provide your answer as a JSON object with the following keys:
     )
 
     result = json.loads(response.choices[0].message.content)
+
+    # The model sometimes invents a selector that is not in the list. If its
+    # answer matches nothing on the page, use the longest candidate instead.
+    if not _selects_element(html, result.get("selector")):
+        result["reasoning"] = (
+            f"{result.get('reasoning', '')} (The model's selector "
+            f"'{result.get('selector')}' matched nothing on the page, so the "
+            "longest candidate was used.)"
+        ).strip()
+        result["selector"] = summaries[0]["selector"]
 
     specific_selector = find_most_specific_selector(html, result["selector"])
     result["specific_selector"] = specific_selector

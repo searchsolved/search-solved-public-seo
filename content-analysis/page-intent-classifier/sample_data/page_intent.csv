@@ -1,0 +1,11 @@
+﻿url,intent,action,category,error
+https://www.python.org/downloads/,provide Python downloads,download Python now,download,
+https://www.python.org/about/gettingstarted/,introduce Python programming basics,get started learning,learn,
+https://www.python.org/doc/,provide Python documentation access,browse documentation resources,browse,
+https://www.python.org/psf/donations/,encourage donations to PSF,make a donation,donate,
+https://www.python.org/psf/membership/,encourage membership sign-up,sign up now,signup,
+https://www.python.org/jobs/,display job listings for Python,view job details,browse,
+https://www.python.org/events/,display upcoming Python events,view event details,browse,
+https://www.python.org/about/help/,provide Python programming help,seek assistance,learn,
+https://www.python.org/success-stories/,provide Python resources and updates,explore Python content,browse,
+https://www.python.org/community/,promote Python community engagement,join community events,other,

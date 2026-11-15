@@ -1,0 +1,50 @@
+entity,spacy_label,descriptive_tag,wikipedia_url,context,count
+Tokyo,GPE,CITY IN JAPAN,https://en.wikipedia.org/wiki/Tokyo,"['original World Marathon Majors are ... Boston, London, Berlin, Chicago']",1
+Boston,GPE,CITY IN USA,https://en.wikipedia.org/wiki/Boston,"['World Marathon Majors are Tokyo, ... London, Berlin, Chicago and', 'Chicago and New York. The ... Marathon is the oldest']",1
+London,GPE,CITY IN UK,https://en.wikipedia.org/wiki/London,"['Marathon Majors are Tokyo, Boston, ... Berlin, Chicago and New', 'for fast times, and the ... Marathon finishes on The', 'womens marathon record at the ... Marathon in 2003. Kipchoge', 'began in Bushy Park in ... in 2004 and is']",2
+Berlin,GPE,CITY IN GERMANY,https://en.wikipedia.org/wiki/Berlin,"['Majors are Tokyo, Boston, London, ... Chicago and New York.', 'first run in 1897. The ... Marathon is known for', '2003. Kipchoge has won the ... Marathon several times, and']",1
+Chicago,GPE,CITY IN USA,https://en.wikipedia.org/wiki/Chicago,"['are Tokyo, Boston, London, Berlin, ... and New York. The']",1
+New York,GPE,CITY IN USA,https://en.wikipedia.org/wiki/New_York_City,"['Boston, London, Berlin, Chicago and ... The Boston Marathon', 'times, and Radcliffe won the ... City Marathon three']",1
+Boston Marathon,EVENT,ANNUAL RUNNING EVENT,https://en.wikipedia.org/wiki/Boston_Marathon,['Chicago and New York. The ... is the oldest'],1
+Berlin Marathon,EVENT,ANNUAL RUNNING EVENT,https://en.wikipedia.org/wiki/Berlin_Marathon,"['first run in 1897. The ... is known for', '2003. Kipchoge has won the ... several times, and']",2
+London Marathon,EVENT,ANNUAL RUNNING EVENT,https://en.wikipedia.org/wiki/London_Marathon,"['for fast times, and the ... finishes on The', 'womens marathon record at the ... in 2003. Kipchoge']",2
+Six Star Medal,AWARD,MERIT AWARD,https://en.wikipedia.org/wiki/Six_Star_Medal,['finish all six receive the ... from Abbott'],1
+Eliud Kipchoge,PERSON,KENYAN RUNNER,https://en.wikipedia.org/wiki/Eliud_Kipchoge,['from Abbott World Marathon Majors. ... of Kenya ran'],1
+Kenya,GPE,COUNTRY IN AFRICA,https://en.wikipedia.org/wiki/Kenya,['Marathon Majors. Eliud Kipchoge of ... ran a marathon distance'],1
+Vienna,GPE,CITY IN AUSTRIA,https://en.wikipedia.org/wiki/Vienna,['in under two hours in ... in 2019. Paula Radcliffe'],1
+Paula Radcliffe,PERSON,BRITISH RUNNER,https://en.wikipedia.org/wiki/Paula_Radcliffe,['hours in Vienna in 2019. ... set a womens'],1
+New York City Marathon,EVENT,ANNUAL RUNNING EVENT,https://en.wikipedia.org/wiki/New_York_City_Marathon,"['times, and Radcliffe won the ... three']",1
+Nike,ORG,SPORTS BRAND,"https://en.wikipedia.org/wiki/Nike,_Inc.","['Both athletes were sponsored by ... parkrun began in Bushy', 'Association publishes the race calendar. ... Adidas, Asics, Brooks, Saucony,', 'Japan, Adidas in Germany and ... in Oregon. Hoka began']",3
+parkrun,EVENT,RUNNING EVENT,https://en.wikipedia.org/wiki/Parkrun,"['athletes were sponsored by Nike. ... began in Bushy Park', '5K plan before their first ... You can record your']",2
+Bushy Park,GPE,PARK IN UK,https://en.wikipedia.org/wiki/Bushy_Park,['by Nike. parkrun began in ... in London in'],1
+Paul Sinton-Hewitt,PERSON,EVENT FOUNDER,https://en.wikipedia.org/wiki/Paul_Sinton-Hewitt,['in parks around the world. ... founded the event.'],1
+NHS Couch to 5K,PROGRAM,RUNNING PLAN,https://en.wikipedia.org/wiki/Couch_to_5K,['Many new runners follow the ... plan'],1
+Strava,ORG,FITNESS PLATFORM,https://en.wikipedia.org/wiki/Strava,"['can record your run on ... or with a Garmin', 'California. Most watches upload to ... and Garmin has its']",2
+Garmin,ORG,TECH COMPANY,https://en.wikipedia.org/wiki/Garmin,"['on Strava or with a ... watch. Garmin, Polar, Coros', 'or with a Garmin watch. ... Polar, Coros and Suunto', 'smartwatches that track runs too. ... is based in Kansas,', 'watches upload to Strava, and ... has its own platform', 'has its own platform called ... Connect. The Lake District']",5
+Polar,ORG,TECH COMPANY,https://en.wikipedia.org/wiki/Polar_Electro,"['with a Garmin watch. Garmin, ... Coros and Suunto all', 'Garmin is based in Kansas, ... and Suunto are from']",2
+Coros,ORG,TECH COMPANY,https://en.wikipedia.org/wiki/Coros,"['a Garmin watch. Garmin, Polar, ... and Suunto all make', 'Suunto are from Finland, and ... is based in California.']",2
+Suunto,ORG,TECH COMPANY,https://en.wikipedia.org/wiki/Suunto,"['watch. Garmin, Polar, Coros and ... all make GPS running', 'based in Kansas, Polar and ... are from Finland, and']",2
+Apple,ORG,TECH COMPANY,https://en.wikipedia.org/wiki/Apple_Inc.,['all make GPS running watches. ... and Samsung sell smartwatches'],1
+Samsung,ORG,TECH COMPANY,https://en.wikipedia.org/wiki/Samsung,['GPS running watches. Apple and ... sell smartwatches that track'],1
+Kansas,GPE,STATE IN USA,https://en.wikipedia.org/wiki/Kansas,['too. Garmin is based in ... Polar and Suunto are'],1
+Finland,GPE,COUNTRY IN EUROPE,https://en.wikipedia.org/wiki/Finland,['Polar and Suunto are from ... and Coros is based'],1
+California,GPE,STATE IN USA,https://en.wikipedia.org/wiki/California,['and Coros is based in ... Most watches upload to'],1
+Lake District,GPE,MOUNTAIN RANGE,https://en.wikipedia.org/wiki/Lake_District,['platform called Garmin Connect. The ... in Cumbria is'],1
+Cumbria,GPE,COUNTY IN UK,https://en.wikipedia.org/wiki/Cumbria,['Connect. The Lake District in ... is the home of'],1
+Bob Graham Round,EVENT,RUNNING CHALLENGE,https://en.wikipedia.org/wiki/Bob_Graham_Round,['of English fell running. The ... covers 42'],1
+Scafell Pike,GPE,MOUNTAIN IN UK,https://en.wikipedia.org/wiki/Scafell_Pike,"['Round covers 42 peaks, including ... Helvellyn and Skiddaw,']",1
+Helvellyn,GPE,MOUNTAIN IN UK,https://en.wikipedia.org/wiki/Helvellyn,"['42 peaks, including Scafell Pike, ... and Skiddaw, and starts']",1
+Skiddaw,GPE,MOUNTAIN IN UK,https://en.wikipedia.org/wiki/Skiddaw,"['including Scafell Pike, Helvellyn and ... and starts from the']",1
+Keswick,GPE,TOWN IN UK,https://en.wikipedia.org/wiki/Keswick,['from the Moot Hall in ... Kilian Jornet set a'],1
+Kilian Jornet,PERSON,SPANISH RUNNER,https://en.wikipedia.org/wiki/Kilian_Jornet,['the Moot Hall in Keswick. ... set a record'],1
+Jasmin Paris,PERSON,BRITISH RUNNER,https://en.wikipedia.org/wiki/Jasmin_Paris,"['the round in 2018, and ... has held the']",1
+Fell Runners Association,ORG,ATHLETICS ORGANIZATION,https://en.wikipedia.org/wiki/Fell_Runners_Association,['held the womens record. The ... publishes the'],1
+Adidas,ORG,SPORTS BRAND,https://en.wikipedia.org/wiki/Adidas,"['publishes the race calendar. Nike, ... Asics, Brooks, Saucony, New', 'founded in Kobe in Japan, ... in Germany and Nike']",2
+Asics,ORG,SPORTS BRAND,https://en.wikipedia.org/wiki/ASICS,"['the race calendar. Nike, Adidas, ... Brooks, Saucony, New Balance', 'best known running shoe brands. ... was founded in Kobe']",2
+Brooks,ORG,SPORTS BRAND,https://en.wikipedia.org/wiki/Brooks_Sports,"['race calendar. Nike, Adidas, Asics, ... Saucony, New Balance and']",1
+Saucony,ORG,SPORTS BRAND,https://en.wikipedia.org/wiki/Saucony,"['calendar. Nike, Adidas, Asics, Brooks, ... New Balance and Hoka']",1
+New Balance,ORG,SPORTS BRAND,https://en.wikipedia.org/wiki/New_Balance,"['Nike, Adidas, Asics, Brooks, Saucony, ... and Hoka are']",1
+Hoka,ORG,SPORTS BRAND,https://en.wikipedia.org/wiki/Hoka,"['Brooks, Saucony, New Balance and ... are among the best', 'Germany and Nike in Oregon. ... began in France and']",2
+Deckers Brands,ORG,PARENT COMPANY,https://en.wikipedia.org/wiki/Deckers_Brands,"['and is now owned by ... On, a Swiss']",1
+On,ORG,SPORTS BRAND,https://en.wikipedia.org/wiki/On_running,"['and the London Marathon finishes ... The Mall. Runners who', 'You can record your run ... Strava or with a', 'now owned by Deckers Brands. ... a Swiss company, counts']",3
+Roger Federer,PERSON,SWISS ATHLETE,https://en.wikipedia.org/wiki/Roger_Federer,"['On, a Swiss company, counts ... among its investors.']",1

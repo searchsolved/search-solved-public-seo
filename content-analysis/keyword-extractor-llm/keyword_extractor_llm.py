@@ -54,7 +54,7 @@ with st.sidebar:
         model = st.selectbox("Model", ["gpt-4o-mini", "gpt-4o", "gpt-4.1"])
     else:
         api_key = st.text_input("Anthropic API Key", type="password")
-        model = st.selectbox("Model", ["claude-sonnet-4-5-20250929", "claude-sonnet-4-20250514", "claude-haiku-4-5-20251015"])
+        model = st.selectbox("Model", ["claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5"])
 
     st.header("Extraction Settings")
     min_word_count = st.slider("Minimum words per keyword", 2, 5, 2)
@@ -155,6 +155,28 @@ Return only keywords that appear verbatim in the content."""
         return None, str(e)
 
 
+def cell_text(value):
+    """Return a spreadsheet cell as text, with blank cells as an empty string.
+
+    str() on a blank cell gives "nan", which was then treated as an existing
+    anchor and removed every keyword containing those letters.
+    """
+    if value is None or pd.isna(value):
+        return ""
+    return str(value).strip()
+
+
+def claude_text(message):
+    """Return the reply text from a Claude response.
+
+    Current Claude models can return thinking blocks before the text, so the
+    reply is read by block type, not by position. Raises if the model declined.
+    """
+    if message.stop_reason == "refusal":
+        raise RuntimeError("Claude declined this request. Try different content or another model.")
+    return "".join(block.text for block in message.content if block.type == "text")
+
+
 def extract_keywords_claude(client, model, content, url="", h1="", existing_anchors=None, min_words=2, max_kw=20):
     """Extract keywords using Claude."""
 
@@ -187,13 +209,13 @@ new_page_ideas = topics that warrant new dedicated content"""
     try:
         message = client.messages.create(
             model=model,
-            max_tokens=2000,
-            temperature=0,
+            max_tokens=4000,  # room for the model's thinking as well as the reply
+            output_config={"effort": "low"},
             system=system_prompt,
             messages=[{"role": "user", "content": user_prompt}]
         )
 
-        response_text = message.content[0].text.strip()
+        response_text = claude_text(message).strip()
 
         # Clean response
         if response_text.startswith("```"):
@@ -338,12 +360,12 @@ with tab2:
                     status.text(f"Processing row {idx + 1}/{len(df)}...")
 
                     content = str(row.get(content_col, ''))
-                    url = str(row.get(url_col, '')) if url_col != "(None)" else ""
-                    h1 = str(row.get(h1_col, '')) if h1_col != "(None)" else ""
+                    url = cell_text(row.get(url_col)) if url_col != "(None)" else ""
+                    h1 = cell_text(row.get(h1_col)) if h1_col != "(None)" else ""
 
                     existing_anchors = None
                     if anchors_col != "(None)":
-                        anchors_str = str(row.get(anchors_col, ''))
+                        anchors_str = cell_text(row.get(anchors_col))
                         if anchors_str:
                             existing_anchors = [a.strip() for a in anchors_str.split(',') if a.strip()]
 

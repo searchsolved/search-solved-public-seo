@@ -1,3 +1,5 @@
+# Author: Lee Foot
+# Website: https://www.leefoot.com
 ####################################################################################
 # Author   : Lee Foot                                                              #
 # Website  : https://www.leefoot.com                                               #
@@ -7,7 +9,7 @@
 # Bluesky  : https://bsky.app/profile/leefootseo.bsky.social                                              #
 ####################################################################################
 
-# Internal Search Report Mapper V2
+"""Internal Search Report Mapper V2
 Takes the Google Analytics search terms report and merges with a Screaming Frog crawl file to find opportunities to map
 internal searches to.
 
@@ -16,6 +18,13 @@ internal searches to.
 3) Paths are hardcoded, please enter your own for GA, Screaming Frog and the output csv files
 4) V2 Now contains fuzzy matching!"""
 
+
+import matplotlib
+import matplotlib.cm
+
+# PolyFuzz imports matplotlib.cm.get_cmap, which matplotlib 3.9 removed.
+if not hasattr(matplotlib.cm, "get_cmap"):
+    matplotlib.cm.get_cmap = matplotlib.colormaps.get_cmap
 
 from polyfuzz import PolyFuzz
 from glob import glob

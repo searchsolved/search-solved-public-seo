@@ -67,6 +67,7 @@ def main():
     print(f"Initial Selector: {result.get('selector')}")
     print(f"Specific Selector: {result.get('specific_selector')}")
     print(f"Reasoning: {result.get('reasoning')}")
+    print(f"Extracted from: {result.get('extraction_source')}")
     print()
     print("--- Extracted Content ---")
     print(result.get("extracted_text", ""))

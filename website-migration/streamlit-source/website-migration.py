@@ -16,6 +16,13 @@ import numpy as np
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib
+import matplotlib.cm
+
+# PolyFuzz imports matplotlib.cm.get_cmap, which matplotlib 3.9 removed.
+if not hasattr(matplotlib.cm, "get_cmap"):
+    matplotlib.cm.get_cmap = matplotlib.colormaps.get_cmap
+
 from polyfuzz import PolyFuzz
 from polyfuzz.models import TFIDF, EditDistance, RapidFuzz
 import plotly.graph_objects as go

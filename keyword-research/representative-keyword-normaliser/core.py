@@ -30,13 +30,14 @@ RESPONSE_FORMAT = {
     "type": "json_schema",
     "json_schema": {
         "name": "keyword_response",
-        "strict": "true",
+        "strict": True,
         "schema": {
             "type": "object",
             "properties": {
                 "keyword": {"type": "string"}
             },
-            "required": ["keyword"]
+            "required": ["keyword"],
+            "additionalProperties": False
         }
     }
 }

@@ -50,7 +50,7 @@ with st.sidebar:
 
     if provider == "Anthropic (Claude)":
         api_key = st.text_input("Anthropic API Key", type="password")
-        model = st.selectbox("Model", ["claude-sonnet-4-5-20250929", "claude-sonnet-4-20250514", "claude-haiku-4-5-20251015"])
+        model = st.selectbox("Model", ["claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5"])
     else:
         api_key = st.text_input("OpenAI API Key", type="password")
         model = st.selectbox("Model", ["gpt-4o-mini", "gpt-4o"])
@@ -131,6 +131,17 @@ PRESET_PATTERNS = {
 }
 
 
+def claude_text(message):
+    """Return the reply text from a Claude response.
+
+    Current Claude models can return thinking blocks before the text, so the
+    reply is read by block type, not by position. Raises if the model declined.
+    """
+    if message.stop_reason == "refusal":
+        raise RuntimeError("Claude declined this request. Try different content or another model.")
+    return "".join(block.text for block in message.content if block.type == "text")
+
+
 def generate_regex_claude(client, model, description, test_strings, context):
     """Generate regex using Claude."""
     prompt = f"""Generate a regex pattern for SEO use based on this description:
@@ -162,12 +173,13 @@ Important:
     try:
         message = client.messages.create(
             model=model,
-            max_tokens=1024,
+            max_tokens=4000,  # room for the model's thinking as well as the reply
+            output_config={"effort": "medium"},
             system="You are a regex expert specializing in SEO applications. Generate precise, well-documented regex patterns.",
             messages=[{"role": "user", "content": prompt}]
         )
 
-        response_text = message.content[0].text.strip()
+        response_text = claude_text(message).strip()
 
         # Clean JSON
         if "```json" in response_text:

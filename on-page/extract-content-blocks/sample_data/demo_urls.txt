@@ -1,0 +1,5 @@
+http://localhost:8765/how-to-choose-running-shoes.html
+http://localhost:8765/when-to-replace-running-shoes.html
+http://localhost:8765/trail-shoes-vs-road-shoes.html
+http://localhost:8765/couch-to-5k-week-by-week.html
+http://localhost:8765/first-10k-training-plan.html

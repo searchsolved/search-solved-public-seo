@@ -1,3 +1,5 @@
+# Author: Lee Foot
+# Website: https://www.leefoot.com
 ####################################################################################
 # Author   : Lee Foot                                                              #
 # Website  : https://www.leefoot.com                                               #
@@ -28,6 +30,13 @@ import pandas as pd
 import os
 from collections import Counter
 from sentence_transformers import SentenceTransformer
+import matplotlib
+import matplotlib.cm
+
+# PolyFuzz imports matplotlib.cm.get_cmap, which matplotlib 3.9 removed.
+if not hasattr(matplotlib.cm, "get_cmap"):
+    matplotlib.cm.get_cmap = matplotlib.colormaps.get_cmap
+
 from polyfuzz import PolyFuzz
 from polyfuzz.models import SentenceEmbeddings
 import plotly.express as px

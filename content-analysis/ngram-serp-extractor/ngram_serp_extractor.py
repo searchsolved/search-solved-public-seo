@@ -181,10 +181,13 @@ if submitted:
         for url in links:
             try:
                 downloaded = trafilatura.fetch_url(url)
+                # trafilatura 2.x returns a Document object, not a dict
                 d = bare_extraction(downloaded, config=newconfig, with_metadata=True)
-                text.append((d['text']))
-                title.append(d['title'])
-                extracted_url.append(d['url'])
+                if d is None or not d.text:
+                    continue
+                text.append(d.text)
+                title.append(d.title or '')
+                extracted_url.append(d.url or url)
             except Exception:
                 pass
 
@@ -204,7 +207,7 @@ if submitted:
                   "[", "\\", "]", "^", "-", "_", "`", "{", "|", "}", "~", "–"]
 
     for char in spec_chars:
-        df_title['title'] = df_title['title'].str.replace(char, ' ', regex=True)
+        df_title['title'] = df_title['title'].str.replace(char, ' ', regex=False)
 
     # get word counts of page title
     word_str = df_title['title']
@@ -221,7 +224,7 @@ if submitted:
     df_serp['text'] = df_serp['text'].str.lower()
 
     for char in spec_chars:
-        df_serp['text'] = df_serp['text'].str.replace(char, ' ', regex=True)
+        df_serp['text'] = df_serp['text'].str.replace(char, ' ', regex=False)
 
     # remove stop words
     df_serp['text'] = df_serp['text'].apply(lambda x: ' '.join([word for word in x.split() if word not in (stop)]))

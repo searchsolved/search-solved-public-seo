@@ -1,242 +1,92 @@
-# Web Content Block Extractor
+# Content Block Extractor
 
-**By Lee Foot | 21st October 2025** [LeeFoot.com](https://LeeFoot.com)
+**By Lee Foot** [leefoot.com](https://www.leefoot.com)
 
-A Python script that uses Claude AI to automatically identify and extract major content blocks from web pages, generating XPath selectors for each element.
+Uses Claude to identify the major content blocks on a set of pages (hero sections, feature grids, carousels and so on), gives an XPath for each, and counts how often each XPath appears across the pages. Useful for template analysis and for setting up a scraper.
 
-## Overview
+There are two ways to run it. Both use the same code (`content_blocks_core.py`) and produce the same output.
 
-This tool crawls a list of URLs, extracts the HTML content, and uses Claude Haiku to intelligently identify major content sections (hero sections, feature blocks, carousels, etc.) along with robust XPath expressions to select them. Perfect for web scraping, content analysis, or building automated testing selectors.
+| | File | Best for |
+|---|---|---|
+| Streamlit app | `extract_content_blocks_app.py` | A handful of pages, in a browser |
+| Command line | `extract_content_blocks.py` | Long URL lists, with progress saved as it goes |
 
-## Features
+## How it works
 
-- **AI-Powered Extraction**: Uses Claude Haiku to intelligently identify content blocks
-- **Frequency Analysis**: Automatically counts how often each XPath appears across all pages
-- **Incremental Saving**: Saves progress every N rows to prevent data loss
-- **Batch Processing**: Process multiple URLs with automatic rate limiting
-- **Post-Processing**: Combines all results and standardizes naming by XPath
-- **Debug Mode**: Test with a small subset of URLs before full run
+1. Fetches each page.
+2. Removes `script`, `style`, `noscript`, `meta`, `link`, `header`, `footer` and `nav` elements. Blocks inside the header, footer or nav are therefore never returned.
+3. Sends the remaining HTML to Claude Haiku 4.5 (`claude-haiku-4-5-20251001`), cut at 200,000 characters if the page is longer.
+4. Reads the JSON array of blocks from the reply. Entries without an XPath are dropped.
+5. Counts how many rows share each XPath and gives each XPath one name (the first one seen).
 
-## Prerequisites
+The XPaths are written by the model and are not tested against the page. Check them before relying on them.
 
-- Python 3.7+
-- Anthropic API key (Claude)
+## Requirements
 
-## Installation
+- Python 3.9 or later
+- An Anthropic API key
+- `pip install -r requirements.txt`
 
-1. Download the script `extract_content_blocks.py`
-
-2. Install required packages:
-```bash
-pip install requests beautifulsoup4 anthropic pandas
-```
-
-3. Get your Anthropic API key from [https://console.anthropic.com/](https://console.anthropic.com/)
-
-4. Open the script and add your API key:
-```python
-# Your API key
-api_key = "YOUR CLAUDE KEY HERE"  # Replace with your actual API key
-```
-
-## Project Structure
-
-```
-zb_extract_content_blocks/
-│
-├── input/
-│   └── urls.txt                          # Your list of URLs to process
-│
-├── output/
-│   ├── content_blocks_*.csv              # Individual batch files
-│   └── combined_output_with_frequency.csv # Final processed results
-│
-└── extract_content_blocks.py             # Main script
-```
-
-## Usage
-
-### 1. Prepare Your URL List
-
-Create a file at `input/urls.txt` with one URL per line:
-
-```
-https://example.com
-https://example.com/products
-https://example.com/about
-https://anothersite.com
-```
-
-### 2. Configure the Script (Optional)
-
-Edit these settings at the top of `extract_content_blocks.py`:
-
-```python
-# DEBUG MODE: Set to True to process only 2 URLs for testing
-DEBUG_MODE = False
-
-# INCREMENTAL SAVE: Save progress every N rows
-SAVE_EVERY_N_ROWS = 50
-
-# Update paths if needed
-INPUT_FILE = r"C:\python_scripts\zb_extract_content_blocks\input\urls.txt"
-OUTPUT_DIR = r"C:\python_scripts\zb_extract_content_blocks\output"
-```
-
-### 3. Run the Script
+## Streamlit app
 
 ```bash
-python extract_content_blocks.py
+streamlit run extract_content_blocks_app.py
 ```
+
+Enter your Anthropic API key in the sidebar, then enter one URL, paste several, or upload a CSV and pick the URL column. The app shows the blocks, a chart of the most common XPaths, and a reference table with one row per XPath. URLs that fail are listed with the error.
+
+## Command line
+
+```bash
+export ANTHROPIC_API_KEY=your-key
+python extract_content_blocks.py --input urls.txt --output-dir output
+```
+
+`urls.txt` holds one URL per line.
+
+| Option | Default | What it does |
+|---|---|---|
+| `--input` | required | Text file with one URL per line |
+| `--output-dir` | `output` | Folder for the CSV files |
+| `--limit` | all | Process only the first N URLs. Use `--limit 2` for a test run |
+| `--save-every` | 50 | Save a batch file every N rows |
+| `--delay` | 1 | Seconds to wait before each page fetch |
+| `--model` | `claude-haiku-4-5-20251001` | Claude model |
+| `--max-html-chars` | 200000 | Cut the filtered HTML at this many characters |
+
+The key is read from the `ANTHROPIC_API_KEY` environment variable. It is never stored in the script.
 
 ## Output
 
-### Individual CSV Files
-The script creates timestamped CSV files as it processes URLs:
-- `content_blocks_20240121_143022_a1b2c3d4.csv`
-- `content_blocks_20240121_143145_e5f6g7h8.csv`
+One row per block per page.
 
-Each contains:
 | Column | Description |
-|--------|-------------|
+|---|---|
 | `url` | Source URL |
-| `name` | Descriptive name of the content block |
-| `xpath` | XPath selector for the element |
+| `name` | Name of the content block |
+| `xpath` | XPath for the element |
 | `notes` | Brief description |
 
-### Final Combined Output
-After processing all URLs, the script generates:
+Files:
 
-**`combined_output_with_frequency.csv`**
+- `content_blocks.csv` (app) or `content_blocks_<timestamp>_<id>.csv` batch files (command line): the four columns above.
+- `combined_output_with_frequency.csv` (both): the same rows with a `frequency` column, one name per XPath, sorted by frequency. `frequency` is the number of rows that share the XPath across the pages in this run.
 
-Contains all results with additional columns:
-| Column | Description |
-|--------|-------------|
-| `url` | Source URL |
-| `name` | Standardized name (consistent for same XPath) |
-| `xpath` | XPath selector |
-| `notes` | Description |
-| `frequency` | How many times this XPath appears across all pages |
+The command line script combines only the rows from the current run. Batch files left in the folder by an earlier run are not counted.
 
-Sorted by frequency (most common XPaths first).
+## Cost
 
-## Example Output
+One API call per page. The cost depends on page size: the two pages used for testing (Python documentation, about 21,000 and 42,000 input tokens) cost roughly 2.5 and 5 US cents at Claude Haiku 4.5 prices ($1 per million input tokens, $5 per million output tokens). Run `--limit 2` first to see token counts for your own pages.
 
-```
-Top 10 XPaths by frequency:
-================================================================================
-  45x - Hero Section
-        //div[@class='hero-banner']
-  38x - Navigation Menu
-        //nav[@id='main-navigation']
-  35x - Footer
-        //footer[@class='site-footer']
-  28x - Feature Grid
-        //section[@class='features']
-```
+## Errors
 
-## Debug Mode
+A page that fails to download, or a reply with no usable JSON, is reported and skipped; the run continues. The command line script lists the failed URLs at the end.
 
-For testing, enable debug mode to process only the first 2 URLs:
+## Notes
 
-```python
-DEBUG_MODE = True
-```
-
-This is useful for:
-- Testing your API key setup
-- Verifying URL format
-- Checking output structure
-- Estimating API costs
-
-## Rate Limiting
-
-The script includes a 1-second delay between requests to be respectful to web servers:
-
-```python
-time.sleep(1)  # In fetch_webpage()
-```
-
-Adjust as needed based on the target site's policies.
-
-## Token Usage
-
-The script uses prompt caching to reduce costs:
-- HTML content is cached
-- System prompt is cached
-- Subsequent similar requests use cached tokens at ~90% discount
-
-Console output shows token usage for each request:
-```
-Tokens - Input: 1234, Cache creation: 5678, Cache read: 9012, Output: 345
-```
-
-## Error Handling
-
-- Invalid URLs are skipped with error messages
-- Network errors are caught and logged
-- JSON parsing errors are handled gracefully
-- Progress is saved incrementally to prevent data loss
-
-## Cost Estimation
-
-With Claude Haiku 4.5 (current pricing):
-- Input: $1 per million tokens
-- Output: $5 per million tokens
-- Cached input: ~$0.10 per million tokens (90% discount)
-
-Average cost per URL: $0.002 - $0.015 depending on page size
-
-The script uses prompt caching to significantly reduce costs on repeated similar requests.
-
-## Troubleshooting
-
-**"No module named 'anthropic'"**
-```bash
-pip install anthropic
-```
-
-**"401 Unauthorized" or API authentication errors**
-- Ensure you've replaced `"YOUR CLAUDE KEY HERE"` with your actual API key
-- Verify your API key is valid at [https://console.anthropic.com/](https://console.anthropic.com/)
-
-**"403 Forbidden" errors when fetching URLs**
-- Check if the website allows scraping (check robots.txt)
-- Some sites block automated requests
-
-**Large HTML pages timing out**
-- Increase timeout in `fetch_webpage()`: `timeout=60`
-- Consider filtering more aggressively in `filter_html()`
-
-## Best Practices
-
-1. **Always test with DEBUG_MODE=True first**
-2. **Keep your API key secure** - don't share your script with the key in it
-3. **Respect robots.txt and terms of service**
-4. **Use appropriate rate limiting for target sites**
-5. **Monitor API usage and costs in the Anthropic console**
+- A one second delay runs before each page fetch. Raise `--delay` for sites that need it, and respect robots.txt and each site's terms.
+- Pages that build their content with JavaScript will return little, because the HTML is fetched without a browser.
 
 ## License
 
-MIT License - feel free to use and modify as needed.
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## Acknowledgments
-
-- Built with [Anthropic's Claude API](https://www.anthropic.com/)
-- Uses BeautifulSoup for HTML parsing
-- Powered by Python
-
-## Support
-
-For issues or questions:
-1. Check the Troubleshooting section above
-2. Review [Anthropic's documentation](https://docs.anthropic.com/)
-3. Open an issue on GitHub
-
----
-
-**Note**: This tool is for educational and legitimate web scraping purposes only. Always ensure you have permission to scrape websites and comply with their terms of service and robots.txt files.
+MIT License.

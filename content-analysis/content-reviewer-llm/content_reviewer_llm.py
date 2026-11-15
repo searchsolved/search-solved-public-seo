@@ -57,7 +57,7 @@ with st.sidebar:
 
     if provider == "Anthropic (Claude)":
         ai_key = st.text_input("Anthropic API Key", type="password")
-        model = st.selectbox("Model", ["claude-sonnet-4-5-20250929", "claude-sonnet-4-20250514", "claude-haiku-4-5-20251015"])
+        model = st.selectbox("Model", ["claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5"])
     else:
         ai_key = st.text_input("OpenAI API Key", type="password")
         model = st.selectbox("Model", ["gpt-4o", "gpt-4o-mini", "gpt-4.1"])
@@ -151,6 +151,17 @@ def get_review_prompt(review_type, custom_focus=None):
     return base_prompts.get(review_type, custom_focus or "General content quality review")
 
 
+def claude_text(message):
+    """Return the reply text from a Claude response.
+
+    Current Claude models can return thinking blocks before the text, so the
+    reply is read by block type, not by position. Raises if the model declined.
+    """
+    if message.stop_reason == "refusal":
+        raise RuntimeError("Claude declined this request. Try different content or another model.")
+    return "".join(block.text for block in message.content if block.type == "text")
+
+
 def review_with_claude(client, model, content, metadata, review_focus):
     """Review content using Claude."""
     prompt = f"""Create an annotated version of the provided content with inline review comments and suggestions.
@@ -197,11 +208,11 @@ Create the annotated version maintaining the original document structure while p
     try:
         message = client.messages.create(
             model=model,
-            max_tokens=8000,
-            temperature=0.1,
+            max_tokens=16000,  # room for the model's thinking as well as the review
+            output_config={"effort": "medium"},
             messages=[{"role": "user", "content": prompt}]
         )
-        return message.content[0].text, None
+        return claude_text(message), None
     except Exception as e:
         return None, str(e)
 

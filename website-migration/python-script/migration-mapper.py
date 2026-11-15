@@ -1,3 +1,5 @@
+# Author: Lee Foot
+# Website: https://www.leefoot.com
 ####################################################################################
 # Author   : Lee Foot                                                              #
 # Website  : https://www.leefoot.com                                               #
@@ -14,6 +16,13 @@ Uses a grid search to find the highest scoring match between columns specified i
 
 import os
 import pandas as pd
+import matplotlib
+import matplotlib.cm
+
+# PolyFuzz imports matplotlib.cm.get_cmap, which matplotlib 3.9 removed.
+if not hasattr(matplotlib.cm, "get_cmap"):
+    matplotlib.cm.get_cmap = matplotlib.colormaps.get_cmap
+
 from polyfuzz import PolyFuzz
 from tqdm import tqdm
 import chardet

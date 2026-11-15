@@ -9,6 +9,9 @@
 
 """Content Consolidation Analyzer
 
+Author: Lee Foot
+Website: https://www.leefoot.com
+
 Identifies content consolidation opportunities by clustering pages that share
 significant SERP overlap. Helps find cannibalizing pages competing for the same keywords.
 
@@ -181,14 +184,19 @@ def find_consolidation_clusters(query_map, common_urls_threshold):
         cluster_data['cluster_type'] = 'clique'
         all_clusters.append(cluster_data)
 
-    # Mark overlapping queries
-    query_cluster_count = defaultdict(int)
-    for cluster in all_clusters:
-        for query in cluster['queries']:
-            query_cluster_count[query] += 1
+    # Mark overlapping queries: a query claimed by more than one cluster of the
+    # same type. Every clique also sits inside a connected component, so counting
+    # across both types flagged every clustered query and applied the overlap
+    # penalty to every cluster.
+    for cluster_type in ('connected_component', 'clique'):
+        same_type = [c for c in all_clusters if c['cluster_type'] == cluster_type]
+        query_cluster_count = defaultdict(int)
+        for cluster in same_type:
+            for query in cluster['queries']:
+                query_cluster_count[query] += 1
 
-    for cluster in all_clusters:
-        cluster['overlapping_queries'] = [q for q in cluster['queries'] if query_cluster_count[q] > 1]
+        for cluster in same_type:
+            cluster['overlapping_queries'] = [q for q in cluster['queries'] if query_cluster_count[q] > 1]
 
     return all_clusters, similarity_matrix
 
@@ -241,8 +249,13 @@ def analyze_cluster_details(cluster_queries, query_map, similarity_matrix):
 
 
 def calculate_consolidation_score(metrics, cluster_size, overlapping_count):
-    """Calculate a score (0-100) indicating consolidation strength."""
-    base_score = min(40, metrics['avg_shared_urls'] * 4)
+    """Calculate a score (0-100) indicating consolidation strength.
+
+    Up to 50 points for shared URLs (5 per average shared URL), up to 30 for
+    connectivity, up to 20 for cluster size, minus up to 10 for queries that
+    sit in more than one cluster of the same type.
+    """
+    base_score = min(50, metrics['avg_shared_urls'] * 5)
     connectivity_bonus = metrics['connectivity_score'] * 30
     size_bonus = min(20, (cluster_size - 2) * 5)
     overlap_penalty = min(10, overlapping_count * 5)
@@ -269,9 +282,16 @@ def create_cluster_dataframe(clusters, query_map):
     """Creates a dataframe with consolidation recommendations."""
     rows = []
     processed_queries = set()
+    used_names = defaultdict(int)
 
     for cluster in clusters:
+        # The shortest query names the cluster. Two cliques can share a shortest
+        # query, so repeats within a cluster type get a number: "name (2)".
         cluster_name = get_shortest_query_in_cluster(cluster['queries'])
+        used_names[(cluster['cluster_type'], cluster_name)] += 1
+        repeat = used_names[(cluster['cluster_type'], cluster_name)]
+        if repeat > 1:
+            cluster_name = f"{cluster_name} ({repeat})"
 
         for query in cluster['queries']:
             processed_queries.add(query)
@@ -395,7 +415,7 @@ def main():
         if not top_opportunities.empty:
             logger.info(f"\nTop consolidation opportunities:")
             for idx, row in top_opportunities.head(5).iterrows():
-                logger.info(f"  - {idx}: Score {row['consolidation_score']} ({row['cluster_size']} pages)")
+                logger.info(f"  - {idx}: Score {row['consolidation_score']} ({row['cluster_size']} queries)")
 
         return results_df
 

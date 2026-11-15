@@ -1,0 +1,16 @@
+URL: http://localhost:8765/how-to-choose-running-shoes.html
+H1: How to choose running shoes
+Initial Selector: body > main:nth-of-type(1)
+Specific Selector: body > main:nth-of-type(1) > article:nth-of-type(1)
+Reasoning: This selector likely contains the main body content as it points to the <main> element, which is typically used to encompass the primary content of a webpage. The text length of 391 suggests it holds substantial information, further indicating that it is the main body content.
+Extracted from: specific_selector
+
+--- Extracted Content ---
+HOW TO CHOOSE RUNNING SHOES
+
+Choosing running shoes starts with where you run. Road shoes have smooth soles and plenty of cushioning, while trail shoes have deeper lugs for grip on mud.
+
+Measure both feet in the afternoon, when they are at their largest, and leave a thumb's width in front of your longest toe. A gait check on a treadmill shows whether a neutral or a stability shoe suits you.
+
+--- Internal Links ---
+[]

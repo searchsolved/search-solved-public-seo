@@ -1,0 +1,18 @@
+url,name,xpath,notes,frequency
+http://localhost:8765/how-to-choose-running-shoes.html,Article Title,//article/h1,Main heading for the article,3
+http://localhost:8765/how-to-choose-running-shoes.html,Related Guides Sidebar,//aside,Sidebar section with related article links,3
+http://localhost:8765/trail-shoes-vs-road-shoes.html,Article Title,//article/h1,Main article title 'Trail shoes vs road shoes',3
+http://localhost:8765/trail-shoes-vs-road-shoes.html,Related Guides Sidebar,//aside,Sidebar section with related article links,3
+http://localhost:8765/couch-to-5k-week-by-week.html,Article Title,//article/h1,"Main article title 'Couch to 5k, week by week'",3
+http://localhost:8765/couch-to-5k-week-by-week.html,Related Guides Sidebar,//aside,Sidebar section with related links to training guides,3
+http://localhost:8765/when-to-replace-running-shoes.html,Main Article Content,//main/article,Primary article content with title and body text about replacing running shoes,2
+http://localhost:8765/when-to-replace-running-shoes.html,Article Title,//main/article/h1,Main heading for the article,2
+http://localhost:8765/when-to-replace-running-shoes.html,Related Guides Sidebar,//main/aside,Sidebar section with related article links,2
+http://localhost:8765/trail-shoes-vs-road-shoes.html,Article Content,//article/p,Main body paragraphs comparing trail and road shoes,2
+http://localhost:8765/couch-to-5k-week-by-week.html,Article Content,//article/p,Main content paragraphs describing the couch to 5k training plan,2
+http://localhost:8765/first-10k-training-plan.html,Main Article Content,//main/article,Primary article content with title and training plan description,2
+http://localhost:8765/first-10k-training-plan.html,Article Title,//main/article/h1,Main heading for the 10k training plan article,2
+http://localhost:8765/first-10k-training-plan.html,Related Guides Sidebar,//main/aside,Sidebar section with related article links,2
+http://localhost:8765/how-to-choose-running-shoes.html,Main Article Content,//article,Primary article content with heading and paragraphs about choosing running shoes,1
+http://localhost:8765/when-to-replace-running-shoes.html,Article Body Text,//main/article/p,Paragraph content describing shoe replacement guidelines,1
+http://localhost:8765/when-to-replace-running-shoes.html,Related Guides List,//main/aside/ul,List of related guide links,1

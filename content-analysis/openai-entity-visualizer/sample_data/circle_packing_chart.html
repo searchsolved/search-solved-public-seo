@@ -1,0 +1,495 @@
+
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+  /* CSS styling */
+  circle {
+    fill-opacity: 0.7;
+    stroke: #fff;
+    stroke-width: 1px;
+    transition: stroke 0.2s; /* Add transition for smooth highlighting */
+  }
+
+  circle:hover {
+    stroke: #000; /* Change stroke color to black on hover */
+  }
+
+  .leaf circle {
+    fill: #ff7f0e;
+  }
+
+  .node text {
+    font: 12px sans-serif;
+  }
+
+  .node--leaf text {
+    text-shadow: 0 1px 0 #fff;
+  }
+
+  .label {
+    pointer-events: none;
+    text-anchor: middle;
+    font-size: 11px;
+    font-family: 'Gill Sans', sans-serif;
+  }
+</style>
+
+<body>
+<script src="https://d3js.org/d3.v6.min.js"></script>
+<script>
+
+  var data = {
+  "name": "root",
+  "children": [
+    {
+      "name": "GPE",
+      "children": [
+        {
+          "name": "CITY IN JAPAN",
+          "children": [
+            {
+              "name": "Tokyo",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "name": "CITY IN USA",
+          "children": [
+            {
+              "name": "Boston",
+              "value": 1
+            },
+            {
+              "name": "Chicago",
+              "value": 1
+            },
+            {
+              "name": "New York",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "name": "CITY IN UK",
+          "children": [
+            {
+              "name": "London",
+              "value": 2
+            }
+          ]
+        },
+        {
+          "name": "CITY IN GERMANY",
+          "children": [
+            {
+              "name": "Berlin",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "name": "COUNTRY IN AFRICA",
+          "children": [
+            {
+              "name": "Kenya",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "name": "CITY IN AUSTRIA",
+          "children": [
+            {
+              "name": "Vienna",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "name": "PARK IN UK",
+          "children": [
+            {
+              "name": "Bushy Park",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "name": "STATE IN USA",
+          "children": [
+            {
+              "name": "Kansas",
+              "value": 1
+            },
+            {
+              "name": "California",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "name": "COUNTRY IN EUROPE",
+          "children": [
+            {
+              "name": "Finland",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "name": "MOUNTAIN RANGE",
+          "children": [
+            {
+              "name": "Lake District",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "name": "COUNTY IN UK",
+          "children": [
+            {
+              "name": "Cumbria",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "name": "MOUNTAIN IN UK",
+          "children": [
+            {
+              "name": "Scafell Pike",
+              "value": 1
+            },
+            {
+              "name": "Helvellyn",
+              "value": 1
+            },
+            {
+              "name": "Skiddaw",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "name": "TOWN IN UK",
+          "children": [
+            {
+              "name": "Keswick",
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "EVENT",
+      "children": [
+        {
+          "name": "ANNUAL RUNNING EVENT",
+          "children": [
+            {
+              "name": "Boston Marathon",
+              "value": 1
+            },
+            {
+              "name": "Berlin Marathon",
+              "value": 2
+            },
+            {
+              "name": "London Marathon",
+              "value": 2
+            },
+            {
+              "name": "New York City Marathon",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "name": "RUNNING EVENT",
+          "children": [
+            {
+              "name": "parkrun",
+              "value": 2
+            }
+          ]
+        },
+        {
+          "name": "RUNNING CHALLENGE",
+          "children": [
+            {
+              "name": "Bob Graham Round",
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "AWARD",
+      "children": [
+        {
+          "name": "MERIT AWARD",
+          "children": [
+            {
+              "name": "Six Star Medal",
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "PERSON",
+      "children": [
+        {
+          "name": "KENYAN RUNNER",
+          "children": [
+            {
+              "name": "Eliud Kipchoge",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "name": "BRITISH RUNNER",
+          "children": [
+            {
+              "name": "Paula Radcliffe",
+              "value": 1
+            },
+            {
+              "name": "Jasmin Paris",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "name": "EVENT FOUNDER",
+          "children": [
+            {
+              "name": "Paul Sinton-Hewitt",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "name": "SPANISH RUNNER",
+          "children": [
+            {
+              "name": "Kilian Jornet",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "name": "SWISS ATHLETE",
+          "children": [
+            {
+              "name": "Roger Federer",
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ORG",
+      "children": [
+        {
+          "name": "SPORTS BRAND",
+          "children": [
+            {
+              "name": "Nike",
+              "value": 3
+            },
+            {
+              "name": "Adidas",
+              "value": 2
+            },
+            {
+              "name": "Asics",
+              "value": 2
+            },
+            {
+              "name": "Brooks",
+              "value": 1
+            },
+            {
+              "name": "Saucony",
+              "value": 1
+            },
+            {
+              "name": "New Balance",
+              "value": 1
+            },
+            {
+              "name": "Hoka",
+              "value": 2
+            },
+            {
+              "name": "On",
+              "value": 3
+            }
+          ]
+        },
+        {
+          "name": "FITNESS PLATFORM",
+          "children": [
+            {
+              "name": "Strava",
+              "value": 2
+            }
+          ]
+        },
+        {
+          "name": "TECH COMPANY",
+          "children": [
+            {
+              "name": "Garmin",
+              "value": 5
+            },
+            {
+              "name": "Polar",
+              "value": 2
+            },
+            {
+              "name": "Coros",
+              "value": 2
+            },
+            {
+              "name": "Suunto",
+              "value": 2
+            },
+            {
+              "name": "Apple",
+              "value": 1
+            },
+            {
+              "name": "Samsung",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "name": "ATHLETICS ORGANIZATION",
+          "children": [
+            {
+              "name": "Fell Runners Association",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "name": "PARENT COMPANY",
+          "children": [
+            {
+              "name": "Deckers Brands",
+              "value": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "PROGRAM",
+      "children": [
+        {
+          "name": "RUNNING PLAN",
+          "children": [
+            {
+              "name": "NHS Couch to 5K",
+              "value": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+};
+
+
+  var width = 932;
+  var height = width;
+  var format = d3.format(",d");
+
+  var pack = data => d3.pack()
+      .size([width - 2, height - 2])
+      .padding(3)
+      (d3.hierarchy(data)
+      .sum(d => d.value)
+      .sort((a, b) => b.value - a.value));
+
+  var color = d3.scaleLinear()
+      .domain([0, 5])
+      .range(["hsl(152,80%,80%)", "hsl(228,30%,40%)"])
+      .interpolate(d3.interpolateHcl);
+
+  const root = pack(data);
+  let focus = root;
+  let view;
+
+  const svg = d3.create("svg")
+      .attr("viewBox", `-${width / 2} -${height / 2} ${width} ${height}`)
+      .attr("width", width)
+      .attr("height", height)
+      .style("max-width", "100%")
+      .style("height", "auto")
+      .style("margin", "0 -14px")
+      .style("background", "rgb(240, 240, 240)") // Set the background color here
+      .style("cursor", "pointer")
+      .on("click", (event) => zoom(event, root));
+
+  const node = svg.append("g")
+      .selectAll("circle")
+      .data(root.descendants().slice(1))
+      .join("circle")
+      .attr("fill", d => d.children ? color(d.depth) : "white")
+      .attr("pointer-events", d => !d.children ? "none" : null)
+      .on("mouseover", function() { d3.select(this).attr("stroke", "#000"); })
+      .on("mouseout", function() { d3.select(this).attr("stroke", null); })
+      .on("click", (event, d) => focus !== d && (zoom(event, d), event.stopPropagation()));
+
+  const label = svg.append("g")
+      .attr("pointer-events", "none")
+      .attr("text-anchor", "top")
+      .selectAll("text")
+      .data(root.descendants())
+      .join("text")
+      .style("fill-opacity", d => d.parent === root ? 1 : 0)
+      .style("display", d => d.parent === root ? "inline" : "none")
+      .text(d => d.data.name);
+
+  zoomTo([root.x, root.y, root.r * 2]);
+
+  function zoomTo(v) {
+    const k = width / v[2];
+    view = v;
+    label.attr("transform", d => `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`);
+    node.attr("transform", d => `translate(${(d.x - v[0]) * k},${(d.y - v[1]) * k})`);
+    node.attr("r", d => d.r * k);
+  }
+
+  function zoom(event, d) {
+    const focus0 = focus;
+    focus = d;
+    const transition = svg.transition()
+        .duration(event.altKey ? 7500 : 750)
+        .tween("zoom", d => {
+          const i = d3.interpolateZoom(view, [focus.x, focus.y, focus.r * 2]);
+          return t => zoomTo(i(t));
+        });
+    label
+      .filter(function(d) { return d.parent === focus || this.style.display === "inline"; })
+      .transition(transition)
+        .style("fill-opacity", d => d.parent === focus ? 1 : 0)
+        .on("start", function(d) { if (d.parent === focus) this.style.display = "inline"; })
+        .on("end", function(d) { if (d.parent !== focus) this.style.display = "none"; });
+  }
+
+  document.body.appendChild(svg.node());
+
+</script>
+</body>

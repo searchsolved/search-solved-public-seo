@@ -46,6 +46,13 @@ def main():
     # Import ML libraries
     print("Loading ML libraries...")
     try:
+        import matplotlib
+        import matplotlib.cm
+
+        # PolyFuzz imports matplotlib.cm.get_cmap, which matplotlib 3.9 removed.
+        if not hasattr(matplotlib.cm, "get_cmap"):
+            matplotlib.cm.get_cmap = matplotlib.colormaps.get_cmap
+
         from polyfuzz import PolyFuzz
         from polyfuzz.models import SentenceEmbeddings
         from sentence_transformers import SentenceTransformer

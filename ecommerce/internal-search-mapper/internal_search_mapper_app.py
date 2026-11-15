@@ -11,6 +11,13 @@ import streamlit as st
 import pandas as pd
 
 try:
+    import matplotlib
+    import matplotlib.cm
+
+    # PolyFuzz imports matplotlib.cm.get_cmap, which matplotlib 3.9 removed.
+    if not hasattr(matplotlib.cm, "get_cmap"):
+        matplotlib.cm.get_cmap = matplotlib.colormaps.get_cmap
+
     from polyfuzz import PolyFuzz
 except ImportError:
     st.error("Please install polyfuzz: pip install polyfuzz")

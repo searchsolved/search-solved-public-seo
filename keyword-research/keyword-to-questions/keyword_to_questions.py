@@ -52,7 +52,7 @@ with st.sidebar:
 
     if provider == "Anthropic (Claude)":
         api_key = st.text_input("Anthropic API Key", type="password")
-        model = st.selectbox("Model", ["claude-sonnet-4-5-20250929", "claude-sonnet-4-20250514", "claude-haiku-4-5-20251015"])
+        model = st.selectbox("Model", ["claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5"])
     else:
         api_key = st.text_input("OpenAI API Key", type="password")
         model = st.selectbox("Model", ["gpt-4o-mini", "gpt-4o", "gpt-4.1"])
@@ -65,6 +65,17 @@ with st.sidebar:
         "Direct and simple",
         "Formal/professional"
     ])
+
+
+def claude_text(message):
+    """Return the reply text from a Claude response.
+
+    Current Claude models can return thinking blocks before the text, so the
+    reply is read by block type, not by position. Raises if the model declined.
+    """
+    if message.stop_reason == "refusal":
+        raise RuntimeError("Claude declined this request. Try different content or another model.")
+    return "".join(block.text for block in message.content if block.type == "text")
 
 
 def convert_keywords_claude(client, model, keywords, topic="", consolidate=True, style="Natural conversational"):
@@ -106,12 +117,13 @@ Return ONLY a valid JSON object with this structure:
     try:
         message = client.messages.create(
             model=model,
-            max_tokens=2000,
+            max_tokens=4000,  # room for the model's thinking as well as the reply
+            output_config={"effort": "low"},
             system="You convert keyword phrases into natural questions. Always respond with valid JSON only.",
             messages=[{"role": "user", "content": prompt}]
         )
 
-        response_text = message.content[0].text.strip()
+        response_text = claude_text(message).strip()
 
         # Clean response
         if response_text.startswith("```"):

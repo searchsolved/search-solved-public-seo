@@ -71,15 +71,26 @@ running shoe reviews,https://example.com/shoes
 
 The tool outputs a CSV with:
 
-- `cluster_id`: Identifier for the cluster
+- `cluster_id`: The shortest query in the cluster. Unique within a `cluster_type`; a repeat is numbered, for example `running socks (2)`
+- `cluster_type`: `connected_component` or `clique`. The same group of queries can appear once as each type
 - `query`: The search query
 - `consolidation_score`: 0-100 score indicating consolidation strength
 - `consolidation_recommendation`: Human-readable recommendation
-- `cluster_size`: Number of pages in the cluster
+- `cluster_size`: Number of queries in the cluster
+- `is_in_multiple_clusters`: True when the query sits in more than one cluster of the same type
 - `shared_urls`: URLs that appear for multiple queries
 - And more metrics...
 
 ## Consolidation Scores
+
+The score is built from four parts:
+
+| Part | Points | How it is measured |
+|------|--------|--------------------|
+| Shared URLs | up to 50 | 5 points per average shared URL, capped |
+| Connectivity | up to 30 | Share of query pairs in the cluster that overlap |
+| Cluster size | up to 20 | 5 points per query beyond two |
+| Overlap penalty | up to -10 | 5 points per query that also sits in another cluster of the same type |
 
 | Score | Recommendation |
 |-------|----------------|

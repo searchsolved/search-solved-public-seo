@@ -107,13 +107,22 @@ if st.button("Detect & Extract", type="primary"):
                         f"**Specific Selector:** `{result.get('specific_selector', 'N/A')}`"
                     )
                     st.markdown(f"**Reasoning:** {result.get('reasoning', 'N/A')}")
+                    source_labels = {
+                        "specific_selector": "the specific selector",
+                        "selector": "the initial selector",
+                        "heuristic": "a fallback heuristic (neither selector matched content)",
+                    }
+                    st.markdown(
+                        "**Content extracted from:** "
+                        + source_labels.get(result.get("extraction_source"), "N/A")
+                    )
 
                 with col2:
                     st.subheader("Internal Links Found")
                     links_str = result.get("links", "[]")
                     st.code(links_str, language="python")
 
-                st.subheader("Extracted Content (Markdown)")
+                st.subheader("Extracted Content (plain text)")
                 extracted = result.get("extracted_text", "")
                 st.text_area(
                     "Content",

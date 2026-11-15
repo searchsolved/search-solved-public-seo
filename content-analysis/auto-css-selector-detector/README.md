@@ -41,11 +41,11 @@ python auto_css_selector_detector_cli.py --url https://example.com/page
 
 ## How It Works
 
-1. Fetches the page HTML and removes non-content elements (nav, footer, sidebar, etc.)
-2. Generates structural summaries of the top-level content containers
+1. Fetches the page HTML (a 4xx or 5xx response stops the run)
+2. Summarises the top-level content containers, leaving out navigation, headers and footers, with a selector for each that is valid on the live page (`#id` where the id is unique, otherwise an `nth-of-type` path from `body`)
 3. Sends the summaries to the LLM, which returns the best CSS selector as JSON
-4. Refines the selector to target the most content-rich descendant
-5. Extracts the content, converts to Markdown, and deduplicates
+4. Narrows that selector: steps into a child container while it holds at least 80% of the text, and never past the element that contains the content's H1
+5. Extracts the content from the narrowed selector, converts it to plain text and removes near-duplicate paragraphs. If neither selector matches content, a scoring heuristic picks the element, and `extraction_source` in the result says which was used
 
 ## Author
 

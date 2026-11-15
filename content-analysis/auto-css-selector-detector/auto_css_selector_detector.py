@@ -39,62 +39,103 @@ def get_page_content(url):
         "Referer": "https://www.google.com",
     }
     response = requests.get(url, headers=headers, timeout=30)
+    response.raise_for_status()
     response.encoding = response.apparent_encoding
     return response.text
 
 
+CONTAINER_TAGS = ["div", "main", "article", "section"]
+NON_CONTENT_TAGS = ["nav", "header", "footer", "aside", "script", "style"]
+NON_CONTENT_WORDS = ["nav", "menu", "sidebar", "footer", "header"]
+
+
+def is_non_content(element):
+    """True for navigation, header, footer and sidebar elements."""
+    if element.name in NON_CONTENT_TAGS:
+        return True
+    names = " ".join(element.get("class") or []) + " " + (element.get("id") or "")
+    return any(word in names.lower() for word in NON_CONTENT_WORDS)
+
+
+def content_soup(element):
+    """Parse an element with its non-content descendants removed."""
+    return BeautifulSoup(clean_content(str(element)), "html.parser")
+
+
+def content_text(element):
+    """Text of an element once navigation, headers and footers are removed."""
+    return content_soup(element).get_text(" ", strip=True)
+
+
+def _has_unique_simple_id(element):
+    element_id = element.get("id")
+    if not element_id or not re.fullmatch(r"[A-Za-z][\w-]*", element_id):
+        return False
+    root = element
+    while root.parent is not None:
+        root = root.parent
+    return len(root.find_all(id=element_id)) == 1
+
+
 def generate_selector(element):
-    """Generate a CSS selector path for a given BeautifulSoup element."""
+    """Generate a CSS selector that matches only this element on the page.
+
+    Uses #id when the element has a simple id that is unique in the document,
+    otherwise a path of nth-of-type steps anchored at body.
+    """
     if element.name == "body":
         return "body"
 
-    siblings = element.find_previous_siblings(element.name)
-    index = len(siblings) + 1 if siblings else 1
+    if _has_unique_simple_id(element):
+        return f"#{element['id']}"
+
+    index = len(element.find_previous_siblings(element.name)) + 1
     selector = f"{element.name}:nth-of-type({index})"
     parent = element.find_parent()
 
-    if parent and parent.name != "body":
-        return f"{generate_selector(parent)} > {selector}"
-    return selector
+    if parent is None or parent.name in ("body", "html", "[document]"):
+        return f"body > {selector}"
+    return f"{generate_selector(parent)} > {selector}"
 
 
-def find_most_specific_selector(html, initial_selector):
-    """Refine a selector to target the most content-rich descendant."""
+def find_most_specific_selector(html, initial_selector, min_share=0.8):
+    """Narrow a selector to the innermost container that still holds the content.
+
+    Steps down into a child container only while that child holds at least
+    min_share of the text, and never past the element that contains the
+    content's H1. Returns a selector that matches one element.
+    """
     soup = BeautifulSoup(html, "html.parser")
-    initial_element = soup.select_one(initial_selector)
+    try:
+        current = soup.select_one(initial_selector)
+    except Exception:
+        current = None
 
-    if not initial_element:
+    if current is None:
         return initial_selector
 
-    current_selector = initial_selector
-    current_element = initial_element
-
     while True:
-        children = current_element.find_all(recursive=False)
+        total = len(content_text(current))
+        if total == 0:
+            break
+
+        children = [
+            child
+            for child in current.find_all(CONTAINER_TAGS, recursive=False)
+            if not is_non_content(child)
+        ]
         if not children:
             break
 
-        best_child = None
-        best_score = 0
-
-        for child in children:
-            child_text = child.get_text(strip=True)
-            parent_text_len = len(current_element.get_text(strip=True))
-            if parent_text_len == 0:
-                continue
-            score = len(child_text) * (len(child_text) / parent_text_len)
-
-            if score > best_score:
-                best_child = child
-                best_score = score
-
-        if best_child:
-            current_selector = f"{current_selector} > {best_child.name}"
-            current_element = best_child
-        else:
+        best_child = max(children, key=lambda child: len(content_text(child)))
+        if len(content_text(best_child)) / total < min_share:
+            break
+        if content_soup(current).find("h1") and not content_soup(best_child).find("h1"):
             break
 
-    return current_selector
+        current = best_child
+
+    return generate_selector(current)
 
 
 def deduplicate_content(text):
@@ -232,25 +273,64 @@ def clean_text(markdown_text):
 
 
 def summarize_page(html):
-    """Generate section summaries from top-level content containers."""
+    """Summarise the top-level content containers of the page.
+
+    Works on the page as fetched, so each selector is valid on the live page.
+    Navigation, header and footer containers are skipped, and text is measured
+    with those parts removed. If the body has no container children, the body
+    itself is offered.
+    """
     soup = BeautifulSoup(html, "html.parser")
     body = soup.body
     if not body:
         return []
 
     summaries = []
-    for child in body.find_all(
-        ["div", "main", "article", "section"], recursive=False
-    ):
-        section_data = {
+    for child in body.find_all(CONTAINER_TAGS, recursive=False):
+        if is_non_content(child):
+            continue
+        text = content_text(child)
+        if not text:
+            continue
+        summaries.append({
             "selector": generate_selector(child),
-            "text_length": len(child.get_text(strip=True)),
-            "sample": child.get_text(strip=True)[:200] + "...",
-        }
-        summaries.append(section_data)
+            "text_length": len(text),
+            "sample": text[:200] + "...",
+        })
+
+    if not summaries:
+        text = content_text(body)
+        summaries.append({
+            "selector": "body",
+            "text_length": len(text),
+            "sample": text[:200] + "...",
+        })
 
     summaries.sort(key=lambda x: x["text_length"], reverse=True)
     return summaries
+
+
+def select_content_html(html, result):
+    """Return the HTML to extract from, and which selector it came from.
+
+    Tries the specific selector, then the selector the LLM chose, and falls
+    back to the scoring heuristic when neither matches an element with text.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    for key in ("specific_selector", "selector"):
+        selector = result.get(key)
+        if not selector:
+            continue
+        try:
+            element = soup.select_one(selector)
+        except Exception:
+            element = None
+        if element is None:
+            continue
+        cleaned = clean_content(str(element))
+        if BeautifulSoup(cleaned, "html.parser").get_text(strip=True):
+            return cleaned, key
+    return find_main_content(clean_content(html)), "heuristic"
 
 
 def extract_h1(html):
@@ -263,7 +343,7 @@ def extract_h1(html):
 def ask_llm(client, model, summaries, html, url):
     """
     Ask the LLM to identify the best CSS selector for main content,
-    then extract and clean the content.
+    then extract and clean the content from that selector.
     """
     h = html2text.HTML2Text()
     h.ignore_links = False
@@ -286,12 +366,11 @@ that most likely contains the main body content:
 
 {json.dumps(truncated_summaries, indent=2)}
 
-The sections are sorted by a content score, which considers factors like text length, \
-text-to-HTML ratio, number of paragraphs, average paragraph length, presence of headings, \
-links, and images.
+The sections are sorted by text length, longest first. Navigation, headers and footers \
+have already been left out.
 
 Provide your answer as a JSON object with the following keys:
-- 'selector': The CSS selector for the main content (string)
+- 'selector': The CSS selector for the main content, copied exactly from the list (string)
 - 'reasoning': Your reasoning for choosing this selector (string)
 """
 
@@ -315,8 +394,8 @@ Provide your answer as a JSON object with the following keys:
     specific_selector = find_most_specific_selector(html, result["selector"])
     result["specific_selector"] = specific_selector
 
-    cleaned_html = clean_content(html)
-    main_content_html = find_main_content(cleaned_html)
+    main_content_html, extraction_source = select_content_html(html, result)
+    result["extraction_source"] = extraction_source
     markdown_text = h.handle(main_content_html)
     result["links"] = extract_links(markdown_text, url)
     result["extracted_text"] = remove_html_tags(clean_text(markdown_text))
@@ -330,13 +409,13 @@ def detect_and_extract(url, api_key, model="gpt-4o-mini", base_url="https://api.
     and extract the main content as markdown.
 
     Returns a dict with keys: url, h1, selector, specific_selector,
-    reasoning, extracted_text, links.
+    reasoning, extraction_source, extracted_text, links.
+    extraction_source is "specific_selector", "selector" or "heuristic".
     """
     client = create_client(api_key, base_url)
     html = get_page_content(url)
-    clean_html = clean_content(html)
-    summaries = summarize_page(clean_html)
-    result = ask_llm(client, model, summaries, clean_html, url)
+    summaries = summarize_page(html)
+    result = ask_llm(client, model, summaries, html, url)
     result["url"] = url
     result["h1"] = extract_h1(html)
     return result

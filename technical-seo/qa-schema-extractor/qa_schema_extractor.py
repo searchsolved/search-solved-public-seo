@@ -70,14 +70,8 @@ def extract_qa_pairs(json_data):
                         'answer': answer
                     })
 
-            # Handle FAQPage type
-            if obj_type == 'FAQPage' or 'FAQPage' in str(obj_type):
-                main_entity = obj.get('mainEntity', [])
-                if isinstance(main_entity, list):
-                    for item in main_entity:
-                        traverse(item)
-
-            # Continue traversing
+            # Continue traversing. This also reaches an FAQPage's mainEntity (a list or a
+            # single Question), so each question is collected once.
             for value in obj.values():
                 traverse(value)
 

@@ -14,8 +14,14 @@ import logging
 import re
 
 import pandas as pd
-from openai import OpenAI
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
+from openai import (
+    AuthenticationError,
+    BadRequestError,
+    NotFoundError,
+    OpenAI,
+    PermissionDeniedError,
+)
+from tenacity import retry, retry_if_not_exception_type, stop_after_attempt, wait_fixed
 
 DEFAULT_BASE_URL = "http://127.0.0.1:11434/v1"
 DEFAULT_MODEL = "qwen2.5:7b"
@@ -81,10 +87,14 @@ def parse_json_response(response_content):
         raise UnableToParseJSONError("Unable to parse JSON response")
 
 
+# Errors that will not go away on a second try: bad key, unknown model, rejected request.
+PERMANENT_ERRORS = (AuthenticationError, PermissionDeniedError, NotFoundError, BadRequestError)
+
+
 @retry(stop=stop_after_attempt(3), wait=wait_fixed(2),
-       retry=retry_if_exception_type((UnableToParseJSONError, Exception)))
-def process_keyword(keyword, client, model=DEFAULT_MODEL):
-    """Ask the model for a representative keyword. Retries up to 3 times."""
+       retry=retry_if_not_exception_type(PERMANENT_ERRORS), reraise=True)
+def request_keyword(keyword, client, model=DEFAULT_MODEL):
+    """One request to the model. Raises on failure so the retry decorator can try again."""
     cleaned_keyword = clean_keyword(keyword)
     prompt = (
         f"Suggest an accurate and descriptive representative keyword for: {cleaned_keyword}. "
@@ -97,21 +107,28 @@ def process_keyword(keyword, client, model=DEFAULT_MODEL):
         {"role": "user", "content": prompt}
     ]
 
-    try:
-        completion = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            response_format=RESPONSE_FORMAT,
-            **reasoning_params(model),
-        )
+    completion = client.chat.completions.create(
+        model=model,
+        messages=messages,
+        response_format=RESPONSE_FORMAT,
+        **reasoning_params(model),
+    )
 
-        response_content = completion.choices[0].message.content
-        logging.info(f"Raw API response for '{keyword}': {response_content}")
-        response_json = parse_json_response(response_content)
-        return response_json['keyword']
-    except UnableToParseJSONError as e:
-        logging.error(f"Error parsing JSON for '{keyword}': {str(e)}")
-        raise
+    response_content = completion.choices[0].message.content
+    logging.info(f"Raw API response for '{keyword}': {response_content}")
+    response_json = parse_json_response(response_content)
+    return response_json['keyword']
+
+
+def process_keyword(keyword, client, model=DEFAULT_MODEL):
+    """Ask the model for a representative keyword.
+
+    Invalid replies and temporary API errors are retried (3 attempts, 2 seconds apart).
+    If every attempt fails, or the error is permanent (bad key, unknown model), the row
+    gets an "Error: ..." value and the run carries on with the next keyword.
+    """
+    try:
+        return request_keyword(keyword, client, model)
     except Exception as e:
         logging.error(f"Error processing '{keyword}': {str(e)}")
         return f"Error: {str(e)[:100]}..."

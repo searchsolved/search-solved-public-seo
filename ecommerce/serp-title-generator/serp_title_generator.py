@@ -71,7 +71,8 @@ dataforseo_password = st.sidebar.text_input(
 )
 
 location_select = st.sidebar.selectbox("Search Location", list(LOCATION_CODES.keys()))
-device_select = st.sidebar.selectbox("Device", ["Desktop", "Mobile", "Tablet"])
+device_select = st.sidebar.selectbox("Device", ["Desktop", "Mobile"])
+st.sidebar.caption("DataForSEO returns desktop or mobile results only.")
 num_results = st.sidebar.slider("Number of Results to Analyse", min_value=10, max_value=50, value=20)
 
 # Show estimated cost

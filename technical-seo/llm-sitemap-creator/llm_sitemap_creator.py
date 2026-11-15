@@ -92,7 +92,7 @@ model = st.sidebar.selectbox(
     "Model",
     ["gpt-6-luna", "gpt-6.1-terra"],
     index=0,
-    help="GPT model to use (mini is cheaper)"
+    help="GPT model to use (gpt-6-luna is the cheaper one)"
 )
 
 

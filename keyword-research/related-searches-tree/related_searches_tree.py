@@ -260,10 +260,12 @@ seed_keywords = [kw.strip() for kw in keyword_input.strip().split('\n') if kw.st
 if seed_keywords:
     st.info(f"Ready to explore {len(seed_keywords)} seed keyword(s)")
 
-    # Estimate API calls and cost
-    est_calls = sum(max_results ** i for i in range(crawl_depth + 1)) * len(seed_keywords)
+    # Estimate API calls and cost. Keywords at depths 0 to crawl_depth - 1 are queried; those
+    # found at the last level are recorded but not queried. This is a ceiling: keywords seen
+    # before are skipped, so real runs usually make fewer calls.
+    est_calls = sum(max_results ** i for i in range(crawl_depth)) * len(seed_keywords)
     est_cost = est_calls * 0.002
-    st.caption(f"Estimated API calls: ~{est_calls} (approx. ${est_cost:.2f})")
+    st.caption(f"Estimated API calls: up to {est_calls} (up to ${est_cost:.2f})")
 
 if st.button("Build Tree", type="primary", disabled=not has_credentials or not seed_keywords):
     if not has_credentials:

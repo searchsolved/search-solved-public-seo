@@ -102,9 +102,9 @@ device_select = st.sidebar.selectbox(
     (
         "Desktop",
         "Mobile",
-        "Tablet",
     ),
 )
+st.sidebar.caption("DataForSEO returns desktop or mobile results only.")
 
 num_pages = st.sidebar.slider("Set Number of Pages to Analyse", min_value=1, max_value=10, value=1)
 depth = num_pages * 10

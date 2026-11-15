@@ -67,14 +67,16 @@ def classify_update(summary):
     """Classify the type of algorithm update."""
     summary_lower = summary.lower()
 
+    # Checked in order, so a longer phrase must come before any shorter phrase inside it
+    # ('link spam update' before 'spam update').
     classifications = [
         ('core update', 'Core Update'),
+        ('link spam update', 'Link Spam Update'),
         ('spam update', 'Spam Update'),
         ('helpful content update', 'Helpful Content Update'),
         ('helpful content system', 'Helpful Content Update'),
         ('product reviews update', 'Product Reviews Update'),
         ('reviews update', 'Reviews Update'),
-        ('link spam update', 'Link Spam Update'),
         ('page experience update', 'Page Experience Update'),
         ('site reputation abuse', 'Site Reputation Abuse'),
         ('expired domain abuse', 'Expired Domain Abuse'),

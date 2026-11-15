@@ -167,7 +167,7 @@ def main():
                         help='Search location name (default: United Kingdom)')
     parser.add_argument('--location-code', type=int, default=None,
                         help='DataForSEO location code (overrides --location, default: 2826)')
-    parser.add_argument('--device', choices=['desktop', 'mobile', 'tablet'],
+    parser.add_argument('--device', choices=['desktop', 'mobile'],
                         default='desktop', help='Device type (default: desktop)')
     parser.add_argument('--num-results', type=int, default=10,
                         help='Results per SERP (default: 10)')

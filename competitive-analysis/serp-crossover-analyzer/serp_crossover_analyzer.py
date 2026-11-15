@@ -93,9 +93,10 @@ location = st.sidebar.selectbox(
 
 device = st.sidebar.selectbox(
     "Device",
-    ["Desktop", "Mobile", "Tablet"],
+    ["Desktop", "Mobile"],
     index=0
 )
+st.sidebar.caption("DataForSEO returns desktop or mobile results only.")
 
 num_results = st.sidebar.slider(
     "Results per SERP",

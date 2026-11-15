@@ -5,7 +5,7 @@
 #  Find keywords close to ranking and check if they appear in title/H1/copy.       #
 #                                                                                  #
 ####################################################################################
-# Author   : Lee Foot                                                              #
+# Author: Lee Foot                                                                 #
 # Website  : https://www.leefoot.com                                               #
 # Contact  : https://www.leefoot.com/contact                                       #
 # Email    : hello@leefoot.com                                                     #
@@ -332,26 +332,18 @@ if submitted:
         st.info("Dataframe is empty! Nothing to do!")
         st.stop()
 
-    # check whether a keyword appears in title, h1 or category description
-    df_striking["KW1 in Title"] = df_striking.apply(lambda row: row["KW1"] in row["title"], axis=1)
-    df_striking["KW1 in H1"] = df_striking.apply(lambda row: row["KW1"] in row["h1"], axis=1)
-    df_striking["KW1 in Copy"] = df_striking.apply(lambda row: row["KW1"] in row["copy"], axis=1)
+    # check whether a keyword appears in title, h1 or category description.
+    # The page text above is lowercased with apostrophes removed and hyphens turned into
+    # spaces, so each keyword gets the same treatment before it is compared.
+    def normalise_keyword(keyword):
+        return str(keyword).lower().replace("'", "").replace("-", " ")
 
-    df_striking["KW2 in Title"] = df_striking.apply(lambda row: row["KW2"] in row["title"], axis=1)
-    df_striking["KW2 in H1"] = df_striking.apply(lambda row: row["KW2"] in row["h1"], axis=1)
-    df_striking["KW2 in Copy"] = df_striking.apply(lambda row: row["KW2"] in row["copy"], axis=1)
-
-    df_striking["KW3 in Title"] = df_striking.apply(lambda row: row["KW3"] in row["title"], axis=1)
-    df_striking["KW3 in H1"] = df_striking.apply(lambda row: row["KW3"] in row["h1"], axis=1)
-    df_striking["KW3 in Copy"] = df_striking.apply(lambda row: row["KW3"] in row["copy"], axis=1)
-
-    df_striking["KW4 in Title"] = df_striking.apply(lambda row: row["KW4"] in row["title"], axis=1)
-    df_striking["KW4 in H1"] = df_striking.apply(lambda row: row["KW4"] in row["h1"], axis=1)
-    df_striking["KW4 in Copy"] = df_striking.apply(lambda row: row["KW4"] in row["copy"], axis=1)
-
-    df_striking["KW5 in Title"] = df_striking.apply(lambda row: row["KW5"] in row["title"], axis=1)
-    df_striking["KW5 in H1"] = df_striking.apply(lambda row: row["KW5"] in row["h1"], axis=1)
-    df_striking["KW5 in Copy"] = df_striking.apply(lambda row: row["KW5"] in row["copy"], axis=1)
+    for n in range(1, 6):
+        kw = f"KW{n}"
+        for field, label in (("title", "Title"), ("h1", "H1"), ("copy", "Copy")):
+            df_striking[f"{kw} in {label}"] = df_striking.apply(
+                lambda row, kw=kw, field=field: normalise_keyword(row[kw]) in row[field], axis=1
+            )
 
     # delete true / false values if there is no keyword
     df_striking.loc[df_striking["KW1"] == "", ["KW1 in Title", "KW1 in H1", "KW1 in Copy"]] = ""

@@ -155,6 +155,17 @@ Return only keywords that appear verbatim in the content."""
         return None, str(e)
 
 
+def cell_text(value):
+    """Return a spreadsheet cell as text, with blank cells as an empty string.
+
+    str() on a blank cell gives "nan", which was then treated as an existing
+    anchor and removed every keyword containing those letters.
+    """
+    if value is None or pd.isna(value):
+        return ""
+    return str(value).strip()
+
+
 def claude_text(message):
     """Return the reply text from a Claude response.
 
@@ -349,12 +360,12 @@ with tab2:
                     status.text(f"Processing row {idx + 1}/{len(df)}...")
 
                     content = str(row.get(content_col, ''))
-                    url = str(row.get(url_col, '')) if url_col != "(None)" else ""
-                    h1 = str(row.get(h1_col, '')) if h1_col != "(None)" else ""
+                    url = cell_text(row.get(url_col)) if url_col != "(None)" else ""
+                    h1 = cell_text(row.get(h1_col)) if h1_col != "(None)" else ""
 
                     existing_anchors = None
                     if anchors_col != "(None)":
-                        anchors_str = str(row.get(anchors_col, ''))
+                        anchors_str = cell_text(row.get(anchors_col))
                         if anchors_str:
                             existing_anchors = [a.strip() for a in anchors_str.split(',') if a.strip()]
 

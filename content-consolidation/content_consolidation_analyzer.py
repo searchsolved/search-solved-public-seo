@@ -415,7 +415,7 @@ def main():
         if not top_opportunities.empty:
             logger.info(f"\nTop consolidation opportunities:")
             for idx, row in top_opportunities.head(5).iterrows():
-                logger.info(f"  - {idx}: Score {row['consolidation_score']} ({row['cluster_size']} pages)")
+                logger.info(f"  - {idx}: Score {row['consolidation_score']} ({row['cluster_size']} queries)")
 
         return results_df
 

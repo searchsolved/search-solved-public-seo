@@ -165,13 +165,15 @@ st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-
 with st.expander("How to use this tool"):
     st.markdown("""
     **What this tool does:**
-    - Extracts n-grams from SERP content
-    - Analyses phrase frequency across top results
-    - Identifies common patterns in ranking content
+    - Finds the ten most common word pairs (bigrams) across the pages ranking for a keyword
+    - Lists the words used more than once in their titles
+    - Gives you the titles and URLs of the ranking pages
 
     **Why two steps:** Google now routes result links through google.com/goto. DataForSEO's
     Standard queue turns those back into real URLs, but a search can take 25 minutes or
     more to finish. So you send the search, keep the job file, and collect the results later.
+
+    **Requirements:** a DataForSEO account (sign up at [dataforseo.com](https://dataforseo.com/))
 
     **How to use:**
     1. Enter your DataForSEO login and password in the sidebar
@@ -187,16 +189,6 @@ with st.expander("How to use this tool"):
     - Competitive phrase research
     """)
 
-
-with st.expander("How do I use this app?"):
-    st.write("""
-        1. You will need a DataForSEO account from dataforseo.com
-        2. Enter your login and password, enter a seed keyword, and click Send search
-        3. Download the job file. DataForSEO can take 25 minutes or more to finish the search
-        4. Come back to Collect results, upload the job file and click Collect results
-        5. The tool extracts page titles and content from ranking pages
-        6. Use this data to optimise your page titles and expand content coverage
-    """)
 
 dataforseo_login = st.sidebar.text_input(
     'DataForSEO Login',

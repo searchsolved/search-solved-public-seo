@@ -78,28 +78,22 @@ def decode_job_file(raw):
     return raw.decode('utf-8', errors='replace')
 
 
-with st.expander("How do I use this app?"):
-    st.write("""
-        1. You will need a DataForSEO account from dataforseo.com (pay as you go)
-        2. You will need an API key from dandelion.eu - 1,000 free requests per day
-        3. Enter your DataForSEO login and password and your Dandelion key in the sidebar
-        4. Step 1: enter a seed keyword and send the search, then download the job file
-        5. Step 2 (25 minutes or more later): upload the job file and collect the results
-        6. This data can be used to optimize pages / expand on existing content""")
-
 st.title("SERP Entity Extractor")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![Hire Me](https://img.shields.io/badge/-Hire%20Me-FF6B6B?logoColor=white)](https://www.leefoot.com/contact) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social) · [![More Tools](https://img.shields.io/badge/-More%20Tools-8B5CF6?logoColor=white)](https://leefoot.com/tools) · [![GitHub](https://img.shields.io/badge/-GitHub-6B7280?logoColor=white)](https://github.com/searchsolved/search-solved-public-seo)")
 
 with st.expander("How to use this tool"):
     st.markdown("""
     **What this tool does:**
-    - Extracts entities from SERP results
-    - Analyzes competitor content for entities
-    - Compares entity coverage across rankings
+    - Extracts named entities from the pages ranking for a keyword, using the Dandelion.eu API
+    - Shows the most frequent entities across those pages in a chart and a table
 
     **Why two steps:** Google now routes result links through google.com/goto. DataForSEO's
     Standard queue turns those back into real URLs, but a search can take 25 minutes or
     more to finish. So you send the search, keep the job file, and collect the results later.
+
+    **Requirements:**
+    - DataForSEO account (sign up at [dataforseo.com](https://dataforseo.com/), pay as you go)
+    - Dandelion.eu API key (dandelion.eu, 1,000 free requests per day)
 
     **How to use:**
     1. Enter your DataForSEO login and password and your Dandelion.eu key in the sidebar

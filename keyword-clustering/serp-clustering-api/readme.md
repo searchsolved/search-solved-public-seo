@@ -79,33 +79,39 @@ curl -X POST "http://localhost:8000/cluster-serps?common_urls=4" \
 
 The file is the top organic results for each keyword, one row per ranking URL. The top 10 is usually enough for clustering. Ways to make it:
 
-- **DataForSEO SERP API (script).** Call the Google Organic Live Advanced endpoint for each keyword and keep the `url` of each item where `type` is `organic`. Costs about $0.002 per keyword for the top 10. A minimal script:
+- **DataForSEO SERP API (script).** Use the Standard queue (`task_post`, then `task_get/advanced`) and keep the `url` of each item where `type` is `organic`. Live requests currently return many organic URLs as unresolved `google.com/goto` links, which breaks URL matching; the Standard queue resolves them but a search can take 25 minutes or more. Costs about $0.0006 per keyword for the top 10. A minimal script that sends the searches, then checks every 60 seconds until they are all done:
 
   ```python
   import csv, os, time, requests
 
+  BASE = "https://api.dataforseo.com/v3/serp/google/organic"
   keywords = ["best running shoes", "top running shoes"]
   auth = (os.environ["DATAFORSEO_LOGIN"], os.environ["DATAFORSEO_PASSWORD"])
+
+  body = [{"keyword": kw, "location_code": 2826, "language_code": "en",
+           "device": "desktop", "depth": 10} for kw in keywords]  # up to 100 per call
+  posted = requests.post(f"{BASE}/task_post", auth=auth, json=body, timeout=60).json()
+  pending = {t["id"]: t["data"]["keyword"] for t in posted["tasks"] if t["status_code"] == 20100}
 
   with open("serp_results.csv", "w", newline="", encoding="utf-8") as f:
       writer = csv.writer(f)
       writer.writerow(["keyword", "url"])
-      for kw in keywords:
-          resp = requests.post(
-              "https://api.dataforseo.com/v3/serp/google/organic/live/advanced",
-              auth=auth,
-              json=[{"keyword": kw, "location_code": 2826, "language_code": "en",
-                     "device": "desktop", "depth": 10}],
-              timeout=60,
-          ).json()
-          items = (resp["tasks"][0].get("result") or [{}])[0].get("items") or []
-          for item in items:
-              if item.get("type") == "organic":
-                  writer.writerow([kw, item["url"]])
-          time.sleep(2)
+      while pending:
+          time.sleep(60)
+          for task_id, kw in list(pending.items()):
+              task = requests.get(f"{BASE}/task_get/advanced/{task_id}", auth=auth, timeout=60).json()["tasks"][0]
+              if task["status_code"] in (40601, 40602):  # still running
+                  continue
+              del pending[task_id]
+              items = (task.get("result") or [{}])[0].get("items") or []
+              for item in items:
+                  url = item.get("url") or ""
+                  if item.get("type") == "organic" and "google.com/goto" not in url:
+                      writer.writerow([kw, url])
+              time.sleep(0.5)
   ```
 
-- **Share of Voice tool** (`reporting/share-of-voice`, live DataForSEO mode). The Excel download's **Raw Data** sheet has `keyword` and `url` columns (top 10 results). Save that sheet as CSV and upload it with the default column names.
+- **Share of Voice tool** (`reporting/share-of-voice`, DataForSEO mode). The Excel download's **Raw Data** sheet has `keyword` and `url` columns (top 10 results). Save that sheet as CSV and upload it with the default column names.
 - **SERP Crossover Analyzer** (`competitive-analysis/serp-crossover-analyzer`). The Excel report's **Raw SERP Data** sheet has `Keyword` and `URL` columns. Save it as CSV and pass `keyword_column=Keyword` and `url_column=URL`.
 - Any rank tracker export with one row per keyword and ranking URL, with the column names passed as above.
 

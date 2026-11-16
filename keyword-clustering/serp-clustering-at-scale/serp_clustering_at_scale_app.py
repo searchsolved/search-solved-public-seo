@@ -5,20 +5,28 @@
 SERP Clustering at Scale - Streamlit App
 
 Clusters keywords based on common SERP URLs to identify content consolidation opportunities.
-Supports CSV upload and live SERP fetching via DataForSEO.
+Supports CSV upload and SERP data from the DataForSEO SERP API (Standard queue:
+send the searches now, collect the results later).
 """
 
 import os
 import time
-import requests
-from base64 import b64encode
 from collections import defaultdict
-from itertools import combinations
 
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
+
+from dataforseo_queue import (
+    QueueError,
+    collect_results,
+    estimate_cost,
+    is_unresolved,
+    job_from_csv,
+    job_to_csv,
+    organic_items,
+    send_searches,
+)
 
 st.set_page_config(
     page_title="SERP Clustering at Scale",
@@ -43,10 +51,17 @@ with st.expander("How to use this tool"):
     2. Upload one or more CSV files (columns: search query and result URL)
     3. Configure clustering threshold and run
 
-    **Option 2: Fetch Live SERPs (DataForSEO)**
+    **Option 2: Fetch SERPs from DataForSEO (two steps)**
+
+    *Why two steps:* Google now routes result links through google.com/goto. DataForSEO's
+    Standard queue turns those back into real URLs, but a search can take 25 minutes or
+    more to finish. So you send the searches, keep the job file, and collect the results later.
+
     1. Enter your DataForSEO API credentials in the sidebar
-    2. Paste keywords (one per line) into the text area
-    3. Select location and device, then fetch and cluster
+    2. **1. Send searches:** paste keywords (one per line), choose the location, device and
+       results per keyword, check the estimated cost and click "Send searches". Download the job file.
+    3. **2. Collect results** (about 30 minutes later): upload the job file and click
+       "Collect and Cluster". The minimum shared URLs setting in the sidebar can be changed afterwards.
 
     **Best for:**
     - Large-scale keyword research
@@ -59,8 +74,7 @@ st.markdown("Cluster keywords by shared SERP URLs to find content consolidation 
 # DataForSEO Configuration
 # ----------------
 
-DATAFORSEO_ENDPOINT = "https://api.dataforseo.com/v3/serp/google/organic/live/advanced"
-COST_PER_KEYWORD = 0.002  # USD per keyword (10 results)
+LANGUAGE_CODE = "en"
 
 LOCATION_CODES = {
     "United Kingdom": 2826,
@@ -77,86 +91,35 @@ LOCATION_CODES = {
 
 
 # ----------------
-# DataForSEO Live Fetching
+# DataForSEO Standard queue results
 # ----------------
 
-def fetch_serps_dataforseo(keywords, login, password, location_code, device, progress_bar, status_text):
+def serps_to_dataframe(ready):
     """
-    Fetch live SERP results from DataForSEO for a list of keywords.
-    Returns a DataFrame with columns 'query' and 'link'.
+    Turn collected DataForSEO results ({keyword: SERP items}) into a DataFrame with
+    columns 'query' and 'link'. Organic URLs left as unresolved google.com/goto links
+    are skipped and counted. Returns (df, unresolved).
     """
-    cred = b64encode(f"{login}:{password}".encode()).decode()
-    headers = {
-        "Authorization": f"Basic {cred}",
-        "Content-Type": "application/json",
-    }
-
     rows = []
-    failed = []
-    total = len(keywords)
+    unresolved = 0
+    for keyword, items in ready.items():
+        for item in organic_items(items):
+            url = item.get("url", "")
+            if is_unresolved(url):
+                unresolved += 1
+            elif url:
+                rows.append({"query": keyword, "link": url})
+    return pd.DataFrame(rows, columns=["query", "link"]), unresolved
 
-    for i, keyword in enumerate(keywords):
-        keyword = keyword.strip()
-        if not keyword:
-            continue
 
-        status_text.text(f"Fetching SERP {i + 1}/{total}: {keyword}")
-        progress_bar.progress((i + 1) / total * 0.8)  # Reserve 0.8-1.0 for clustering
-
-        payload = [{
-            "keyword": keyword,
-            "location_code": location_code,
-            "language_code": "en",
-            "device": device,
-            "depth": 10,
-        }]
-
+def decode_bytes(raw_bytes):
+    """Decode an uploaded file, trying a few common encodings."""
+    for encoding in ("utf-8", "utf-8-sig", "latin-1"):
         try:
-            response = requests.post(
-                DATAFORSEO_ENDPOINT,
-                headers=headers,
-                json=payload,
-                timeout=30,
-            )
-            response.raise_for_status()
-            data = response.json()
-
-            tasks = data.get("tasks", [])
-            if not tasks or tasks[0].get("status_code") != 20000:
-                error_msg = tasks[0].get("status_message", "Unknown error") if tasks else "No tasks returned"
-                failed.append(f"{keyword}: {error_msg}")
-                continue
-
-            result = tasks[0].get("result", [])
-            if not result:
-                failed.append(f"{keyword}: no results")
-                continue
-
-            items = result[0].get("items", [])
-            organic_results = [item for item in items if item.get("type") == "organic"]
-
-            for item in organic_results:
-                url = item.get("url", "")
-                if url:
-                    rows.append({"query": keyword, "link": url})
-
-        except requests.exceptions.RequestException as e:
-            failed.append(f"{keyword}: {e}")
-
-        # Rate limit: 0.5s between requests
-        if i < total - 1:
-            time.sleep(0.5)
-
-    if failed:
-        with st.expander(f"⚠️ {len(failed)} keyword(s) had issues"):
-            for msg in failed:
-                st.text(msg)
-
-    if not rows:
-        st.error("No SERP data retrieved. Check your credentials and keywords.")
-        return None
-
-    return pd.DataFrame(rows)
+            return raw_bytes.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    raise ValueError("Could not decode the file.")
 
 
 # ----------------
@@ -400,8 +363,11 @@ def process_clustering_from_live(df, common_urls, progress_bar, status_text):
 # Display Results
 # ----------------
 
-def display_results(results_df, elapsed):
-    """Display clustering results with tabs, charts, and download options."""
+def display_results(results_df, elapsed, key_prefix="csv"):
+    """Display clustering results with tabs, charts, and download options.
+
+    key_prefix keeps widget keys unique when both input methods show results on one page.
+    """
     clustered = results_df[results_df['Cluster'] != 'NO_CLUSTER']
     st.success(f"Found {clustered['Cluster'].nunique()} clusters in {elapsed:.1f}s!")
 
@@ -414,7 +380,7 @@ def display_results(results_df, elapsed):
     ])
 
     with tab1:
-        st.dataframe(results_df, use_container_width=True, height=400)
+        st.dataframe(results_df, width="stretch", height=400, key=f"{key_prefix}_all_results")
 
         csv = results_df.to_csv(index=False).encode('utf-8')
         st.download_button(
@@ -422,7 +388,8 @@ def display_results(results_df, elapsed):
             data=csv,
             file_name="serp_clusters.csv",
             mime="text/csv",
-            use_container_width=True
+            width="stretch",
+            key=f"{key_prefix}_download_results",
         )
 
     with tab2:
@@ -436,7 +403,8 @@ def display_results(results_df, elapsed):
 
             st.dataframe(
                 top_clusters[['Cluster', 'Cluster Size', 'Score', 'Recommendation', 'Sample URLs']],
-                use_container_width=True
+                width="stretch",
+                key=f"{key_prefix}_top_clusters",
             )
         else:
             st.info("No clusters found. Try lowering the minimum shared URLs threshold.")
@@ -463,7 +431,7 @@ def display_results(results_df, elapsed):
                 nbins=20,
                 title='Consolidation Score Distribution'
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch", key=f"{key_prefix}_score_chart")
 
         # Cluster size distribution
         st.subheader("Cluster Size Distribution")
@@ -475,7 +443,7 @@ def display_results(results_df, elapsed):
                 labels={'x': 'Cluster Size', 'y': 'Number of Clusters'},
                 title='Distribution of Cluster Sizes'
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch", key=f"{key_prefix}_size_chart")
 
     with tab4:
         if len(clustered) > 0:
@@ -485,6 +453,7 @@ def display_results(results_df, elapsed):
             selected_cluster = st.selectbox(
                 "Select a cluster to view",
                 cluster_names,
+                key=f"{key_prefix}_select_cluster",
                 format_func=lambda x: f"{x} (Score: {clustered[clustered['Cluster'] == x]['Score'].iloc[0]})"
             )
 
@@ -530,7 +499,7 @@ with st.sidebar:
     st.markdown("---")
 
     st.header("🔑 DataForSEO API")
-    st.markdown("Required for live SERP fetching. Leave blank to use CSV upload only.")
+    st.markdown("Required to send searches and collect results. Leave blank to use CSV upload only.")
 
     dataforseo_login = st.text_input(
         "DataForSEO Login",
@@ -546,20 +515,6 @@ with st.sidebar:
         help="Your DataForSEO API password. Can also be set via DATAFORSEO_PASSWORD env var.",
     )
 
-    location = st.selectbox(
-        "Location",
-        options=list(LOCATION_CODES.keys()),
-        index=0,
-        help="Target location for SERP results",
-    )
-
-    device = st.selectbox(
-        "Device",
-        options=["Desktop", "Mobile"],
-        index=0,
-        help="Device type for SERP results",
-    )
-
     st.markdown("---")
     st.markdown("### 📖 Data Format")
     st.markdown("""
@@ -567,9 +522,9 @@ with st.sidebar:
     - Column 1: Search query
     - Column 2: Result URL
 
-    **Live Fetch:**
+    **DataForSEO:**
     - One keyword per line
-    - Cost: ~$0.002 per keyword
+    - Cost: keywords x $0.0006 x (results per keyword / 10)
     """)
 
 
@@ -577,7 +532,7 @@ with st.sidebar:
 # Main Content - Input Tabs
 # ----------------
 
-input_tab1, input_tab2 = st.tabs(["📤 Upload SERP CSVs", "🌐 Fetch Live SERPs"])
+input_tab1, input_tab2, input_tab3 = st.tabs(["📤 Upload SERP CSVs", "🌐 1. Send searches", "📥 2. Collect results"])
 
 with input_tab1:
     st.markdown("Upload pre-fetched SERP export CSV files (e.g. from SERP API or DataForSEO batch exports).")
@@ -605,12 +560,12 @@ with input_tab1:
 
             # Preview
             with st.expander("Preview Data"):
-                st.dataframe(df_combined.head(20), use_container_width=True)
+                st.dataframe(df_combined.head(20), width="stretch")
 
             unique_queries = df_combined.iloc[:, 0].nunique()
             st.info(f"Found **{unique_queries:,}** unique queries")
 
-            if st.button("🎯 Run Clustering", type="primary", use_container_width=True, key="csv_cluster"):
+            if st.button("🎯 Run Clustering", type="primary", width="stretch", key="csv_cluster"):
                 progress_bar = st.progress(0)
                 status_text = st.empty()
 
@@ -626,8 +581,35 @@ with input_tab1:
     else:
         st.info("Upload SERP export CSV files to get started with this method.")
 
+has_credentials = bool(dataforseo_login and dataforseo_password)
+
 with input_tab2:
-    st.markdown("Fetch live SERP data from DataForSEO. Enter your API credentials in the sidebar.")
+    st.markdown("Send your keywords to DataForSEO. Enter your API credentials in the sidebar.")
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        location = st.selectbox(
+            "Location",
+            options=list(LOCATION_CODES.keys()),
+            index=0,
+            help="Target location for SERP results",
+        )
+    with col2:
+        device = st.selectbox(
+            "Device",
+            options=["Desktop", "Mobile"],
+            index=0,
+            help="Device type for SERP results",
+        )
+    with col3:
+        depth = st.slider(
+            "Results per keyword",
+            min_value=10,
+            max_value=100,
+            value=10,
+            step=10,
+            help="Number of Google results to fetch per keyword. DataForSEO bills per 10 results.",
+        )
 
     keywords_text = st.text_area(
         "Keywords (one per line)",
@@ -636,90 +618,193 @@ with input_tab2:
         help="Enter keywords to fetch SERPs for, one per line.",
     )
 
-    if keywords_text:
-        keywords = [k.strip() for k in keywords_text.strip().split("\n") if k.strip()]
-        num_keywords = len(keywords)
+    # Exact duplicates are sent once
+    keywords = list(dict.fromkeys(k.strip() for k in keywords_text.split("\n") if k.strip()))
 
-        if num_keywords > 0:
-            estimated_cost = num_keywords * COST_PER_KEYWORD
-            st.info(
-                f"**{num_keywords:,}** keywords entered. "
-                f"Estimated cost: **${estimated_cost:.2f}** "
-                f"(${COST_PER_KEYWORD} per keyword)"
-            )
-
-            # Check credentials
-            has_credentials = bool(dataforseo_login and dataforseo_password)
-
-            if not has_credentials:
-                st.warning("Enter your DataForSEO login and password in the sidebar to enable live fetching.")
-
-            if st.button(
-                "🌐 Fetch and Cluster",
-                type="primary",
-                use_container_width=True,
-                disabled=not has_credentials,
-                key="live_cluster",
-            ):
-                progress_bar = st.progress(0)
-                status_text = st.empty()
-                start_time = time.time()
-
-                # Fetch SERPs
-                location_code = LOCATION_CODES[location]
-                device_value = device.lower()
-
-                df_live = fetch_serps_dataforseo(
-                    keywords=keywords,
-                    login=dataforseo_login,
-                    password=dataforseo_password,
-                    location_code=location_code,
-                    device=device_value,
-                    progress_bar=progress_bar,
-                    status_text=status_text,
-                )
-
-                if df_live is not None and not df_live.empty:
-                    st.success(
-                        f"Retrieved {len(df_live):,} results for "
-                        f"{df_live['query'].nunique()} keywords"
-                    )
-
-                    # Preview fetched data
-                    with st.expander("Preview Fetched Data"):
-                        st.dataframe(df_live.head(20), use_container_width=True)
-
-                    # Cluster the results
-                    results_df = process_clustering_from_live(
-                        df_live, common_urls, progress_bar, status_text
-                    )
-                    elapsed = time.time() - start_time
-
-                    progress_bar.empty()
-                    status_text.empty()
-
-                    display_results(results_df, elapsed)
-                else:
-                    progress_bar.empty()
-                    status_text.empty()
+    if keywords:
+        st.info(
+            f"**{len(keywords):,}** keywords entered at {depth} results each. "
+            f"Estimated cost: **${estimate_cost(len(keywords), depth):.4f}**"
+        )
+        if not has_credentials:
+            st.warning("Enter your DataForSEO login and password in the sidebar to send searches.")
     else:
-        st.info("Enter keywords above and configure your DataForSEO credentials in the sidebar to fetch live SERPs.")
+        st.info("Enter keywords above and configure your DataForSEO credentials in the sidebar to send searches.")
+
+    if st.button(
+        "🌐 Send searches",
+        type="primary",
+        width="stretch",
+        disabled=not has_credentials or not keywords,
+        key="send_searches",
+    ):
+        try:
+            with st.spinner("Sending searches to DataForSEO..."):
+                job_rows, send_warnings, send_cost = send_searches(
+                    keywords, dataforseo_login, dataforseo_password,
+                    LOCATION_CODES[location], LANGUAGE_CODE,
+                    device=device.lower(), depth=depth,
+                )
+        except QueueError as e:
+            st.error(str(e))
+        else:
+            for warning in send_warnings:
+                st.warning(warning)
+            if job_rows:
+                st.session_state["clustering_job"] = job_rows
+                st.session_state["clustering_send_cost"] = send_cost
+
+    if st.session_state.get("clustering_job"):
+        job_rows = st.session_state["clustering_job"]
+        st.success(
+            f"Queued {len(job_rows)} search(es). Cost reported by DataForSEO: "
+            f"${st.session_state['clustering_send_cost']:.4f}"
+        )
+        st.markdown(
+            "DataForSEO can take **25 minutes or more** to finish. Download the job file, "
+            "then use **2. Collect results**. While this page stays open, the job is kept "
+            "here too, so you can collect without uploading it."
+        )
+        st.download_button(
+            label="📥 Download job file (CSV)",
+            data=job_to_csv(job_rows).encode("utf-8"),
+            file_name="serp_clustering_job.csv",
+            mime="text/csv",
+            width="stretch",
+        )
 
     with st.expander("ℹ️ About DataForSEO"):
         st.markdown("""
-        [DataForSEO](https://dataforseo.com/) provides live SERP data via API.
+        [DataForSEO](https://dataforseo.com/) provides SERP data via API.
 
-        **Pricing:** ~$0.002 per keyword (10 organic results).
+        **Pricing:** keywords x $0.0006 x (results per keyword / 10), using the Standard queue.
+
+        **Why two steps:** Google now routes result links through google.com/goto. The Standard
+        queue turns those back into real URLs, but a search can take 25 minutes or more to finish.
 
         **How it works:**
         1. Enter your API credentials in the sidebar
         2. Paste your keywords above (one per line)
-        3. Select your target location and device
-        4. Click "Fetch and Cluster" to retrieve SERPs and cluster in one step
+        3. Select your target location, device and results per keyword
+        4. Click "Send searches" and download the job file
+        5. About 30 minutes later, open **2. Collect results** and collect and cluster
 
-        **Rate limiting:** Requests are sent one at a time with a 0.5s delay
-        to avoid overloading the API.
+        **Rate limiting:** Searches are sent in batches of up to 100, and results are
+        collected one at a time with a 0.5s delay to avoid overloading the API.
         """)
+
+with input_tab3:
+    st.markdown("Collect the finished searches and cluster them. "
+                "Searches can take 25 minutes or more to finish after sending.")
+
+    job_rows = st.session_state.get("clustering_job")
+    job_file = st.file_uploader(
+        "Job file from step 1",
+        type=["csv"],
+        help="The serp_clustering_job.csv you downloaded when you sent the searches",
+    )
+    if job_file is not None:
+        try:
+            job_rows = job_from_csv(decode_bytes(job_file.getvalue()))
+        except ValueError as e:
+            st.error(str(e))
+            job_rows = None
+    elif job_rows:
+        st.caption(f"Using the job sent from this page ({len(job_rows)} search(es)).")
+
+    if not has_credentials:
+        st.warning("Enter your DataForSEO login and password in the sidebar to collect results.")
+
+    if st.button(
+        "🎯 Collect and Cluster",
+        type="primary",
+        width="stretch",
+        disabled=not has_credentials or not job_rows,
+        key="collect_cluster",
+    ):
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        start_time = time.time()
+
+        def update_progress(done, total, keyword):
+            progress_bar.progress((done / total if total else 1.0) * 0.8)  # Reserve 0.8-1.0 for clustering
+            status_text.text(f"Checking {done + 1}/{total}: {keyword}" if keyword else "")
+
+        try:
+            result = collect_results(job_rows, dataforseo_login, dataforseo_password,
+                                     progress_callback=update_progress)
+        except QueueError as e:
+            progress_bar.empty()
+            status_text.empty()
+            st.error(str(e))
+        else:
+            df_live, unresolved = serps_to_dataframe(result["ready"])
+            collected = {
+                "df_live": df_live,
+                "ready": len(result["ready"]),
+                "pending": result["pending"],
+                "errors": result["errors"],
+                "unresolved": unresolved,
+                "total": len(job_rows),
+                "results_df": None,
+                "threshold": None,
+                "elapsed": 0.0,
+            }
+            if not df_live.empty:
+                collected["results_df"] = process_clustering_from_live(
+                    df_live.copy(), common_urls, progress_bar, status_text
+                )
+                collected["threshold"] = common_urls
+                collected["elapsed"] = time.time() - start_time
+            progress_bar.empty()
+            status_text.empty()
+            st.session_state["clustering_collected"] = collected
+
+    collected = st.session_state.get("clustering_collected")
+    if collected:
+        if collected["pending"]:
+            st.warning(
+                f"{collected['ready']} of {collected['total']} search(es) have finished; "
+                f"{len(collected['pending'])} are still running at DataForSEO. "
+                "Try again in a few minutes. The clusters below cover the finished ones only."
+            )
+        if collected["errors"]:
+            with st.expander(f"⚠️ {len(collected['errors'])} search(es) failed"):
+                for msg in collected["errors"]:
+                    st.text(msg)
+        if collected["unresolved"]:
+            st.warning(
+                f"{collected['unresolved']} result(s) came back as unresolved google.com/goto links "
+                "and were left out of the clustering."
+            )
+
+        df_live = collected["df_live"]
+        if collected["ready"] and df_live.empty:
+            st.error("No SERP URLs to cluster in the finished searches.")
+        elif not df_live.empty:
+            st.success(
+                f"Retrieved {len(df_live):,} results for "
+                f"{df_live['query'].nunique()} keywords"
+            )
+
+            # Preview fetched data
+            with st.expander("Preview Fetched Data"):
+                st.dataframe(df_live.head(20), width="stretch")
+
+            # Re-cluster when the minimum shared URLs setting has changed since collecting
+            if collected["threshold"] != common_urls:
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                start_time = time.time()
+                collected["results_df"] = process_clustering_from_live(
+                    df_live.copy(), common_urls, progress_bar, status_text
+                )
+                collected["threshold"] = common_urls
+                collected["elapsed"] = time.time() - start_time
+                progress_bar.empty()
+                status_text.empty()
+
+            display_results(collected["results_df"], collected["elapsed"], key_prefix="queue")
 
 # Footer
 st.markdown("---")

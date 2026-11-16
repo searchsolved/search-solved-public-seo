@@ -4,11 +4,21 @@
 """
 SERP Crossover Analyzer - CLI Version
 
-Analyse URL overlap across multiple keyword SERPs using the DataForSEO API.
+Analyse URL overlap across multiple keyword SERPs using the DataForSEO API
+(Standard queue).
+
+Searches in the Standard queue can take 25 minutes or more to finish, so the
+tool works in two steps. `send` queues the searches and writes a job file;
+`collect` reads the job file, fetches the finished searches and writes the
+crossover matrix. Add --wait to `collect` to keep checking until every search
+is done.
 
 Usage:
-    python serp_crossover_analyzer_cli.py --keywords "seo tools" "keyword research" --login YOUR_LOGIN --password YOUR_PASS
-    python serp_crossover_analyzer_cli.py --keywords "seo tools" "keyword research"  # uses env vars
+    python serp_crossover_analyzer_cli.py send --keywords "seo tools" "keyword research" --job job.csv
+    python serp_crossover_analyzer_cli.py collect --job job.csv --output serp_crossover.csv
+    python serp_crossover_analyzer_cli.py collect --job job.csv --wait
+
+Credentials: pass --login and --password, or set the environment variables.
 
 Environment variables:
     DATAFORSEO_LOGIN    - DataForSEO account login
@@ -16,13 +26,24 @@ Environment variables:
 """
 
 import argparse
-import math
-import pandas as pd
-import requests
 import os
 import sys
-from base64 import b64encode
+import time
+from pathlib import Path
 from urllib.parse import urlparse
+
+import pandas as pd
+
+from dataforseo_queue import (
+    QueueError,
+    collect_results,
+    estimate_cost,
+    is_unresolved,
+    job_from_csv,
+    job_to_csv,
+    organic_items,
+    send_searches,
+)
 
 LOCATION_CODES = {
     "United Kingdom": 2826,
@@ -37,6 +58,11 @@ LOCATION_CODES = {
     "India": 2356,
 }
 
+LANGUAGE_CODE = "en"
+
+WAIT_CHECK_SECONDS = 60
+WAIT_LIMIT_MINUTES = 90
+
 
 def extract_domain(url):
     """Extract domain from URL."""
@@ -47,48 +73,31 @@ def extract_domain(url):
         return url
 
 
-def fetch_serp(keyword, login, password, location_code, device, num_results):
-    """Fetch SERP results for a keyword using the DataForSEO API."""
-    cred = b64encode(f"{login}:{password}".encode()).decode()
-    headers = {
-        'Authorization': f'Basic {cred}',
-        'Content-Type': 'application/json'
-    }
+def build_serp_data(ready, depths):
+    """Turn collected searches into {keyword: [results]} for the crossover analysis.
 
-    payload = [{
-        "keyword": keyword,
-        "location_code": location_code,
-        "language_code": "en",
-        "device": device.lower(),
-        "depth": num_results
-    }]
-
-    try:
-        response = requests.post(
-            'https://api.dataforseo.com/v3/serp/google/organic/live/advanced',
-            headers=headers,
-            json=payload,
-            timeout=60
-        )
-        data = response.json()
-
-        items = data["tasks"][0]["result"][0]["items"]
-        organic = [item for item in items if item["type"] == "organic"]
-
+    ready is {keyword: items} from collect_results(); depths is {keyword: results per SERP}.
+    Organic results that came back as unresolved google.com/goto links are left out and
+    counted, since their real URL and domain are unknown. Returns (serp_data, unresolved).
+    """
+    serp_data, unresolved = {}, 0
+    for keyword, items in ready.items():
+        organic = organic_items(items)[:depths.get(keyword, len(items))]
         results = []
-        for i, result in enumerate(organic[:num_results]):
+        for i, result in enumerate(organic):
+            url = result.get('url') or ''
+            if is_unresolved(url):
+                unresolved += 1
+                continue
             results.append({
                 'position': result.get('rank_group', i + 1),
                 'title': result.get('title', ''),
-                'link': result.get('url', ''),
-                'domain': extract_domain(result.get('url', ''))
+                'link': url,
+                'domain': extract_domain(url)
             })
-
-        return results
-
-    except Exception as e:
-        print(f"  Warning: Error fetching '{keyword}': {str(e)}")
-        return []
+        if results:
+            serp_data[keyword] = results
+    return serp_data, unresolved
 
 
 def calculate_crossover(serp_data):
@@ -150,40 +159,20 @@ def find_overlapping_urls(serp_data):
     return df
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description='Analyse URL overlap across multiple keyword SERPs using the DataForSEO API'
-    )
-    parser.add_argument('--keywords', required=True, nargs='+',
-                        help='Keywords to compare')
-    parser.add_argument('--login',
-                        help='DataForSEO login (or set DATAFORSEO_LOGIN env var)')
-    parser.add_argument('--password',
-                        help='DataForSEO password (or set DATAFORSEO_PASSWORD env var)')
-    parser.add_argument('--output', default='serp_crossover.csv',
-                        help='Output CSV path (default: serp_crossover.csv)')
-    parser.add_argument('--location', default='United Kingdom',
-                        choices=list(LOCATION_CODES.keys()),
-                        help='Search location name (default: United Kingdom)')
-    parser.add_argument('--location-code', type=int, default=None,
-                        help='DataForSEO location code (overrides --location, default: 2826)')
-    parser.add_argument('--device', choices=['desktop', 'mobile'],
-                        default='desktop', help='Device type (default: desktop)')
-    parser.add_argument('--num-results', type=int, default=10,
-                        help='Results per SERP (default: 10)')
-
-    args = parser.parse_args()
-
-    # Get credentials
+def credentials(args):
     login = args.login or os.environ.get('DATAFORSEO_LOGIN')
     password = args.password or os.environ.get('DATAFORSEO_PASSWORD')
-
     if not login or not password:
         print("Error: DataForSEO credentials required.")
         print("Use --login and --password, or set DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD environment variables.")
         sys.exit(1)
+    return login, password
 
-    keywords = args.keywords
+
+def send(args):
+    login, password = credentials(args)
+
+    keywords = list(dict.fromkeys(kw.strip() for kw in args.keywords if kw.strip()))
     if len(keywords) < 2:
         print("Error: Need at least 2 keywords to compare")
         sys.exit(1)
@@ -191,25 +180,80 @@ def main():
     # Resolve location code
     location_code = args.location_code if args.location_code else LOCATION_CODES[args.location]
 
-    # Show estimated cost
-    estimated_cost = len(keywords) * 0.002 * math.ceil(args.num_results / 10)
-
-    print(f"Analysing {len(keywords)} keywords...")
+    print(f"Sending {len(keywords)} keywords...")
     print(f"  Location: {args.location} (code: {location_code})")
     print(f"  Device: {args.device}")
     print(f"  Results per SERP: {args.num_results}")
-    print(f"  Estimated cost: ${estimated_cost:.3f}")
+    print(f"  Estimated cost: ${estimate_cost(len(keywords), args.num_results):.4f}")
 
-    # Fetch SERPs
-    serp_data = {}
-    for keyword in keywords:
-        print(f"  Fetching: {keyword}")
-        results = fetch_serp(keyword, login, password, location_code, args.device, args.num_results)
-        if results:
-            serp_data[keyword] = results
+    try:
+        job_rows, warnings, cost = send_searches(keywords, login, password, location_code, LANGUAGE_CODE,
+                                                 device=args.device, depth=args.num_results)
+    except QueueError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
+    for warning in warnings:
+        print(f"Warning: {warning}")
+    if not job_rows:
+        print("No searches were queued.")
+        sys.exit(1)
+
+    Path(args.job).write_text(job_to_csv(job_rows), encoding='utf-8')
+    print(f"\nQueued {len(job_rows)} search(es). Cost reported by DataForSEO: ${cost:.4f}")
+    print(f"Job file saved to: {args.job}")
+    print("DataForSEO can take 25 minutes or more to finish. Then run:")
+    print(f"  python {Path(__file__).name} collect --job {args.job}")
+
+
+def collect(args):
+    login, password = credentials(args)
+
+    job_path = Path(args.job)
+    if not job_path.is_file():
+        print(f"Error: Job file does not exist: {job_path}")
+        sys.exit(1)
+    try:
+        job_rows = job_from_csv(job_path.read_text(encoding='utf-8'))
+    except ValueError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
+    started = time.time()
+    while True:
+        try:
+            result = collect_results(job_rows, login, password)
+        except QueueError as e:
+            print(f"Error: {e}")
+            sys.exit(1)
+        print(f"{len(result['ready'])} of {len(job_rows)} search(es) finished, "
+              f"{len(result['pending'])} still running, {len(result['errors'])} failed.")
+        if not result['pending'] or not args.wait:
+            break
+        if time.time() - started > WAIT_LIMIT_MINUTES * 60:
+            print(f"Stopped waiting after {WAIT_LIMIT_MINUTES} minutes. Run collect again later.")
+            break
+        time.sleep(WAIT_CHECK_SECONDS)
+
+    for error in result['errors']:
+        print(f"Warning: {error}")
+    if result['pending']:
+        print(f"{len(result['pending'])} search(es) are still running, so the analysis below leaves them out. "
+              "Run collect again later for the full analysis.")
+
+    depths = {}
+    for row in job_rows:
+        try:
+            depths[row['keyword']] = int(row['depth'])
+        except (KeyError, TypeError, ValueError):
+            pass
+    serp_data, unresolved = build_serp_data(result['ready'], depths)
+    if unresolved:
+        print(f"Warning: {unresolved} result(s) came back as unresolved google.com/goto links "
+              "and are left out of the crossover, as their real URL is unknown.")
 
     if len(serp_data) < 2:
-        print("Error: Need at least 2 successful SERP fetches")
+        print("Error: Need at least 2 finished searches with results to analyse")
         sys.exit(1)
 
     # Calculate crossover
@@ -227,7 +271,7 @@ def main():
         print(f"Overlapping URLs saved to: {overlap_path}")
 
     # Print summary
-    print(f"\nCrossover Matrix:")
+    print("\nCrossover Matrix:")
     print(matrix.to_string())
 
     # Average crossover
@@ -243,6 +287,50 @@ def main():
         print(f"\nOverlapping URLs: {len(overlapping_df)}")
         for _, row in overlapping_df.head(5).iterrows():
             print(f"  [{row['Keywords Count']} keywords] {row['Domain']}")
+
+
+def add_credential_args(parser):
+    parser.add_argument('--login',
+                        help='DataForSEO login (or set DATAFORSEO_LOGIN env var)')
+    parser.add_argument('--password',
+                        help='DataForSEO password (or set DATAFORSEO_PASSWORD env var)')
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Analyse URL overlap across multiple keyword SERPs using the DataForSEO API'
+    )
+    sub = parser.add_subparsers(dest='command', required=True)
+
+    p_send = sub.add_parser('send', help='Queue the searches and write a job file')
+    p_send.add_argument('--keywords', required=True, nargs='+',
+                        help='Keywords to compare')
+    p_send.add_argument('--job', default='serp_crossover_job.csv',
+                        help='Job file to write (default: serp_crossover_job.csv)')
+    p_send.add_argument('--location', default='United Kingdom',
+                        choices=list(LOCATION_CODES.keys()),
+                        help='Search location name (default: United Kingdom)')
+    p_send.add_argument('--location-code', type=int, default=None,
+                        help='DataForSEO location code (overrides --location, default: 2826)')
+    p_send.add_argument('--device', choices=['desktop', 'mobile'],
+                        default='desktop', help='Device type (default: desktop)')
+    p_send.add_argument('--num-results', type=int, default=10,
+                        help='Results per SERP, billed per 10 (default: 10)')
+    add_credential_args(p_send)
+    p_send.set_defaults(func=send)
+
+    p_collect = sub.add_parser('collect', help='Collect finished searches and write the crossover matrix')
+    p_collect.add_argument('--job', required=True, help='Job file written by send')
+    p_collect.add_argument('--output', default='serp_crossover.csv',
+                           help='Output CSV path (default: serp_crossover.csv)')
+    p_collect.add_argument('--wait', action='store_true',
+                           help=f'Check every {WAIT_CHECK_SECONDS}s until all searches finish '
+                                f'(up to {WAIT_LIMIT_MINUTES} minutes)')
+    add_credential_args(p_collect)
+    p_collect.set_defaults(func=collect)
+
+    args = parser.parse_args()
+    args.func(args)
 
 
 if __name__ == '__main__':

@@ -1,9 +1,8 @@
 """
 SERP Appearance Report - Core Logic
 
-Fetches live Google organic results for a list of keywords from the
-DataForSEO SERP API (Google Organic, Live Advanced) and keeps the results
-that belong to a user-supplied domain.
+Matches Google organic results collected from the DataForSEO SERP API
+(Standard queue, see dataforseo_queue.py) against a user-supplied domain.
 
 Author: Lee Foot
 Website: https://www.leefoot.com
@@ -11,19 +10,13 @@ Website: https://www.leefoot.com
 
 import io
 import math
-import time
-from base64 import b64encode
 from urllib.parse import urlparse
 
 import pandas as pd
-import requests
+
+from dataforseo_queue import is_unresolved, organic_items
 
 ENCODINGS = ['utf-8', 'utf-8-sig', 'latin-1', 'iso-8859-1']
-
-DATAFORSEO_ENDPOINT = 'https://api.dataforseo.com/v3/serp/google/organic/live/advanced'
-
-# DataForSEO bills live SERP requests per 10 results
-COST_PER_10_RESULTS = 0.002
 
 # Region name -> (DataForSEO location_code, language_code)
 LOCATIONS = {
@@ -149,92 +142,8 @@ def url_matches_domain(url, domain):
 
 
 # ----------------------------------------------------------------------
-# DataForSEO
+# Report
 # ----------------------------------------------------------------------
-
-class DataForSEOError(ValueError):
-    """An error reported by the DataForSEO API, with its status code when known."""
-
-    def __init__(self, message, status_code=None):
-        super().__init__(message)
-        self.status_code = status_code
-
-    @property
-    def is_account_error(self):
-        """True for authentication (401xx) and payment or balance (402xx) errors."""
-        return self.status_code is not None and 40100 <= self.status_code < 40300
-
-
-def estimate_cost(num_keywords, depth):
-    """Estimated DataForSEO cost in USD for a run."""
-    return num_keywords * COST_PER_10_RESULTS * math.ceil(depth / 10)
-
-
-def build_headers(login, password):
-    """Basic auth headers for the DataForSEO API."""
-    cred = b64encode(f"{login}:{password}".encode()).decode()
-    return {
-        'Authorization': f'Basic {cred}',
-        'Content-Type': 'application/json'
-    }
-
-
-def build_payload(keyword, location_code, language_code, device, depth):
-    """Request body for one keyword."""
-    return [{
-        "keyword": keyword,
-        "location_code": location_code,
-        "language_code": language_code,
-        "device": device.lower(),
-        "depth": depth
-    }]
-
-
-def parse_serp_response(response_data):
-    """Return (organic_items, cost) from a DataForSEO SERP response.
-
-    Raises ValueError with a readable message when the API or the task
-    reports an error.
-    """
-    if not isinstance(response_data, dict):
-        raise DataForSEOError("Unexpected response from DataForSEO")
-    if response_data.get('status_code') != 20000:
-        raise DataForSEOError(f"API error: {response_data.get('status_message', 'Unknown error')}",
-                              response_data.get('status_code'))
-    cost = response_data.get('cost') or 0.0
-    try:
-        task = response_data["tasks"][0]
-    except (KeyError, TypeError, IndexError):
-        raise DataForSEOError("No task returned by DataForSEO")
-    if task.get('status_code') != 20000:
-        raise DataForSEOError(f"Task error: {task.get('status_message', 'Unknown error')}",
-                              task.get('status_code'))
-    try:
-        items = task["result"][0]["items"] or []
-    except (KeyError, TypeError, IndexError):
-        items = []
-    organic = [item for item in items if item.get("type") == "organic"]
-    return organic, cost
-
-
-def fetch_serp(keyword, headers, location_code, language_code, device, depth, timeout=60):
-    """Fetch one keyword's live SERP. Returns (organic_items, cost); raises DataForSEOError on failure."""
-    try:
-        response = requests.post(
-            DATAFORSEO_ENDPOINT,
-            headers=headers,
-            json=build_payload(keyword, location_code, language_code, device, depth),
-            timeout=timeout
-        )
-    except requests.exceptions.RequestException as e:
-        raise DataForSEOError(f"Request failed: {e}")
-    try:
-        response_data = response.json()
-    except ValueError:
-        status = 40100 if response.status_code == 401 else None
-        raise DataForSEOError(f"Could not parse the API response (HTTP {response.status_code})", status)
-    return parse_serp_response(response_data)
-
 
 def extract_appearances(organic_items, query, domain):
     """Return one row per organic result on the domain, with query, position, link, title and snippet."""
@@ -256,42 +165,19 @@ def extract_appearances(organic_items, query, domain):
     return rows
 
 
-def run_report(keywords, domain, login, password, location_code, language_code,
-               device='desktop', depth=10, delay=2.0, progress_callback=None):
-    """Fetch every keyword and collect the domain's organic appearances.
+def build_report(ready, domain):
+    """Rows for every organic appearance of the domain in the collected searches.
 
-    Requests are sent one at a time with `delay` seconds between them.
-    Returns (rows, warnings, total_cost).
+    ready is {keyword: items} from dataforseo_queue.collect_results(). Returns
+    (rows, unresolved) where unresolved counts organic results that came back as
+    google.com/goto links, which cannot be matched to a domain.
     """
-    if not normalise_domain(domain):
-        raise ValueError("A domain must be supplied.")
-
-    headers = build_headers(login, password)
-    all_rows = []
-    warnings = []
-    total_cost = 0.0
-
-    for i, keyword in enumerate(keywords):
-        if progress_callback:
-            progress_callback(i, len(keywords), keyword)
-        try:
-            organic, cost = fetch_serp(keyword, headers, location_code, language_code, device, depth)
-            total_cost += cost
-            all_rows.extend(extract_appearances(organic, keyword, domain))
-        except DataForSEOError as e:
-            warnings.append(f"{keyword}: {e}")
-            # Stop on credential or balance errors rather than repeating them for every keyword
-            if e.is_account_error:
-                warnings.append("Stopped: fix the DataForSEO account error above and run again.")
-                break
-
-        if i < len(keywords) - 1 and delay > 0:
-            time.sleep(delay)
-
-    if progress_callback:
-        progress_callback(len(keywords), len(keywords), None)
-
-    return all_rows, warnings, total_cost
+    rows, unresolved = [], 0
+    for keyword, items in ready.items():
+        organic = organic_items(items)
+        unresolved += sum(is_unresolved(item.get('url')) for item in organic)
+        rows.extend(extract_appearances(organic, keyword, domain))
+    return rows, unresolved
 
 
 def results_to_dataframe(all_results):

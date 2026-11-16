@@ -6,7 +6,8 @@
 #  SERP Clustering at Scale                                                        #
 #                                                                                  #
 #  Clusters keywords based on common SERP URLs.                                    #
-#  Supports CSV imports (SERP API etc.) and live DataForSEO SERP fetching.        #
+#  Supports CSV imports (SERP API etc.) and the DataForSEO SERP API (Standard    #
+#  queue: send the searches now, collect the results later).                      #
 #  Multiple clustering strategies with consolidation scoring.                      #
 #                                                                                  #
 ####################################################################################
@@ -28,7 +29,7 @@ Features:
 - Consolidation scoring (0-100) to prioritise opportunities
 - Overlap detection between clusters
 - Detailed cluster metrics
-- Live SERP fetching via DataForSEO API
+- SERP data from the DataForSEO SERP API (Standard queue)
 - CSV import from SERP API or similar tools
 
 Usage (CSV mode):
@@ -36,10 +37,18 @@ Usage (CSV mode):
     2. Place CSV files in a folder
     3. Run: python serp_clustering_at_scale.py
 
-Usage (Live DataForSEO mode):
+Usage (DataForSEO mode, two steps):
+    Google now routes result links through google.com/goto. DataForSEO's Standard queue
+    turns those back into real URLs, but a search can take 25 minutes or more to finish,
+    so you send the searches, keep the job file, and collect the results later.
+
     1. Create a text file with one keyword per line
-    2. Run: python serp_clustering_at_scale.py --keywords-file keywords.txt
-    3. Credentials via --login/--password or DATAFORSEO_LOGIN/DATAFORSEO_PASSWORD env vars
+    2. Send: python serp_clustering_at_scale.py send --keywords-file keywords.txt --job job.csv
+    3. About 30 minutes later, collect and cluster:
+       python serp_clustering_at_scale.py collect --job job.csv --output clusters.csv
+       (add --wait to keep checking every 60 seconds until every search has finished)
+    Credentials via --login/--password or DATAFORSEO_LOGIN/DATAFORSEO_PASSWORD env vars.
+    Cost: keywords x $0.0006 x (results per keyword / 10)
 
 Requirements:
     pip install pandas tqdm requests
@@ -51,13 +60,22 @@ import os
 import sys
 import time
 import logging
-import requests
-from base64 import b64encode
 from collections import defaultdict
 from itertools import combinations
 
 import pandas as pd
 from tqdm import tqdm
+
+from dataforseo_queue import (
+    QueueError,
+    collect_results,
+    estimate_cost,
+    is_unresolved,
+    job_from_csv,
+    job_to_csv,
+    organic_items,
+    send_searches,
+)
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -67,8 +85,10 @@ logger = logging.getLogger(__name__)
 # DataForSEO Configuration
 # ----------------
 
-DATAFORSEO_ENDPOINT = "https://api.dataforseo.com/v3/serp/google/organic/live/advanced"
-COST_PER_KEYWORD = 0.002  # USD per keyword (10 results)
+LANGUAGE_CODE = "en"
+JOB_FILE_PATH = "serp_clustering_job.csv"  # job file written by send
+WAIT_CHECK_SECONDS = 60  # collect --wait: seconds between checks
+WAIT_LIMIT_MINUTES = 90  # collect --wait: stop waiting after this long
 
 LOCATION_CODES = {
     "United Kingdom": 2826,
@@ -96,88 +116,27 @@ EXPORT_CSV_FILE_PATH = os.path.join(os.getcwd(), 'serp_cluster_results.csv')  # 
 
 
 # ----------------
-# DataForSEO Live Fetching
+# DataForSEO Standard queue results
 # ----------------
 
-def fetch_serps_dataforseo(keywords, login, password, location_code, device="desktop"):
+def serps_to_dataframe(ready):
     """
-    Fetch live SERP results from DataForSEO for a list of keywords.
+    Turn collected DataForSEO results ({keyword: SERP items}) into a DataFrame with
+    columns 'query' and 'link', matching the format produced by CSV mode.
 
-    Returns a DataFrame with columns 'query' and 'link', matching the format
-    produced by CSV mode.
+    Organic URLs left as unresolved google.com/goto links are skipped and counted.
+    Returns (df, unresolved).
     """
-    cred = b64encode(f"{login}:{password}".encode()).decode()
-    headers = {
-        "Authorization": f"Basic {cred}",
-        "Content-Type": "application/json",
-    }
-
     rows = []
-    failed = []
-
-    for i, keyword in enumerate(tqdm(keywords, desc="Fetching SERPs from DataForSEO")):
-        keyword = keyword.strip()
-        if not keyword:
-            continue
-
-        payload = [{
-            "keyword": keyword,
-            "location_code": location_code,
-            "language_code": "en",
-            "device": device,
-            "depth": 10,
-        }]
-
-        try:
-            response = requests.post(
-                DATAFORSEO_ENDPOINT,
-                headers=headers,
-                json=payload,
-                timeout=30,
-            )
-            response.raise_for_status()
-            data = response.json()
-
-            tasks = data.get("tasks", [])
-            if not tasks or tasks[0].get("status_code") != 20000:
-                error_msg = tasks[0].get("status_message", "Unknown error") if tasks else "No tasks returned"
-                logger.warning(f"API error for '{keyword}': {error_msg}")
-                failed.append(keyword)
-                continue
-
-            result = tasks[0].get("result", [])
-            if not result:
-                logger.warning(f"No results for '{keyword}'")
-                failed.append(keyword)
-                continue
-
-            items = result[0].get("items", [])
-            organic_results = [item for item in items if item.get("type") == "organic"]
-
-            for item in organic_results:
-                url = item.get("url", "")
-                if url:
-                    rows.append({"query": keyword, "link": url})
-
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Request failed for '{keyword}': {e}")
-            failed.append(keyword)
-
-        # Rate limit: 0.5s between requests
-        if i < len(keywords) - 1:
-            time.sleep(0.5)
-
-    if failed:
-        logger.warning(f"{len(failed)} keyword(s) failed: {', '.join(failed[:10])}")
-        if len(failed) > 10:
-            logger.warning(f"  ... and {len(failed) - 10} more")
-
-    if not rows:
-        raise ValueError("No SERP data retrieved from DataForSEO. Check credentials and keywords.")
-
-    df = pd.DataFrame(rows)
-    logger.info(f"Retrieved {len(df)} query-URL pairs for {df['query'].nunique()} keywords")
-    return df
+    unresolved = 0
+    for keyword, items in ready.items():
+        for item in organic_items(items):
+            url = item.get("url", "")
+            if is_unresolved(url):
+                unresolved += 1
+            elif url:
+                rows.append({"query": keyword, "link": url})
+    return pd.DataFrame(rows, columns=["query", "link"]), unresolved
 
 
 # ----------------
@@ -575,54 +534,8 @@ def export_results(df, file_path):
 # CLI Argument Parsing
 # ----------------
 
-def parse_args():
-    """Parse command-line arguments."""
-    parser = argparse.ArgumentParser(
-        description="SERP Clustering at Scale - Cluster keywords by shared SERP URLs.",
-        epilog="CSV mode: reads SERP API exports from a folder. "
-               "Live mode: fetches SERPs from DataForSEO when --keywords-file is provided.",
-    )
-
-    # Mode selection (live mode triggered by --keywords-file)
-    parser.add_argument(
-        "--keywords-file",
-        type=str,
-        default=None,
-        help="Path to a text file with keywords (one per line). "
-             "When provided, fetches live SERPs from DataForSEO instead of reading CSVs.",
-    )
-
-    # DataForSEO credentials
-    parser.add_argument(
-        "--login",
-        type=str,
-        default=None,
-        help="DataForSEO login (or set DATAFORSEO_LOGIN env var).",
-    )
-    parser.add_argument(
-        "--password",
-        type=str,
-        default=None,
-        help="DataForSEO password (or set DATAFORSEO_PASSWORD env var).",
-    )
-
-    # DataForSEO options
-    parser.add_argument(
-        "--location",
-        type=str,
-        default="United Kingdom",
-        choices=list(LOCATION_CODES.keys()),
-        help="Location for SERP results (default: United Kingdom).",
-    )
-    parser.add_argument(
-        "--device",
-        type=str,
-        default="desktop",
-        choices=["desktop", "mobile"],
-        help="Device type for SERP results (default: desktop).",
-    )
-
-    # Clustering options
+def add_clustering_args(parser):
+    """Clustering and output options, used by CSV mode and by collect."""
     parser.add_argument(
         "--common-urls",
         type=int,
@@ -642,6 +555,39 @@ def parse_args():
         default=CORE_THRESHOLD,
         help=f"Core clustering connectivity threshold (default: {CORE_THRESHOLD}).",
     )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default=EXPORT_CSV_FILE_PATH,
+        help=f"Output CSV file path (default: {EXPORT_CSV_FILE_PATH}).",
+    )
+
+
+def add_credential_args(parser):
+    """DataForSEO credentials, used by send and collect."""
+    parser.add_argument(
+        "--login",
+        type=str,
+        default=None,
+        help="DataForSEO login (or set DATAFORSEO_LOGIN env var).",
+    )
+    parser.add_argument(
+        "--password",
+        type=str,
+        default=None,
+        help="DataForSEO password (or set DATAFORSEO_PASSWORD env var).",
+    )
+
+
+def parse_args(argv=None):
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(
+        description="SERP Clustering at Scale - Cluster keywords by shared SERP URLs.",
+        epilog="CSV mode (no subcommand): reads SERP API exports from a folder. "
+               "DataForSEO mode: 'send' queues the searches and writes a job file; "
+               "'collect' reads the job file, fetches the finished searches and clusters them. "
+               "Searches can take 25 minutes or more to finish.",
+    )
 
     # CSV mode options
     parser.add_argument(
@@ -656,139 +602,269 @@ def parse_args():
         default=FILE_PREFIX,
         help=f"File prefix pattern for CSV files (default: {FILE_PREFIX}).",
     )
+    add_clustering_args(parser)
 
-    # Output
-    parser.add_argument(
-        "--output",
+    sub = parser.add_subparsers(dest="command")
+
+    # Step 1: send the searches
+    p_send = sub.add_parser("send", help="Queue the searches at DataForSEO and write a job file")
+    p_send.add_argument(
+        "--keywords-file",
+        "--input",
+        dest="keywords_file",
         type=str,
-        default=EXPORT_CSV_FILE_PATH,
-        help=f"Output CSV file path (default: {EXPORT_CSV_FILE_PATH}).",
+        required=True,
+        help="Path to a text file with keywords (one per line).",
+    )
+    p_send.add_argument(
+        "--job",
+        type=str,
+        default=JOB_FILE_PATH,
+        help=f"Job file to write (default: {JOB_FILE_PATH}).",
+    )
+    p_send.add_argument(
+        "--location",
+        type=str,
+        default="United Kingdom",
+        choices=list(LOCATION_CODES.keys()),
+        help="Location for SERP results (default: United Kingdom).",
+    )
+    p_send.add_argument(
+        "--device",
+        type=str,
+        default="desktop",
+        choices=["desktop", "mobile"],
+        help="Device type for SERP results (default: desktop).",
+    )
+    p_send.add_argument(
+        "--depth",
+        type=int,
+        default=10,
+        help="Results to fetch per keyword, 10 to 100, billed per 10 (default: 10).",
+    )
+    p_send.add_argument("--yes", action="store_true", help="Skip the cost confirmation prompt.")
+    add_credential_args(p_send)
+
+    # Step 2: collect the results and cluster them
+    p_collect = sub.add_parser("collect", help="Collect finished searches, cluster them and write the CSV")
+    p_collect.add_argument("--job", type=str, required=True, help="Job file written by send.")
+    p_collect.add_argument(
+        "--wait",
+        action="store_true",
+        help=f"Check every {WAIT_CHECK_SECONDS}s until all searches finish (up to {WAIT_LIMIT_MINUTES} minutes).",
+    )
+    add_credential_args(p_collect)
+    add_clustering_args(p_collect)
+
+    return parser.parse_args(argv)
+
+
+# ----------------
+# Main Processing Functions
+# ----------------
+
+def cluster_and_export(df, common_urls, strategy, core_threshold, output_path, start_time):
+    """Cluster a query/link DataFrame, export the CSV and log a summary."""
+    # Prepare data
+    df = prepare_data(df)
+    logger.info(f"After preparation: {len(df)} unique query-URL pairs")
+
+    # Create query to URL mapping
+    query_map = create_query_map(df)
+    logger.info(f"Processing {len(query_map)} unique queries")
+
+    # Find consolidation clusters
+    clusters, similarity_matrix = find_consolidation_clusters(
+        query_map,
+        common_urls,
+        strategy=strategy,
+        core_threshold=core_threshold,
     )
 
-    return parser.parse_args()
+    # Create results DataFrame
+    results_df = create_cluster_dataframe(clusters, query_map)
 
+    # Export results
+    export_results(results_df, output_path)
 
-# ----------------
-# Main Processing Function
-# ----------------
+    # Calculate statistics
+    total_queries = len(query_map)
+    clustered_queries = len(results_df[results_df['serp_cluster'] != 'NO_CLUSTER']['query'].unique())
+    clique_count = len([c for c in clusters if c['cluster_type'] == 'clique'])
+    component_count = len([c for c in clusters if c['cluster_type'] == 'connected_component'])
+    core_count = len([c for c in clusters if c['cluster_type'] == 'core_cluster'])
+
+    logger.info(f'Script completed in {time.time() - start_time:.2f} seconds')
+    logger.info(f'Found {len(clusters)} total clusters:')
+    logger.info(f'  - {component_count} connected components')
+    logger.info(f'  - {clique_count} cliques')
+    logger.info(f'  - {core_count} core clusters')
+    logger.info(f'{clustered_queries} out of {total_queries} queries are in clusters')
+    logger.info(f'Results exported to: {output_path}')
+
+    # Show top consolidation opportunities
+    top_opportunities = results_df[results_df['consolidation_score'] >= 60].groupby('serp_cluster').first()
+    if not top_opportunities.empty:
+        logger.info("\nTop consolidation opportunities:")
+        for idx, row in top_opportunities.head(5).iterrows():
+            logger.info(f"  - {idx}: Score {row['consolidation_score']} ({row['#_kws_in_cluster']} keywords)")
+
+    return results_df
+
 
 def process_serps(args=None):
-    """Main function to process Search Engine Result Pages and identify consolidation opportunities."""
+    """CSV mode: read SERP exports from a folder and identify consolidation opportunities."""
     start_time = time.time()
 
     try:
-        # Determine mode
-        if args and args.keywords_file:
-            # Live DataForSEO mode
-            logger.info("Mode: Live SERP fetching via DataForSEO")
+        logger.info("Mode: CSV import")
+        folder = args.folder if args else FOLDER_LOCATION
+        prefix = args.file_prefix if args else FILE_PREFIX
 
-            # Resolve credentials
-            login = args.login or os.environ.get("DATAFORSEO_LOGIN")
-            password = args.password or os.environ.get("DATAFORSEO_PASSWORD")
+        logger.info(f"Looking for CSV files in: {folder}")
+        file_paths = validate_folder_and_files(folder, prefix)
 
-            if not login or not password:
-                logger.error(
-                    "DataForSEO credentials required. Provide --login and --password "
-                    "or set DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD environment variables."
-                )
-                sys.exit(1)
+        df = read_csv_files(file_paths)
+        logger.info(f"Successfully read {len(df)} rows from CSV files")
 
-            # Read keywords
-            if not os.path.exists(args.keywords_file):
-                logger.error(f"Keywords file not found: {args.keywords_file}")
-                sys.exit(1)
-
-            with open(args.keywords_file, "r", encoding="utf-8") as f:
-                keywords = [line.strip() for line in f if line.strip()]
-
-            if not keywords:
-                logger.error("No keywords found in the file.")
-                sys.exit(1)
-
-            # Show estimated cost
-            location_code = LOCATION_CODES[args.location]
-            estimated_cost = len(keywords) * COST_PER_KEYWORD
-            logger.info(f"Keywords: {len(keywords)}")
-            logger.info(f"Location: {args.location} (code: {location_code})")
-            logger.info(f"Device: {args.device}")
-            logger.info(f"Estimated cost: ${estimated_cost:.2f}")
-
-            # Fetch SERPs
-            df = fetch_serps_dataforseo(
-                keywords=keywords,
-                login=login,
-                password=password,
-                location_code=location_code,
-                device=args.device,
-            )
-
-        else:
-            # CSV mode (original behaviour)
-            logger.info("Mode: CSV import")
-            folder = args.folder if args else FOLDER_LOCATION
-            prefix = args.file_prefix if args else FILE_PREFIX
-
-            logger.info(f"Looking for CSV files in: {folder}")
-            file_paths = validate_folder_and_files(folder, prefix)
-
-            df = read_csv_files(file_paths)
-            logger.info(f"Successfully read {len(df)} rows from CSV files")
-
-        # Prepare data
-        df = prepare_data(df)
-        logger.info(f"After preparation: {len(df)} unique query-URL pairs")
-
-        # Create query to URL mapping
-        query_map = create_query_map(df)
-        logger.info(f"Processing {len(query_map)} unique queries")
-
-        # Resolve clustering parameters
-        common_urls = args.common_urls if args else COMMON_URLS
-        strategy = args.strategy if args else CLUSTERING_STRATEGY
-        core_threshold = args.core_threshold if args else CORE_THRESHOLD
-
-        # Find consolidation clusters
-        clusters, similarity_matrix = find_consolidation_clusters(
-            query_map,
-            common_urls,
-            strategy=strategy,
-            core_threshold=core_threshold,
+        return cluster_and_export(
+            df,
+            args.common_urls if args else COMMON_URLS,
+            args.strategy if args else CLUSTERING_STRATEGY,
+            args.core_threshold if args else CORE_THRESHOLD,
+            args.output if args else EXPORT_CSV_FILE_PATH,
+            start_time,
         )
-
-        # Create results DataFrame
-        results_df = create_cluster_dataframe(clusters, query_map)
-
-        # Export results
-        output_path = args.output if args else EXPORT_CSV_FILE_PATH
-        export_results(results_df, output_path)
-
-        # Calculate statistics
-        total_queries = len(query_map)
-        clustered_queries = len(results_df[results_df['serp_cluster'] != 'NO_CLUSTER']['query'].unique())
-        clique_count = len([c for c in clusters if c['cluster_type'] == 'clique'])
-        component_count = len([c for c in clusters if c['cluster_type'] == 'connected_component'])
-        core_count = len([c for c in clusters if c['cluster_type'] == 'core_cluster'])
-
-        logger.info(f'Script completed in {time.time() - start_time:.2f} seconds')
-        logger.info(f'Found {len(clusters)} total clusters:')
-        logger.info(f'  - {component_count} connected components')
-        logger.info(f'  - {clique_count} cliques')
-        logger.info(f'  - {core_count} core clusters')
-        logger.info(f'{clustered_queries} out of {total_queries} queries are in clusters')
-        logger.info(f'Results exported to: {output_path}')
-
-        # Show top consolidation opportunities
-        top_opportunities = results_df[results_df['consolidation_score'] >= 60].groupby('serp_cluster').first()
-        if not top_opportunities.empty:
-            logger.info(f"\nTop consolidation opportunities:")
-            for idx, row in top_opportunities.head(5).iterrows():
-                logger.info(f"  - {idx}: Score {row['consolidation_score']} ({row['#_kws_in_cluster']} keywords)")
-
-        return results_df
 
     except Exception as e:
         logger.error(f"Error processing SERPs: {str(e)}")
         raise
+
+
+def resolve_credentials(args):
+    """DataForSEO credentials from the arguments or environment variables."""
+    login = args.login or os.environ.get("DATAFORSEO_LOGIN")
+    password = args.password or os.environ.get("DATAFORSEO_PASSWORD")
+    if not login or not password:
+        logger.error(
+            "DataForSEO credentials required. Provide --login and --password "
+            "or set DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD environment variables."
+        )
+        sys.exit(1)
+    return login, password
+
+
+def send(args):
+    """Step 1: queue one DataForSEO search per keyword and write the job file."""
+    login, password = resolve_credentials(args)
+
+    if not 10 <= args.depth <= 100:
+        logger.error("--depth must be between 10 and 100.")
+        sys.exit(1)
+
+    if not os.path.exists(args.keywords_file):
+        logger.error(f"Keywords file not found: {args.keywords_file}")
+        sys.exit(1)
+
+    with open(args.keywords_file, "r", encoding="utf-8") as f:
+        # Exact duplicates are sent once
+        keywords = list(dict.fromkeys(line.strip() for line in f if line.strip()))
+
+    if not keywords:
+        logger.error("No keywords found in the file.")
+        sys.exit(1)
+
+    location_code = LOCATION_CODES[args.location]
+    logger.info(f"Keywords: {len(keywords)}")
+    logger.info(f"Location: {args.location} (code: {location_code})")
+    logger.info(f"Device: {args.device}")
+    logger.info(f"Results per keyword: {args.depth}")
+    logger.info(f"Estimated cost: ${estimate_cost(len(keywords), args.depth):.4f}")
+
+    if not args.yes:
+        if not sys.stdin.isatty():
+            logger.error("Run with --yes to confirm the cost when not running interactively.")
+            sys.exit(1)
+        if input("Send the searches? [y/N] ").strip().lower() not in ("y", "yes"):
+            print("Cancelled.")
+            sys.exit(0)
+
+    try:
+        job_rows, warnings, cost = send_searches(
+            keywords, login, password, location_code, LANGUAGE_CODE,
+            device=args.device, depth=args.depth,
+        )
+    except QueueError as e:
+        logger.error(str(e))
+        sys.exit(1)
+
+    for warning in warnings:
+        logger.warning(warning)
+    if not job_rows:
+        logger.error("No searches were queued.")
+        sys.exit(1)
+
+    with open(args.job, "w", encoding="utf-8", newline="") as f:
+        f.write(job_to_csv(job_rows))
+    logger.info(f"Queued {len(job_rows)} search(es). Cost reported by DataForSEO: ${cost:.4f}")
+    logger.info(f"Job file saved to: {args.job}")
+    logger.info("DataForSEO can take 25 minutes or more to finish. Then run:")
+    logger.info(f"  python {os.path.basename(__file__)} collect --job {args.job}")
+
+
+def collect(args):
+    """Step 2: fetch the finished searches in a job file, cluster them and export the CSV."""
+    login, password = resolve_credentials(args)
+
+    if not os.path.exists(args.job):
+        logger.error(f"Job file not found: {args.job}")
+        sys.exit(1)
+    try:
+        with open(args.job, "r", encoding="utf-8") as f:
+            job_rows = job_from_csv(f.read())
+    except ValueError as e:
+        logger.error(str(e))
+        sys.exit(1)
+
+    start_time = time.time()
+    while True:
+        try:
+            with tqdm(total=len(job_rows), desc="Collecting SERPs from DataForSEO") as bar:
+                result = collect_results(
+                    job_rows, login, password,
+                    progress_callback=lambda done, total, keyword: bar.update(done - bar.n),
+                )
+        except QueueError as e:
+            logger.error(str(e))
+            sys.exit(1)
+        logger.info(f"{len(result['ready'])} of {len(job_rows)} search(es) finished, "
+                    f"{len(result['pending'])} still running, {len(result['errors'])} failed.")
+        if not result['pending'] or not args.wait:
+            break
+        if time.time() - start_time > WAIT_LIMIT_MINUTES * 60:
+            logger.warning(f"Stopped waiting after {WAIT_LIMIT_MINUTES} minutes. Run collect again later.")
+            break
+        time.sleep(WAIT_CHECK_SECONDS)
+
+    for error in result['errors']:
+        logger.warning(error)
+    if result['pending']:
+        logger.warning(f"{len(result['pending'])} search(es) are still running, so the clusters below leave "
+                       "them out. Run collect again later for the full set.")
+    if not result['ready']:
+        logger.info("No finished searches to cluster yet.")
+        sys.exit(0)
+
+    df, unresolved = serps_to_dataframe(result['ready'])
+    if unresolved:
+        logger.warning(f"{unresolved} result(s) came back as unresolved google.com/goto links "
+                       "and were left out of the clustering.")
+    if df.empty:
+        logger.error("No SERP URLs to cluster in the finished searches.")
+        sys.exit(1)
+    logger.info(f"Retrieved {len(df)} query-URL pairs for {df['query'].nunique()} keywords")
+
+    return cluster_and_export(df, args.common_urls, args.strategy, args.core_threshold, args.output, start_time)
 
 
 # ----------------
@@ -798,5 +874,10 @@ def process_serps(args=None):
 if __name__ == "__main__":
     args = parse_args()
     start = time.time()
-    process_serps(args)
+    if args.command == "send":
+        send(args)
+    elif args.command == "collect":
+        collect(args)
+    else:
+        process_serps(args)
     print(f'The script took {time.time() - start:.2f} seconds!')

@@ -47,7 +47,7 @@ with st.expander("How to use this tool"):
     - **parent_query**: The query or question that produced this result
     - **question**: The PAA question text
     - **answer_snippet**: The snippet answer shown in search
-    - **source_url/source_title**: The answer source
+    - **source_url/source_title**: The answer source. Google now routes some links through google.com/goto; when DataForSEO cannot resolve one, source_url reads "(unresolved google.com/goto link)"
 
     **Cost:**
     - Approximately $0.002 per keyword
@@ -150,6 +150,10 @@ def build_auth_header(login, password):
     }
 
 
+# Google routes result links through google.com/goto; DataForSEO Live requests leave many
+# of them unresolved. Those are reported with this text instead of a link.
+UNRESOLVED_URL = "(unresolved google.com/goto link)"
+
 def extract_paa_items(items, original_query, parent_query, level, all_questions, seen_questions):
     """
     Recursively extract PAA questions from the DataForSEO response items.
@@ -173,14 +177,20 @@ def extract_paa_items(items, original_query, parent_query, level, all_questions,
                     continue
                 seen_questions.add(question_text)
 
+                # The answer, its URL and its title sit in the question's expanded element
+                answer = next((e for e in q.get("expanded_element") or []
+                               if isinstance(e, dict) and e.get("type") == "people_also_ask_expanded_element"), {})
+                source_url = answer.get("url") or ""
+                if "google.com/goto" in source_url:
+                    source_url = UNRESOLVED_URL
                 question_data = {
                     "original_query": original_query,
                     "level": level,
                     "parent_query": parent_query,
                     "question": question_text,
-                    "answer_snippet": q.get("snippet", ""),
-                    "source_url": q.get("url", ""),
-                    "source_title": q.get("domain", ""),
+                    "answer_snippet": answer.get("description") or "",
+                    "source_url": source_url,
+                    "source_title": answer.get("title") or "",
                 }
                 all_questions.append(question_data)
 

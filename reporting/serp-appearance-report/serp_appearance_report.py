@@ -1,8 +1,8 @@
 """
-SERP Appearance Report - Live Google Results via DataForSEO
-Fetches live Google results for your keyword list from the DataForSEO SERP
-API and reports the query, position, link, title and snippet for every
-organic appearance of your domain.
+SERP Appearance Report - Google Results via DataForSEO
+Sends your keyword list to the DataForSEO SERP API (Standard queue), then
+collects the Google results and reports the query, position, link, title and
+snippet for every organic appearance of your domain.
 
 Author: Lee Foot
 Website: https://leefoot.com
@@ -13,15 +13,16 @@ from io import BytesIO
 
 import streamlit as st
 
+from dataforseo_queue import QueueError, collect_results, estimate_cost, job_from_csv, job_to_csv, send_searches
 from serp_appearance_core import (
     DEVICES,
     LOCATIONS,
-    estimate_cost,
+    build_report,
+    decode_bytes,
     keywords_from_bytes,
     normalise_domain,
     parse_keyword_lines,
     results_to_dataframe,
-    run_report,
 )
 
 st.set_page_config(
@@ -36,19 +37,23 @@ st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-
 with st.expander("How to use this tool"):
     st.markdown("""
     **What this tool does:**
-    - Fetches the live Google results for each of your keywords using the DataForSEO SERP API
+    - Gets the Google results for each of your keywords from the DataForSEO SERP API
     - Keeps the organic results on your domain (subdomains included)
     - Reports the query, position, link, title and snippet for each appearance
+
+    **Why two steps:** Google now routes result links through google.com/goto. DataForSEO's
+    Standard queue turns those back into real URLs, but a search can take 25 minutes or
+    more to finish. So you send the searches, keep the job file, and collect the results later.
 
     **Requirements:**
     - DataForSEO account (sign up at [dataforseo.com](https://dataforseo.com/))
 
     **How to use:**
     1. Enter your DataForSEO login and password in the sidebar
-    2. Choose the location, device and number of results per keyword
-    3. Enter your domain (e.g. example.com)
-    4. Paste your keywords (one per line) or upload a CSV with a keyword column
-    5. Check the estimated cost, click "Fetch SERPs", then download the CSV
+    2. **Send searches:** choose the location, device and results per keyword, add your keywords,
+       check the estimated cost and click "Send searches". Download the job file.
+    3. **Collect results** (about 30 minutes later): upload the job file, enter your domain
+       and click "Collect results", then download the CSV
 
     **Best for:**
     - Checking how your site appears in the SERPs for your top queries
@@ -73,141 +78,167 @@ dataforseo_password = st.sidebar.text_input(
     help="Your password from dataforseo.com"
 )
 
-st.sidebar.markdown("---")
-st.sidebar.header("Search Settings")
-
-location = st.sidebar.selectbox("Location", list(LOCATIONS.keys()), index=0)
-
-device = st.sidebar.selectbox("Device", [d.title() for d in DEVICES], index=0)
-st.sidebar.caption("DataForSEO supports desktop and mobile results only.")
-
-depth = st.sidebar.slider(
-    "Results per keyword",
-    min_value=10,
-    max_value=100,
-    value=10,
-    step=10,
-    help="Number of Google results to fetch per keyword. DataForSEO bills per 10 results."
-)
-
-delay = st.sidebar.slider(
-    "Seconds between requests",
-    min_value=0.5,
-    max_value=5.0,
-    value=2.0,
-    step=0.5,
-    help="Requests are sent one at a time with this pause between them"
-)
-
-# Main inputs
-domain = st.text_input(
-    "Your domain",
-    placeholder="example.com",
-    help="Organic results on this domain or its subdomains are reported"
-)
-
-input_method = st.radio("Keywords", ["Paste keywords", "Upload CSV"], horizontal=True)
-
-keywords = []
-if input_method == "Paste keywords":
-    keyword_text = st.text_area(
-        "Keywords (one per line)",
-        height=150,
-        placeholder="seo tools\nkeyword research\ncontent marketing"
-    )
-    keywords = parse_keyword_lines(keyword_text) if keyword_text else []
-else:
-    uploaded_file = st.file_uploader(
-        "Upload a CSV of keywords",
-        type=['csv', 'txt'],
-        help="Uses the column named keyword, keywords, query, queries, search term or "
-             "top queries; otherwise the first column. A .txt file with one keyword per line also works."
-    )
-    if uploaded_file is not None:
-        try:
-            keywords = keywords_from_bytes(uploaded_file.getvalue(), uploaded_file.name)
-        except Exception as e:
-            st.error(f"Could not read {uploaded_file.name}: {e}")
-
 has_credentials = bool(dataforseo_login and dataforseo_password)
-has_domain = bool(normalise_domain(domain))
+if not has_credentials:
+    st.warning("Enter your DataForSEO login and password in the sidebar to get started")
 
-if keywords:
-    estimated_cost = estimate_cost(len(keywords), depth)
-    st.info(f"Ready to fetch {len(keywords)} keyword(s) at {depth} results each. "
-            f"Estimated cost: ${estimated_cost:.3f}")
+send_tab, collect_tab = st.tabs(["1. Send searches", "2. Collect results"])
 
-if st.button("Fetch SERPs", type="primary",
-             disabled=not has_credentials or not keywords or not has_domain):
-    location_code, language_code = LOCATIONS[location]
-    progress_bar = st.progress(0)
-    status_text = st.empty()
+with send_tab:
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        location = st.selectbox("Location", list(LOCATIONS.keys()), index=0)
+    with col2:
+        device = st.selectbox("Device", [d.title() for d in DEVICES], index=0,
+                              help="DataForSEO supports desktop and mobile results only.")
+    with col3:
+        depth = st.slider("Results per keyword", min_value=10, max_value=100, value=10, step=10,
+                          help="Number of Google results to fetch per keyword. DataForSEO bills per 10 results.")
 
-    def update_progress(done, total, keyword):
-        progress_bar.progress(done / total if total else 1.0)
-        status_text.text(f"Fetching SERP {done + 1}/{total}: {keyword}" if keyword else "")
+    input_method = st.radio("Keywords", ["Paste keywords", "Upload CSV"], horizontal=True)
 
-    rows, warnings, total_cost = run_report(
-        keywords, domain, dataforseo_login, dataforseo_password,
-        location_code, language_code,
-        device=device.lower(), depth=depth, delay=delay,
-        progress_callback=update_progress
-    )
-
-    st.session_state['appearance_df'] = results_to_dataframe(rows)
-    st.session_state['appearance_warnings'] = warnings
-    st.session_state['appearance_cost'] = total_cost
-    st.session_state['appearance_domain'] = normalise_domain(domain)
-    st.session_state['appearance_keywords'] = len(keywords)
-
-if 'appearance_df' in st.session_state:
-    df = st.session_state['appearance_df']
-    warnings = st.session_state['appearance_warnings']
-
-    st.subheader("Results")
-    st.success(f"Found **{len(df)}** appearances of **{st.session_state['appearance_domain']}** "
-               f"across {st.session_state['appearance_keywords']} keyword(s).")
-    st.caption(f"Cost reported by DataForSEO: ${st.session_state['appearance_cost']:.4f}")
-
-    if warnings:
-        with st.expander(f"{len(warnings)} keyword(s) had issues"):
-            for warning in warnings:
-                st.text(warning)
-
-    if df.empty:
-        st.info("No organic results were on that domain. Check the domain spelling, "
-                "or fetch more results per keyword.")
+    keywords = []
+    if input_method == "Paste keywords":
+        keyword_text = st.text_area(
+            "Keywords (one per line)",
+            height=150,
+            placeholder="seo tools\nkeyword research\ncontent marketing"
+        )
+        keywords = parse_keyword_lines(keyword_text) if keyword_text else []
     else:
-        st.dataframe(df, use_container_width=True)
+        uploaded_file = st.file_uploader(
+            "Upload a CSV of keywords",
+            type=['csv', 'txt'],
+            help="Uses the column named keyword, keywords, query, queries, search term or "
+                 "top queries; otherwise the first column. A .txt file with one keyword per line also works."
+        )
+        if uploaded_file is not None:
+            try:
+                keywords = keywords_from_bytes(uploaded_file.getvalue(), uploaded_file.name)
+            except Exception as e:
+                st.error(f"Could not read {uploaded_file.name}: {e}")
 
-        buffer = BytesIO()
-        df.to_csv(buffer, index=False, encoding='utf-8-sig')
-        buffer.seek(0)
+    if keywords:
+        st.info(f"Ready to send {len(keywords)} keyword(s) at {depth} results each. "
+                f"Estimated cost: ${estimate_cost(len(keywords), depth):.4f}")
 
+    if st.button("Send searches", type="primary", disabled=not has_credentials or not keywords):
+        location_code, language_code = LOCATIONS[location]
+        try:
+            with st.spinner("Sending searches to DataForSEO..."):
+                job_rows, send_warnings, send_cost = send_searches(
+                    keywords, dataforseo_login, dataforseo_password, location_code, language_code,
+                    device=device.lower(), depth=depth)
+        except QueueError as e:
+            st.error(str(e))
+        else:
+            for warning in send_warnings:
+                st.warning(warning)
+            if job_rows:
+                st.session_state['appearance_job'] = job_rows
+                st.session_state['appearance_send_cost'] = send_cost
+
+    if st.session_state.get('appearance_job'):
+        job_rows = st.session_state['appearance_job']
+        st.success(f"Queued {len(job_rows)} search(es). Cost reported by DataForSEO: "
+                   f"${st.session_state['appearance_send_cost']:.4f}")
+        st.markdown("DataForSEO can take **25 minutes or more** to finish. Download the job file, "
+                    "then use **2. Collect results**. While this page stays open, the job is kept "
+                    "here too, so you can collect without uploading it.")
         st.download_button(
-            label="📥 Download SERP Appearance Report (CSV)",
-            data=buffer,
-            file_name="serp_appearance_report.csv",
+            label="📥 Download job file (CSV)",
+            data=job_to_csv(job_rows).encode('utf-8'),
+            file_name="serp_appearance_job.csv",
             mime="text/csv"
         )
 
-else:
-    if not has_credentials:
-        st.warning("Enter your DataForSEO login and password in the sidebar to get started")
+with collect_tab:
+    job_rows = st.session_state.get('appearance_job')
+    job_file = st.file_uploader("Job file from step 1", type=['csv'],
+                                help="The serp_appearance_job.csv you downloaded when you sent the searches")
+    if job_file is not None:
+        try:
+            job_rows = job_from_csv(decode_bytes(job_file.getvalue()))
+        except ValueError as e:
+            st.error(str(e))
+            job_rows = None
+    elif job_rows:
+        st.caption(f"Using the job sent from this page ({len(job_rows)} search(es)).")
 
+    domain = st.text_input(
+        "Your domain",
+        placeholder="example.com",
+        help="Organic results on this domain or its subdomains are reported"
+    )
+    has_domain = bool(normalise_domain(domain))
+
+    if st.button("Collect results", type="primary",
+                 disabled=not has_credentials or not job_rows or not has_domain):
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+
+        def update_progress(done, total, keyword):
+            progress_bar.progress(done / total if total else 1.0)
+            status_text.text(f"Checking {done + 1}/{total}: {keyword}" if keyword else "")
+
+        try:
+            result = collect_results(job_rows, dataforseo_login, dataforseo_password,
+                                     progress_callback=update_progress)
+        except QueueError as e:
+            st.error(str(e))
+        else:
+            rows, unresolved = build_report(result['ready'], domain)
+            st.session_state['appearance_result'] = {
+                'df': results_to_dataframe(rows),
+                'ready': len(result['ready']),
+                'pending': result['pending'],
+                'errors': result['errors'],
+                'unresolved': unresolved,
+                'total': len(job_rows),
+                'domain': normalise_domain(domain),
+            }
+
+    report = st.session_state.get('appearance_result')
+    if report:
+        if report['pending']:
+            st.warning(f"{report['ready']} of {report['total']} search(es) have finished; "
+                       f"{len(report['pending'])} are still running at DataForSEO. "
+                       "Try again in a few minutes. The table below covers the finished ones only.")
+        if report['errors']:
+            with st.expander(f"{len(report['errors'])} search(es) failed"):
+                for error in report['errors']:
+                    st.text(error)
+        if report['unresolved']:
+            st.warning(f"{report['unresolved']} result(s) came back as unresolved google.com/goto links "
+                       "and could not be checked against your domain.")
+
+        if report['ready']:
+            df = report['df']
+            st.subheader("Results")
+            st.success(f"Found **{len(df)}** appearances of **{report['domain']}** "
+                       f"across {report['ready']} keyword(s).")
+            if df.empty:
+                st.info("No organic results were on that domain. Check the domain spelling, "
+                        "or send the searches again with more results per keyword.")
+            else:
+                st.dataframe(df, width="stretch")
+                buffer = BytesIO()
+                df.to_csv(buffer, index=False, encoding='utf-8-sig')
+                buffer.seek(0)
+                st.download_button(
+                    label="📥 Download SERP Appearance Report (CSV)",
+                    data=buffer,
+                    file_name="serp_appearance_report.csv",
+                    mime="text/csv"
+                )
+
+with st.expander("Keyword CSV format and use cases"):
     st.markdown("""
-    ### How it Works
-    1. Enter your domain and your keywords
-    2. The tool fetches the live Google results for each keyword, one request at a time
-    3. Organic results on your domain (or its subdomains) are kept
-    4. The output lists the query, position, link, title and snippet per appearance
+    **Keyword CSV format:** any CSV with a column named `keyword`, `keywords`, `query`, `queries`,
+    `search term` or `top queries` (any case). A Google Search Console queries export works as is.
+    Without one of those names, the first column is used.
 
-    ### Keyword CSV Format
-    Any CSV with a column named `keyword`, `keywords`, `query`, `queries`,
-    `search term` or `top queries` (any case). A Google Search Console
-    queries export works as is. Without one of those names, the first column is used.
-
-    ### Use Cases
+    **Use cases:**
     - Reviewing how your top queries render in the SERPs
     - Spotting title rewrites and weak snippets
     - Reporting SERP appearances to stakeholders

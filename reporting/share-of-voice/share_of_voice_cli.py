@@ -142,7 +142,7 @@ def main():
     print(f"  Total estimated traffic: {grouped['Estimated Traffic'].sum():,.0f}")
 
     # Show top domains
-    print(f"\nTop domains by SOV:")
+    print("\nTop domains by SOV:")
     for _, row in grouped.head(10).iterrows():
         print(f"  [{row['SOV (%)']:5.1f}%] {row['Domain']}")
 

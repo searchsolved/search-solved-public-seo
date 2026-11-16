@@ -2,14 +2,19 @@
 
 ## Features
 
-Fetch the live Google results for a list of keywords from the DataForSEO SERP API and report every organic appearance of your domain, with the query, position, title and snippet for each result.
+Get the Google results for a list of keywords from the DataForSEO SERP API and report every organic appearance of your domain, with the query, position, title and snippet for each result.
 
 - Streamlit web interface + CLI version
+- Two steps: send the searches, then collect the results about 30 minutes later (see below)
 - Keyword input: paste one per line, or upload a CSV (a Google Search Console queries export works as is)
 - Location (10 markets) and device (desktop or mobile) selectable
 - Reports organic results on your domain and its subdomains
-- Estimated cost shown before every run; requests are sent one at a time with a pause between them
+- Estimated cost shown before sending
 - Export findings to CSV
+
+## Why two steps
+
+Google now routes result links through google.com/goto. DataForSEO's Live requests return many of those links unresolved, so the real URL and domain are missing. Its Standard queue resolves them, but a search can take 25 minutes or more to finish. So the tool sends the searches and gives you a job file; you collect the results from that file later. DataForSEO keeps finished searches for 30 days.
 
 ## Requirements
 
@@ -23,11 +28,11 @@ pip install -r requirements.txt
 
 ## Cost
 
-Each keyword is one call to the DataForSEO SERP API (Google Organic, Live Advanced endpoint). DataForSEO bills per 10 results, so the estimate is:
+Each keyword is one search in the DataForSEO Standard queue (Google Organic, Advanced). DataForSEO bills per 10 results, so the estimate is:
 
-`keywords x $0.002 x (results per keyword / 10)`
+`keywords x $0.0006 x (results per keyword / 10)`
 
-For example, 100 keywords at 10 results each is estimated at $0.20, or $2.00 at 100 results each. The app and CLI show the estimate before running and the cost DataForSEO reports after.
+For example, 100 keywords at 10 results each is estimated at $0.06, or $0.60 at 100 results each. Collecting results costs nothing.
 
 ## Usage
 
@@ -38,10 +43,9 @@ streamlit run serp_appearance_report.py
 ```
 
 1. Enter your DataForSEO login and password in the sidebar
-2. Choose the location, device, results per keyword and the pause between requests
-3. Enter your domain (e.g. `example.com`)
-4. Paste your keywords or upload a CSV
-5. Check the estimated cost, click **Fetch SERPs**, then download the CSV
+2. **1. Send searches:** choose the location, device and results per keyword, paste your keywords or upload a CSV, check the estimated cost and click **Send searches**. Download the job file.
+3. **2. Collect results** (about 30 minutes later): upload the job file (or, if the page is still open, use the job it kept), enter your domain (e.g. `example.com`) and click **Collect results**. If some searches are still running, the table covers the finished ones; collect again later for the rest.
+4. Download the CSV
 
 ### CLI
 
@@ -49,26 +53,28 @@ streamlit run serp_appearance_report.py
 export DATAFORSEO_LOGIN="your_login"
 export DATAFORSEO_PASSWORD="your_password"
 
-# Text file, one keyword per line
-python serp_appearance_cli.py --input keywords.txt --domain example.com
+# Step 1: queue the searches (text file, one keyword per line, or a CSV with a keyword column)
+python serp_appearance_cli.py send --input keywords.txt --job job.csv
 
-# CSV with a keyword column, US mobile results, top 20
-python serp_appearance_cli.py --input keywords.csv --domain example.com --output report.csv \
-    --location "United States" --device mobile --depth 20
+# Step 2: collect and report (add --wait to keep checking until every search is done)
+python serp_appearance_cli.py collect --job job.csv --domain example.com --output report.csv
 ```
 
-Arguments:
+`send` arguments:
 
 - `--input` - keyword file: `.txt` with one keyword per line, or `.csv` with a column named `keyword`, `keywords`, `query`, `queries`, `search term` or `top queries` (otherwise the first column is used)
-- `--domain` - domain to report (e.g. `example.com`); subdomains are included. Add a path (e.g. `example.com/blog`) to report one section only
-- `--output` - output CSV path (default: `serp_appearance_report.csv`)
+- `--job` - job file to write (default: `serp_appearance_job.csv`)
 - `--location` - search location (default: `United Kingdom`)
 - `--device` - `desktop` or `mobile` (default: `desktop`)
 - `--depth` - results to fetch per keyword, 10 to 100 (default: `10`)
-- `--delay` - seconds between requests (default: `2.0`)
 - `--yes` - skip the cost confirmation prompt (needed when running non-interactively)
 
-The CLI prints the estimated cost and asks you to confirm before it sends any request.
+`collect` arguments:
+
+- `--job` - job file written by `send`
+- `--domain` - domain to report (e.g. `example.com`); subdomains are included. Add a path (e.g. `example.com/blog`) to report one section only
+- `--output` - output CSV path (default: `serp_appearance_report.csv`)
+- `--wait` - check every 60 seconds until all searches finish (up to 90 minutes)
 
 ## Output
 

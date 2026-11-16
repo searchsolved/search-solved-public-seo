@@ -32,13 +32,13 @@ st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-
 st.markdown(
     """
     This app uses the [dandelion.eu API](https://dandelion.eu/) to extract entities from:
-    - Live SERPs via keyword search
+    - Google SERPs via keyword search
     - CSV/keyword export files
     - YouTube video transcripts
 
     **API Requirements:**
 
-    - **SERPs page**: Requires a [DataForSEO](https://dataforseo.com/) login and password (pay as you go, about $0.002 per page of 10 results)
+    - **SERPs page**: Requires a [DataForSEO](https://dataforseo.com/) login and password (pay as you go, about $0.0006 per page of 10 results). The search is sent in step 1 and collected in step 2, as DataForSEO can take 25 minutes or more to finish it.
     - **All pages**: Requires free [Dandelion.eu API Key](https://dandelion.eu/) (1,000 free requests/day)
 
     **Select a page from the sidebar** to get started!

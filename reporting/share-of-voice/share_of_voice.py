@@ -6,23 +6,41 @@ Share of Voice Calculator (CTR Curve Based)
 
 Calculates estimated organic traffic share using ranking positions and
 industry-standard CTR curves (Sistrix, Advanced Web Ranking, etc.).
-Supports CSV upload of pre-scraped ranking data, or live SERP fetching
-via the DataForSEO API.
+Supports CSV upload of pre-scraped ranking data, or Google results from
+the DataForSEO SERP API (Standard queue: send the searches, collect later).
 
 Features:
 - Upload CSV with keyword, volume, position, domain data
-- Live SERP fetching from DataForSEO with user-supplied keywords and volumes
+- SERP fetching from DataForSEO with user-supplied keywords and volumes
 - Configurable CTR curves (Sistrix, AWR, Custom)
 - Group by domain or by category
 - Export with traffic estimates
 """
 
-import streamlit as st
-import pandas as pd
-import requests
+import csv
+import io
 import os
-from base64 import b64encode
 from io import BytesIO
+
+import pandas as pd
+import streamlit as st
+
+from dataforseo_queue import (
+    JOB_COLUMNS,
+    QueueError,
+    collect_results,
+    estimate_cost,
+    is_unresolved,
+    job_from_csv,
+    organic_items,
+    send_searches,
+)
+
+# Results per keyword: the SOV calculation only uses positions 1 to 10
+SERP_DEPTH = 10
+
+# The job file adds each keyword's search volume to the standard job columns
+SOV_JOB_COLUMNS = JOB_COLUMNS + ['volume']
 
 st.set_page_config(page_title="Share of Voice Calculator", page_icon="📊", layout="wide")
 
@@ -45,9 +63,18 @@ with st.expander("How to use this tool"):
        - `domain` - The domain ranking
        - `category` (optional) - For grouping analysis
 
-    2. **Live SERP Fetch (DataForSEO)** - Provide keywords and search volumes,
-       and the tool will fetch live SERP results from DataForSEO, then calculate
-       SOV from the live rankings.
+    2. **Fetch SERPs (DataForSEO)** - Provide keywords and search volumes, and the
+       tool gets the Google results from DataForSEO, then calculates SOV from the rankings.
+       This works in two steps:
+       - **1. Send searches:** choose the location and device, add your keywords and
+         volumes, check the estimated cost and click "Send searches". Download the job file.
+       - **2. Collect results** (about 30 minutes later): upload the job file and click
+         "Collect results". The CTR curve and Top N settings in the sidebar apply here,
+         so you can change them and look again without sending new searches.
+
+    **Why two steps:** Google now routes result links through google.com/goto. DataForSEO's
+    Standard queue turns those back into real URLs, but a search can take 25 minutes or
+    more to finish. So you send the searches, keep the job file, and collect the results later.
 
     **Where to get ranking data for CSV upload:**
     - SERP API exports (DataForSEO, etc.)
@@ -141,86 +168,95 @@ group_by_category = st.sidebar.checkbox(
 
 # DataForSEO settings in sidebar
 st.sidebar.markdown("---")
-st.sidebar.header("DataForSEO Settings (Live Fetch)")
+st.sidebar.header("DataForSEO Settings")
 
 dataforseo_login = st.sidebar.text_input(
     "DataForSEO Login",
     type="password",
     value=os.environ.get('DATAFORSEO_LOGIN', ''),
-    help="Your login from dataforseo.com (only needed for live SERP fetching)"
+    help="Your login from dataforseo.com (only needed for fetching SERPs)"
 )
 
 dataforseo_password = st.sidebar.text_input(
     "DataForSEO Password",
     type="password",
     value=os.environ.get('DATAFORSEO_PASSWORD', ''),
-    help="Your password from dataforseo.com (only needed for live SERP fetching)"
-)
-
-live_location = st.sidebar.selectbox(
-    "Location (live fetch)",
-    list(LOCATION_CODES.keys()),
-    index=0,
-    help="Location for live SERP fetching"
-)
-
-live_device = st.sidebar.selectbox(
-    "Device (live fetch)",
-    ["desktop", "mobile"],
-    index=0,
-    help="Device type for live SERP fetching"
+    help="Your password from dataforseo.com (only needed for fetching SERPs)"
 )
 
 has_credentials = bool(dataforseo_login and dataforseo_password)
 
 
-def _build_auth_headers(login, password):
-    """Build DataForSEO Basic auth headers."""
-    cred = b64encode(f"{login}:{password}".encode()).decode()
-    return {
-        'Authorization': f'Basic {cred}',
-        'Content-Type': 'application/json'
-    }
+def parse_keyword_volumes(text):
+    """Parse 'keyword, volume' lines. Returns (pairs, problems); repeated keywords keep the first line."""
+    pairs, problems, seen = [], [], set()
+    for line in text.strip().split('\n'):
+        line = line.strip()
+        if not line:
+            continue
+        parts = [p.strip() for p in line.split(',')]
+        if len(parts) >= 2:
+            try:
+                kw = parts[0]
+                vol = int(parts[1])
+            except ValueError:
+                problems.append(f"Could not parse volume for line: '{line}'. Expected format: keyword, volume")
+                continue
+            if kw in seen:
+                problems.append(f"'{kw}' is listed more than once; the first volume is used.")
+                continue
+            seen.add(kw)
+            pairs.append((kw, vol))
+        else:
+            problems.append(f"Could not parse line: '{line}'. Expected format: keyword, volume")
+    return pairs, problems
 
 
-def fetch_serp_results(keyword, login, password, location_code, device):
-    """Fetch organic SERP results for a keyword from DataForSEO."""
-    headers = _build_auth_headers(login, password)
-    payload = [{
-        "keyword": keyword,
-        "location_code": location_code,
-        "language_code": "en",
-        "device": device,
-        "depth": 10
-    }]
+def sov_job_to_csv(job_rows):
+    """Job file text (CSV): the standard job columns plus each keyword's search volume."""
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=SOV_JOB_COLUMNS)
+    writer.writeheader()
+    writer.writerows(job_rows)
+    return buffer.getvalue()
 
-    try:
-        response = requests.post(
-            'https://api.dataforseo.com/v3/serp/google/organic/live/advanced',
-            headers=headers,
-            json=payload,
-            timeout=60
-        )
-        data = response.json()
 
-        if data.get("status_code") != 20000:
-            return []
+def job_volumes(job_rows):
+    """{keyword: volume} from a job. Raises ValueError if the job has no usable volumes."""
+    volumes = {}
+    for row in job_rows:
+        try:
+            volumes[row['keyword']] = int(float(row.get('volume')))
+        except (TypeError, ValueError):
+            raise ValueError("This job file has no search volume for "
+                             f"'{row['keyword']}'. Upload the job file this tool gave you "
+                             "when the searches were sent.")
+    return volumes
 
-        items = data["tasks"][0]["result"][0]["items"]
-        organic_results = []
-        for item in items:
-            if item["type"] == "organic":
-                organic_results.append({
-                    "url": item.get("url", ""),
-                    "domain": item.get("domain", ""),
-                    "title": item.get("title", ""),
-                    "position": item.get("rank_group", 0),
-                })
-        return organic_results
 
-    except Exception as e:
-        st.warning(f"Error fetching SERP for '{keyword}': {str(e)}")
-        return []
+def serp_rows(ready, volumes):
+    """Organic results from collected searches as SOV rows.
+
+    ready is {keyword: items} from collect_results(). Returns (rows, unresolved), where
+    unresolved counts organic results that came back as google.com/goto links; those are
+    left out, as they cannot be credited to a domain.
+    """
+    rows, unresolved = [], 0
+    for kw, items in ready.items():
+        for item in organic_items(items):
+            url = item.get("url") or ""
+            if is_unresolved(url):
+                unresolved += 1
+                continue
+            rows.append({
+                'keyword': kw,
+                'volume': volumes.get(kw),
+                'position': item.get("rank_group", 0),
+                'domain': item.get("domain", ""),
+                'url': url,
+                'title': item.get("title", ""),
+            })
+    return rows, unresolved
 
 
 def find_column(df, possible_names):
@@ -255,7 +291,7 @@ def calculate_and_display_sov(df_work, keyword_col, volume_col, position_col, do
         'Position': list(selected_ctr_curve.keys()),
         'CTR (%)': [f"{v*100:.2f}%" for v in selected_ctr_curve.values()]
     })
-    st.dataframe(ctr_df.T, use_container_width=True)
+    st.dataframe(ctr_df.T, width="stretch")
 
     if do_group_by_category and category_col and category_col in df_work.columns:
         # Group by category and domain
@@ -279,7 +315,7 @@ def calculate_and_display_sov(df_work, keyword_col, volume_col, position_col, do
         for category in grouped[category_col].unique():
             st.markdown(f"### {category}")
             cat_data = grouped[grouped[category_col] == category]
-            st.dataframe(cat_data, use_container_width=True)
+            st.dataframe(cat_data, width="stretch")
             st.bar_chart(cat_data.set_index('Domain')['SOV (%)'].head(10))
 
     else:
@@ -321,7 +357,7 @@ def calculate_and_display_sov(df_work, keyword_col, volume_col, position_col, do
         # Full table
         st.subheader("Detailed Results")
         grouped.index = range(1, len(grouped) + 1)
-        st.dataframe(grouped, use_container_width=True)
+        st.dataframe(grouped, width="stretch")
 
     # Download
     st.subheader("Download")
@@ -345,7 +381,7 @@ def calculate_and_display_sov(df_work, keyword_col, volume_col, position_col, do
 st.subheader("Input Method")
 input_method = st.radio(
     "Choose how to provide ranking data:",
-    ["Upload CSV", "Live SERP Fetch (DataForSEO)"],
+    ["Upload CSV", "Fetch SERPs (DataForSEO)"],
     horizontal=True
 )
 
@@ -431,82 +467,160 @@ if input_method == "Upload CSV":
         st.dataframe(pd.DataFrame(output_example))
 
 else:
-    # ---- Live SERP Fetch path ----
-    st.subheader("Live SERP Fetch via DataForSEO")
+    # ---- DataForSEO path: send searches now, collect results later ----
+    st.subheader("Fetch SERPs via DataForSEO")
 
     if not has_credentials:
-        st.warning("Enter your DataForSEO login and password in the sidebar to use live fetching.")
+        st.warning("Enter your DataForSEO login and password in the sidebar to fetch SERPs.")
 
     st.markdown(
-        "Provide keywords and their monthly search volumes below (one keyword per line). "
-        "The tool will query DataForSEO for live SERP results, then calculate SOV from the rankings."
+        "Google results come from DataForSEO's Standard queue, which can take **25 minutes or more** "
+        "per search. Send the searches in step 1, keep the job file, then collect the results "
+        "and calculate SOV in step 2."
     )
 
-    keyword_volume_input = st.text_area(
-        "Keywords and volumes (format: keyword, volume - one per line)",
-        height=200,
-        placeholder="seo tools, 12100\nkeyword research, 8100\nbacklink checker, 6600"
-    )
+    send_tab, collect_tab = st.tabs(["1. Send searches", "2. Collect results"])
 
-    # Parse input
-    keyword_volume_pairs = []
-    if keyword_volume_input:
-        for line in keyword_volume_input.strip().split('\n'):
-            line = line.strip()
-            if not line:
-                continue
-            parts = [p.strip() for p in line.split(',')]
-            if len(parts) >= 2:
-                try:
-                    kw = parts[0]
-                    vol = int(parts[1])
-                    keyword_volume_pairs.append((kw, vol))
-                except ValueError:
-                    st.warning(f"Could not parse volume for line: '{line}'. Expected format: keyword, volume")
-            else:
-                st.warning(f"Could not parse line: '{line}'. Expected format: keyword, volume")
-
-    if keyword_volume_pairs:
-        num_keywords = len(keyword_volume_pairs)
-        est_cost = num_keywords * 0.002
-        st.info(f"{num_keywords} keyword(s) to fetch. Estimated DataForSEO cost: ${est_cost:.3f}")
-
-    if st.button("Fetch SERPs and Calculate SOV", type="primary",
-                 disabled=not has_credentials or not keyword_volume_pairs):
-        location_code = LOCATION_CODES[live_location]
-        all_rows = []
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-
-        for idx, (kw, vol) in enumerate(keyword_volume_pairs):
-            status_text.text(f"Fetching SERP for '{kw}' ({idx + 1}/{len(keyword_volume_pairs)})")
-            progress_bar.progress(int((idx / len(keyword_volume_pairs)) * 100))
-
-            results = fetch_serp_results(kw, dataforseo_login, dataforseo_password,
-                                         location_code, live_device)
-            for r in results:
-                all_rows.append({
-                    'keyword': kw,
-                    'volume': vol,
-                    'position': r['position'],
-                    'domain': r['domain'],
-                    'url': r['url'],
-                    'title': r['title'],
-                })
-
-        progress_bar.progress(100)
-        status_text.empty()
-
-        if all_rows:
-            df_live = pd.DataFrame(all_rows)
-            st.success(f"Fetched {len(df_live):,} organic results across {len(keyword_volume_pairs)} keywords")
-
-            with st.expander("Preview fetched data"):
-                st.dataframe(df_live.head(30))
-
-            calculate_and_display_sov(
-                df_live.copy(), 'keyword', 'volume', 'position', 'domain',
-                None, selected_ctr, top_n, False
+    with send_tab:
+        col1, col2 = st.columns(2)
+        with col1:
+            live_location = st.selectbox(
+                "Location",
+                list(LOCATION_CODES.keys()),
+                index=0,
+                help="Location for the Google searches"
             )
-        else:
-            st.warning("No SERP results returned. Check your DataForSEO credentials and try again.")
+        with col2:
+            live_device = st.selectbox(
+                "Device",
+                ["desktop", "mobile"],
+                index=0,
+                help="Device type for the Google searches"
+            )
+
+        keyword_volume_input = st.text_area(
+            "Keywords and volumes (format: keyword, volume - one per line)",
+            height=200,
+            placeholder="seo tools, 12100\nkeyword research, 8100\nbacklink checker, 6600"
+        )
+
+        # Parse input
+        keyword_volume_pairs = []
+        if keyword_volume_input:
+            keyword_volume_pairs, parse_problems = parse_keyword_volumes(keyword_volume_input)
+            for problem in parse_problems:
+                st.warning(problem)
+
+        if keyword_volume_pairs:
+            num_keywords = len(keyword_volume_pairs)
+            est_cost = estimate_cost(num_keywords, SERP_DEPTH)
+            st.info(f"{num_keywords} keyword(s) to send at {SERP_DEPTH} results each. "
+                    f"Estimated DataForSEO cost: ${est_cost:.4f}")
+
+        if st.button("Send searches", type="primary",
+                     disabled=not has_credentials or not keyword_volume_pairs):
+            volumes = dict(keyword_volume_pairs)
+            try:
+                with st.spinner("Sending searches to DataForSEO..."):
+                    job_rows, send_warnings, send_cost = send_searches(
+                        [kw for kw, _ in keyword_volume_pairs], dataforseo_login, dataforseo_password,
+                        LOCATION_CODES[live_location], "en", device=live_device, depth=SERP_DEPTH)
+            except QueueError as e:
+                st.error(str(e))
+            else:
+                for warning in send_warnings:
+                    st.warning(warning)
+                if job_rows:
+                    for row in job_rows:
+                        row['volume'] = volumes[row['keyword']]
+                    st.session_state['sov_job'] = job_rows
+                    st.session_state['sov_send_cost'] = send_cost
+                    st.session_state.pop('sov_result', None)
+
+        if st.session_state.get('sov_job'):
+            job_rows = st.session_state['sov_job']
+            st.success(f"Queued {len(job_rows)} search(es). Cost reported by DataForSEO: "
+                       f"${st.session_state['sov_send_cost']:.4f}")
+            st.markdown("DataForSEO can take **25 minutes or more** to finish. Download the job file, "
+                        "then use **2. Collect results**. While this page stays open, the job is kept "
+                        "here too, so you can collect without uploading it.")
+            st.download_button(
+                label="Download job file (CSV)",
+                data=sov_job_to_csv(job_rows).encode('utf-8'),
+                file_name="share_of_voice_job.csv",
+                mime="text/csv"
+            )
+
+    with collect_tab:
+        job_rows = st.session_state.get('sov_job')
+        job_file = st.file_uploader("Job file from step 1", type=['csv'],
+                                    help="The share_of_voice_job.csv you downloaded when you sent the searches")
+        if job_file is not None:
+            try:
+                job_rows = job_from_csv(job_file.getvalue().decode('utf-8-sig', errors='replace'))
+            except ValueError as e:
+                st.error(str(e))
+                job_rows = None
+        elif job_rows:
+            st.caption(f"Using the job sent from this page ({len(job_rows)} search(es)).")
+
+        job_volume_map = None
+        if job_rows:
+            try:
+                job_volume_map = job_volumes(job_rows)
+            except ValueError as e:
+                st.error(str(e))
+
+        if st.button("Collect results", type="primary",
+                     disabled=not has_credentials or not job_volume_map):
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+
+            def update_progress(done, total, keyword):
+                progress_bar.progress(done / total if total else 1.0)
+                status_text.text(f"Checking {done + 1}/{total}: {keyword}" if keyword else "")
+
+            try:
+                result = collect_results(job_rows, dataforseo_login, dataforseo_password,
+                                         progress_callback=update_progress)
+            except QueueError as e:
+                st.error(str(e))
+            else:
+                status_text.empty()
+                all_rows, unresolved = serp_rows(result['ready'], job_volume_map)
+                st.session_state['sov_result'] = {
+                    'rows': all_rows,
+                    'ready': len(result['ready']),
+                    'pending': result['pending'],
+                    'errors': result['errors'],
+                    'unresolved': unresolved,
+                    'total': len(job_rows),
+                }
+
+        report = st.session_state.get('sov_result')
+        if report:
+            if report['pending']:
+                st.warning(f"{report['ready']} of {report['total']} search(es) have finished; "
+                           f"{len(report['pending'])} are still running at DataForSEO. "
+                           "Try again in a few minutes. The results below cover the finished ones only.")
+            if report['errors']:
+                with st.expander(f"{len(report['errors'])} search(es) failed"):
+                    for error in report['errors']:
+                        st.text(error)
+            if report['unresolved']:
+                st.warning(f"{report['unresolved']} result(s) came back as unresolved google.com/goto links. "
+                           "They are left out of the SOV calculation, as they cannot be credited to a domain.")
+
+            if report['rows']:
+                df_live = pd.DataFrame(report['rows'])
+                st.success(f"Collected {len(df_live):,} organic results across {report['ready']} keywords")
+
+                with st.expander("Preview fetched data"):
+                    st.dataframe(df_live.head(30))
+
+                calculate_and_display_sov(
+                    df_live.copy(), 'keyword', 'volume', 'position', 'domain',
+                    None, selected_ctr, top_n, False
+                )
+            elif report['ready']:
+                st.warning("No organic results came back for the finished searches.")

@@ -1,12 +1,12 @@
-# Google Trends Forecasting - Crawl File Version
+# Search Interest Forecasting
 
 ## Features
 
-Forecast Google Trends data at scale using NeuralProphet. Upload a crawl file to analyze trends for multiple keywords/pages.
+Forecast search interest for one keyword or a batch, using NeuralProphet. The history comes from the DataForSEO Trends API: DataForSEO's own 0 to 100 interest index, an alternative to Google Trends, not Google Trends data. Needs a DataForSEO login.
 
 - Streamlit web interface
 - Uses NeuralProphet for time-series forecasting
-- Batch process keywords from crawl files
+- Single keyword, or a batch from a CSV
 - Identify seasonal trends and predict future interest
 
 ## Author

@@ -5,9 +5,10 @@
 # Website  : https://leefoot.com
 ####################################################################################
 #                                                                                  #
-#  Google Trends Forecasting (DataForSEO)                                          #
+#  Search Interest Forecasting (DataForSEO Trends)                                #
 #                                                                                  #
-#  Fetches Google Trends interest-over-time via the DataForSEO Trends API          #
+#  Fetches interest-over-time from the DataForSEO Trends API (DataForSEO's own    #
+#  0 to 100 index, not Google Trends data)                                         #
 #  and forecasts future search interest with NeuralProphet.                        #
 #                                                                                  #
 ####################################################################################
@@ -19,7 +20,7 @@
 
 import streamlit as st
 
-st.set_page_config(page_title="Google Trends Forecasting", page_icon="📈",
+st.set_page_config(page_title="Search Interest Forecasting", page_icon="📈",
                    layout="wide")
 
 import chardet
@@ -37,13 +38,14 @@ import math
 
 set_random_seed(0)
 
-st.title("Google Trends & NeuralProphet Forecasting")
+st.title("Search Interest Forecasting")
 st.markdown("*Created by* [![Website](https://img.shields.io/badge/-leefoot.com-2A9D8F?logoColor=white)](https://www.leefoot.com) · [![Hire Me](https://img.shields.io/badge/-Hire%20Me-FF6B6B?logoColor=white)](https://www.leefoot.com/contact) · [![LinkedIn](https://img.shields.io/badge/-LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lee-foot/) · [![Bluesky](https://img.shields.io/badge/-Bluesky-0285FF?logoColor=white)](https://bsky.app/profile/leefootseo.bsky.social) · [![More Tools](https://img.shields.io/badge/-More%20Tools-8B5CF6?logoColor=white)](https://leefoot.com/tools) · [![GitHub](https://img.shields.io/badge/-GitHub-6B7280?logoColor=white)](https://github.com/searchsolved/search-solved-public-seo)")
 
 with st.expander("How to use this tool"):
     st.markdown("""
     **What this tool does:**
-    - Forecasts Google Trends data using NeuralProphet ML
+    - Forecasts search interest using NeuralProphet
+    - Data comes from DataForSEO Trends, DataForSEO's own 0 to 100 interest index (an alternative to Google Trends, not Google Trends data)
     - Analyses seasonal patterns and projects future performance
     - Works with single keywords or batch processing
 
@@ -100,7 +102,7 @@ COST_PER_REQUEST = 0.0012  # USD per request (up to 5 keywords)
 
 
 def fetch_trends_data(keywords, api_login, api_password, location_code, time_range="past_5_years"):
-    """Fetch Google Trends interest-over-time data from DataForSEO.
+    """Fetch interest-over-time data from the DataForSEO Trends API (not Google Trends).
 
     Parameters
     ----------
@@ -306,7 +308,7 @@ if mode == "Single Keyword":
                         linewidth=2, linestyle='--')
                 ax.set_xlabel('Date')
                 ax.set_ylabel('Interest Over Time')
-                ax.set_title(f'Google Trends Forecast: {keyword}')
+                ax.set_title(f'Search Interest Forecast: {keyword}')
                 ax.legend()
                 ax.grid(True, alpha=0.3)
                 plt.tight_layout()
